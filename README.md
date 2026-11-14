@@ -197,7 +197,7 @@ se entrega eso con las fases 4 y 5 reducidas.
 | RF-03, RF-04, RF-09 | Hecho: partida jugable de principio a fin (fase 3); consumos y radiación con cifras de la NASA, sin verificar |
 | RF-05 | Hecho: panel de salud con icono, número, barra y texto, y alertas agrupadas; Curiosity avisa antes de la radiación |
 | RF-06 | Hecho: tendencia de salud media y recursos en el juego (desplegable) y en la bitácora |
-| RF-08 | Parcial: se desbloquea la historia y la bitácora la lista con su fuente; faltan texto, imagen y tarjeta (fase 5) |
+| RF-08 | Hecho: tarjeta de historia (modal en partida y en bitácora) con imágenes WebP y textos; pendiente de verificación por el equipo (fase 5) |
 | RNF-04 | Hecho: el motor no importa React (hay prueba) |
 | RF-10 a RF-12, RNF-01 a RNF-03, RNF-05 | Sin empezar |
 | Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

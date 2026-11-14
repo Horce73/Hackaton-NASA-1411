@@ -62,7 +62,6 @@ export const Vista3D = forwardRef<Vista3DRef, Vista3DProps>(function Vista3D(
       escena.dispose();
       escenaRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

@@ -68,3 +68,16 @@ export const PENALIZACION_SOPORTE_VITAL = 25;
 
 // Puntuación (TRD 6.4)
 export const PUNTOS_POR_HISTORIA = 10; // PROVISIONAL
+
+// Exploración 3D (RF-09): movimiento del astronauta sobre el terreno.
+// FUENTE NASA / TRD 6.3: gravedad de superficie 0,17 g en la Luna y 0,38 g en Marte.
+export const GRAVEDAD: Record<Destino, number> = { luna: 1.62, marte: 3.72 }; // m/s²
+export const VELOCIDAD_CAMINAR = 7.2; // PROVISIONAL, m/s
+export const VELOCIDAD_SPRINT = 11; // PROVISIONAL, m/s
+export const IMPULSO_SALTO = 3.5; // PROVISIONAL, m/s: unos 3,7 m de altura en la Luna y 1,6 m en Marte
+export const EMPUJE_JETPACK = 6.2; // PROVISIONAL, m/s²
+export const RADIO_JUGADOR = 0.45; // PROVISIONAL, m
+export const ALTURA_JUGADOR = 1.75; // PROVISIONAL, m
+export const RADIO_ARENA = 52; // PROVISIONAL, m: límite de la zona explorable
+export const TIEMPO_COYOTE = 0.12; // s de margen para saltar después de dejar el suelo
+export const TIEMPO_BUFFER_SALTO = 0.12; // s de margen para recordar un salto pulsado en el aire

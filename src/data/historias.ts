@@ -151,3 +151,8 @@ export const HISTORIAS: Historia[] = [
     verificada: false,
   },
 ];
+
+// Índice por id: el HUD, la bitácora y la escena resuelven historias por identificador.
+export const HISTORIAS_POR_ID: Record<string, Historia> = Object.fromEntries(
+  HISTORIAS.map((historia) => [historia.id, historia]),
+);

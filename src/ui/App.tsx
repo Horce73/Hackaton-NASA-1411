@@ -1,13 +1,137 @@
-import { Bitacora } from './bitacora/Bitacora';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { sonido } from '../audio/sonido';
+import { GRAVEDAD } from '../data/parametros';
+import type { EstadoTelemetria3D, EventoAccion3D, ModoCamara3D } from '../three/EscenaPlaneta';
+import { Vista3D, type Vista3DRef } from '../three/Vista3D';
+import { PantallaBitacora } from './bitacora/PantallaBitacora';
+import { TarjetaHistoria } from './comun/TarjetaHistoria';
 import { useEstado } from './comun/EstadoContext';
-import { Diseno } from './diseno/Diseno';
-import { Inicio } from './inicio/Inicio';
-import { Juego } from './juego/Juego';
+import { PantallaDiseno } from './diseno/PantallaDiseno';
+import { PantallaInicio } from './inicio/PantallaInicio';
+import { PantallaJuego } from './juego/PantallaJuego';
+
+const MAPA_ESTADO_BODY = {
+  inicio: 'title',
+  diseno: 'design',
+  juego: 'playing',
+  bitacora: 'gameover',
+} as const;
 
 export function App() {
-  const { estado } = useEstado();
-  if (estado.fase === 'inicio') return <Inicio />;
-  if (estado.fase === 'diseno') return <Diseno config={estado.config} itemIds={estado.itemIds} />;
-  if (estado.fase === 'juego') return <Juego partida={estado.partida} tarjetas={estado.tarjetas} />;
-  return <Bitacora partida={estado.partida} />;
+  const { estado, dispatch } = useEstado();
+  const vista3dRef = useRef<Vista3DRef | null>(null);
+  const [mostrarSaludExterno, setMostrarSaludExterno] = useState(false);
+
+  const enPartida = estado.fase === 'juego' || estado.fase === 'bitacora';
+  const config = enPartida ? estado.partida.config : estado.config;
+  const itemIds = enPartida ? estado.partida.diseno.itemIds : estado.itemIds;
+
+  const [telemetria, setTelemetria] = useState<EstadoTelemetria3D>({
+    objetivoCercano: null,
+    combustibleJetpack: 100,
+    enSuelo: true,
+    enDomo: false,
+    altura: 0,
+    velocidad: 0,
+    gravedad: GRAVEDAD[config.destino],
+    nodosRestantes: 2,
+    softwareGl: false,
+  });
+
+  useEffect(() => {
+    document.body.dataset.state = MAPA_ESTADO_BODY[estado.fase];
+  }, [estado.fase]);
+
+  useEffect(() => {
+    if (estado.fase !== 'bitacora') return;
+    if (estado.partida.resultado === 'exito') sonido.exito();
+    else sonido.alerta();
+  }, [estado.fase, estado]);
+
+  // Con una historia abierta o la misión terminada, la escena deja de recibir controles.
+  const tarjetasAbiertas = estado.fase === 'juego' && estado.tarjetas.length > 0;
+  const modo3d: ModoCamara3D =
+    estado.fase === 'bitacora' || tarjetasAbiertas
+      ? 'pausa'
+      : estado.fase === 'juego'
+        ? 'tercera_persona'
+        : 'orbita';
+
+  const manejarAccion3D = useCallback(
+    (accion: EventoAccion3D) => {
+      if (accion.tipo === 'domo') {
+        setMostrarSaludExterno(true);
+        return;
+      }
+      dispatch({
+        tipo: 'COMPLETAR_TAREA_3D',
+        tarea: accion.tipo,
+        nodoId: accion.nodoId,
+        historiaId: accion.historiaId,
+      });
+    },
+    [dispatch],
+  );
+
+  const manejarEntradaTactil = useCallback((entrada: Parameters<Vista3DRef['setEntradaTactil']>[0]) => {
+    vista3dRef.current?.setEntradaTactil(entrada);
+  }, []);
+
+  const ejecutarAccionCercana = useCallback(() => {
+    vista3dRef.current?.ejecutarAccionCercana();
+  }, []);
+
+  const cerrarSaludExterno = useCallback(() => setMostrarSaludExterno(false), []);
+
+  return (
+    <div className="relative min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
+      {/* Un único lienzo WebGL persistente para toda la experiencia */}
+      <Vista3D
+        ref={vista3dRef}
+        destino={config.destino}
+        itemIds={itemIds}
+        modo={modo3d}
+        eventoActualId={estado.fase === 'juego' ? (estado.partida.eventoActual?.id ?? null) : null}
+        turno={estado.fase === 'juego' ? estado.partida.turno : 0}
+        onTelemetria={setTelemetria}
+        onAccionCompletada={manejarAccion3D}
+      />
+
+      {estado.fase === 'inicio' && <PantallaInicio config={estado.config} dispatch={dispatch} />}
+
+      {estado.fase === 'diseno' && (
+        <PantallaDiseno
+          config={estado.config}
+          itemIds={estado.itemIds}
+          errorDiseno={estado.errorDiseno}
+          dispatch={dispatch}
+        />
+      )}
+
+      {estado.fase === 'juego' && (
+        <PantallaJuego
+          estado={estado}
+          telemetria={telemetria}
+          mostrarSaludExterno={mostrarSaludExterno}
+          onCerrarSaludExterno={cerrarSaludExterno}
+          onEjecutarAccionCercana={ejecutarAccionCercana}
+          onCambiarEntradaTactil={manejarEntradaTactil}
+          dispatch={dispatch}
+        />
+      )}
+
+      {estado.fase === 'bitacora' && (
+        <PantallaBitacora partida={estado.partida} dispatch={dispatch} />
+      )}
+
+      {estado.fase === 'juego' && estado.tarjetas.length > 0 && (
+        <TarjetaHistoria
+          key={estado.tarjetas[0]}
+          historiaId={estado.tarjetas[0]}
+          pendientes={estado.tarjetas.length - 1}
+          onCerrar={() => dispatch({ tipo: 'CERRAR_TARJETA' })}
+        />
+      )}
+    </div>
+  );
 }

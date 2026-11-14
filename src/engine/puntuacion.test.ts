@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { PUNTOS_POR_HISTORIA } from '../data/parametros';
-import { puntuar } from './puntuacion';
+import { desglosePuntuacion, puntuar } from './puntuacion';
 import { iniciarMision } from './turno';
 
 const inicial = iniciarMision({ destino: 'marte', tripulantes: 2, turnos: 10, semilla: 1 }, ['curiosity']);
@@ -21,4 +21,15 @@ test('suma ciencia, salud media redondeada y puntos por historia (TRD 6.4)', () 
 test('más historias desbloqueadas dan más puntos', () => {
   const conDos = { ...inicial, historiasDesbloqueadas: ['curiosity', 'sojourner'] };
   expect(puntuar(conDos) - puntuar(inicial)).toBe(PUNTOS_POR_HISTORIA);
+});
+
+test('el desglose suma exactamente el total que muestra la bitácora', () => {
+  const estado = { ...inicial, ciencia: 12, historiasDesbloqueadas: ['curiosity', 'sojourner'] };
+  const desglose = desglosePuntuacion(estado);
+  expect(desglose).toMatchObject({
+    ciencia: 12,
+    historiasBonus: PUNTOS_POR_HISTORIA * 2,
+    total: puntuar(estado),
+  });
+  expect(desglose.ciencia + desglose.saludMedia + desglose.historiasBonus).toBe(desglose.total);
 });

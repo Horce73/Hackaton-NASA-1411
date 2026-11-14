@@ -12,21 +12,47 @@ import {
 import { itemsDe, reservasIniciales, validarDiseno } from './diseno';
 import { siguiente } from './prng';
 import { actualizarSalud, limitar } from './salud';
-import type { Astronauta, Configuracion, Destino, Efectos, Estado, Evento, Indicador, Opcion, Recursos } from './tipos';
+import type {
+  Astronauta,
+  Configuracion,
+  DeltaTurno,
+  Destino,
+  Efectos,
+  Estado,
+  Evento,
+  Indicador,
+  Opcion,
+  Recursos,
+} from './tipos';
 
 type EfectoNumerico = Exclude<keyof Efectos, 'saludBonus' | 'alertaRadiacion'>;
 
-function sortearEvento(destino: Destino, rng: number): { evento: Evento; rng: number } {
-  const candidatos = EVENTOS.filter((e) => e.destinos.includes(destino));
-  const pesoTotal = candidatos.reduce((suma, e) => suma + e.peso, 0);
+// Sorteo ponderado del evento del día.
+// - Un evento educativo no vuelve a salir cuando su historia ya está desbloqueada.
+// - No repite el evento anterior si hay alternativa, para que la partida no se estanque.
+function sortearEvento(
+  destino: Destino,
+  rng: number,
+  historiasDesbloqueadas: string[] = [],
+  eventoAnteriorId?: string,
+): { evento: Evento; rng: number } {
+  const delDestino = EVENTOS.filter((e) => e.destinos.includes(destino));
+  const sinHistoriaVista = delDestino.filter(
+    (e) => !e.historiaId || !historiasDesbloqueadas.includes(e.historiaId),
+  );
+  const disponibles = sinHistoriaVista.length > 0 ? sinHistoriaVista : delDestino;
+  const sinRepetir = disponibles.filter((e) => e.id !== eventoAnteriorId);
+  const pool = sinRepetir.length > 0 ? sinRepetir : disponibles;
+
+  const pesoTotal = pool.reduce((suma, e) => suma + e.peso, 0);
   const paso = siguiente(rng);
   let restante = paso.valor * pesoTotal;
-  for (const evento of candidatos) {
+  for (const evento of pool) {
     restante -= evento.peso;
     if (restante < 0) return { evento, rng: paso.rng };
   }
   // Solo se llega aquí por redondeo de coma flotante.
-  return { evento: candidatos[candidatos.length - 1], rng: paso.rng };
+  return { evento: pool[pool.length - 1], rng: paso.rng };
 }
 
 // Estado del turno 1 a partir de un diseño válido. Lanza un error si no lo es.
@@ -42,19 +68,26 @@ export function iniciarMision(config: Configuracion, itemIds: string[]): Estado 
       dosis: 0,
     }),
   );
-  const historias = itemsDe(itemIds).flatMap((item) => (item.historiaId ? [item.historiaId] : []));
-  const sorteo = sortearEvento(config.destino, config.semilla >>> 0);
+  const historias = [...new Set(itemsDe(itemIds).flatMap((item) => (item.historiaId ? [item.historiaId] : [])))];
+  const recursos = reservasIniciales(config);
+  const sorteo = sortearEvento(config.destino, config.semilla >>> 0, historias);
 
   return {
     fase: 'juego',
     config,
     diseno: { itemIds: [...itemIds], presupuestoUsado: diseno.presupuestoUsado },
     turno: 1,
-    recursos: reservasIniciales(config),
+    recursos,
     tripulacion,
-    historial: [],
+    historial: [
+      {
+        turno: 0,
+        recursos: { ...recursos },
+        tripulacion: tripulacion.map((a) => ({ ...a, salud: { ...a.salud } })),
+      },
+    ],
     eventoActual: sorteo.evento,
-    historiasDesbloqueadas: [...new Set(historias)],
+    historiasDesbloqueadas: historias,
     ciencia: 0,
     rng: sorteo.rng,
   };
@@ -92,6 +125,9 @@ export function siguienteTurno(estado: Estado, opcionId: string): Estado {
   const bonus = (indicador: Indicador) =>
     items.reduce((suma, item) => suma + (item.efectos.saludBonus?.[indicador] ?? 0), 0);
   const efectos = opcion.efectos;
+  const recursosPrevios = estado.recursos;
+  const dosisMediaPrevia =
+    estado.tripulacion.reduce((suma, a) => suma + a.dosis, 0) / estado.tripulacion.length;
 
   // 1. Efectos directos de la opción elegida.
   let energia = limitar(estado.recursos.energia + (efectos.recursos?.energia ?? 0), 0, CAPACIDAD_ENERGIA);
@@ -170,24 +206,43 @@ export function siguienteTurno(estado: Estado, opcionId: string): Estado {
       : estado.historiasDesbloqueadas;
 
   const recursos = { energia, alimento, oxigeno, agua };
+  const dosisMediaFinal = tripulacion.reduce((suma, a) => suma + a.dosis, 0) / tripulacion.length;
+  const ultimoDelta: DeltaTurno = {
+    energia: energia - recursosPrevios.energia,
+    alimento: alimento - recursosPrevios.alimento,
+    oxigeno: oxigeno - recursosPrevios.oxigeno,
+    agua: agua - recursosPrevios.agua,
+    dosisMedia: dosisMediaFinal - dosisMediaPrevia,
+    ciencia: ciencia - estado.ciencia,
+    opcionTexto: opcion.texto,
+  };
   const base = {
     fase: estado.fase,
     config,
     diseno: estado.diseno,
     recursos,
     tripulacion,
-    historial: [...estado.historial, { turno: estado.turno, recursos, tripulacion }],
+    historial: [...estado.historial, { turno: estado.turno, recursos: { ...recursos }, tripulacion }],
     historiasDesbloqueadas,
     ciencia,
+    ultimoDelta,
   };
 
   // 9. Fin: la misión se aborta si algún indicador llega a 0.
-  const abortada = tripulacion.some((a) => Object.values(a.salud).some((valor) => valor <= 0));
-  if (abortada || estado.turno >= config.turnos) {
-    return { ...base, turno: estado.turno, rng: estado.rng, resultado: abortada ? 'abortada' : 'exito' };
+  const critico = tripulacion.find((a) => Object.values(a.salud).some((valor) => valor <= 0));
+  if (critico || estado.turno >= config.turnos) {
+    return {
+      ...base,
+      turno: estado.turno,
+      rng: estado.rng,
+      resultado: critico ? 'abortada' : 'exito',
+      motivoFin: critico
+        ? `La salud de ${critico.nombre} llegó al límite de seguridad. La misión se aborta y el equipo vuelve a casa.`
+        : `Misión cumplida: el equipo completó los ${config.turnos} días previstos.`,
+    };
   }
 
   // 8. Siguiente evento.
-  const sorteo = sortearEvento(config.destino, estado.rng);
+  const sorteo = sortearEvento(config.destino, estado.rng, historiasDesbloqueadas, evento.id);
   return { ...base, turno: estado.turno + 1, eventoActual: sorteo.evento, rng: sorteo.rng };
 }

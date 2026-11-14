@@ -1,10 +1,10 @@
 import { createContext, useContext, useReducer, type Dispatch, type ReactNode } from 'react';
-import { ESTADO_INICIAL, reducer, type Accion, type EstadoApp } from '../../state/reducer';
+import { crearEstadoInicial, reducer, type Accion, type EstadoApp } from '../../state/reducer';
 
 const Contexto = createContext<{ estado: EstadoApp; dispatch: Dispatch<Accion> } | null>(null);
 
 export function ProveedorEstado({ children }: { children: ReactNode }) {
-  const [estado, dispatch] = useReducer(reducer, ESTADO_INICIAL);
+  const [estado, dispatch] = useReducer(reducer, undefined, () => crearEstadoInicial());
   return <Contexto.Provider value={{ estado, dispatch }}>{children}</Contexto.Provider>;
 }
 

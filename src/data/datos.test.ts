@@ -1,11 +1,14 @@
 // Integridad de los datos y regla de dependencias (TRD sección 9).
 
 import { expect, test } from 'vitest';
+import { validarDiseno } from '../engine/diseno';
+import { iniciarMision } from '../engine/turno';
+import type { Configuracion } from '../engine/tipos';
 import { AVISOS } from './avisos';
-import { CATALOGO } from './catalogo';
-import { EVENTOS } from './eventos';
+import { CATALOGO, CATALOGO_POR_ID } from './catalogo';
+import { EVENTOS, EVENTOS_REPARABLES, EVENTO_SURVEYOR } from './eventos';
 import { HISTORIAS } from './historias';
-import { NOMBRES_TRIPULACION } from './parametros';
+import { NOMBRES_TRIPULACION, PREAJUSTES } from './parametros';
 
 const idsHistorias = HISTORIAS.map((h) => h.id);
 
@@ -98,5 +101,41 @@ test('engine/ no importa React, ui/ ni state/ (RNF-04)', () => {
   expect(Object.keys(fuentes).length).toBeGreaterThan(5);
   for (const [archivo, codigo] of Object.entries(fuentes)) {
     expect(codigo, archivo).not.toMatch(/(from|import)\s*\(?\s*['"](react|[./]*\/(ui|state)\/)/);
+  }
+});
+
+test('cada preajuste trae un diseño sugerido válido y lanzable', () => {
+  for (const preajuste of PREAJUSTES) {
+    const config: Configuracion = {
+      destino: preajuste.destino,
+      tripulantes: preajuste.tripulantes,
+      turnos: preajuste.turnos,
+      semilla: 1,
+    };
+    expect(validarDiseno(config, preajuste.itemsSugeridos).valido, preajuste.id).toBe(true);
+    expect(() => iniciarMision(config, preajuste.itemsSugeridos), preajuste.id).not.toThrow();
+  }
+});
+
+test('el índice del catálogo y las referencias de la escena 3D son consistentes', () => {
+  expect(Object.keys(CATALOGO_POR_ID)).toHaveLength(CATALOGO.length);
+  for (const item of CATALOGO) expect(CATALOGO_POR_ID[item.id]).toBe(item);
+
+  const idsEventos = EVENTOS.map((e) => e.id);
+  for (const id of EVENTOS_REPARABLES) expect(idsEventos, id).toContain(id);
+
+  const surveyor = EVENTOS.find((e) => e.id === EVENTO_SURVEYOR);
+  expect(surveyor?.historiaId, EVENTO_SURVEYOR).toBeTruthy();
+});
+
+test('physics/ no importa React, three, ui/ ni state/', () => {
+  const fuentes = import.meta.glob<string>('../physics/**/*.{ts,tsx}', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  });
+  expect(Object.keys(fuentes).length).toBeGreaterThan(1);
+  for (const [archivo, codigo] of Object.entries(fuentes)) {
+    expect(codigo, archivo).not.toMatch(/from\s+['"](react|three|[./]*\/(ui|state)\/)/);
   }
 });

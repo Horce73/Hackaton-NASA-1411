@@ -31,7 +31,7 @@ una recompensa, no en una lección.
 - Cuentas de usuario, ranking en línea o multijugador.
 - Backend, base de datos o analítica.
 - Simulación científicamente exacta: es un modelo educativo simplificado.
-- Datos de NASA en vivo (RF-10 es opcional y con respaldo local).
+- Datos de NASA en vivo (RF-10 se descartó; TRD sección 13).
 - Realidad virtual, 3D o motor de juego.
 
 ## 4. Historias de usuario
@@ -96,7 +96,7 @@ Es una hackatón: las métricas son de entrega, no de uso.
 Los supuestos abiertos (duración de la hackatón, equipo, reglas de imágenes, datos reales) están en la tabla
 de supuestos del [README](../README.md#supuestos-y-preguntas-abiertas).
 
-Dependencias externas: ninguna obligatoria. Solo RF-10 usaría la API de imágenes de la NASA.
+Dependencias externas: ninguna. RF-10, que usaría la API de imágenes de la NASA, se descartó.
 
 ## 9. Riesgos de producto
 

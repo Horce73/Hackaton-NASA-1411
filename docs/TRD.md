@@ -24,8 +24,10 @@ juego, y se anotan como tales en `src/data/parametros.ts`.
 | Despliegue | Netlify o GitHub Pages | Servidor propio | Sitio estático, sin variables secretas. |
 | Aleatoriedad | PRNG con semilla (mulberry32, 10 líneas) | `Math.random` | Partidas reproducibles y demo estable. |
 
-Dependencias de ejecución: `react`, `react-dom`. Todo lo demás es de desarrollo (`vite`, `typescript`,
-`vitest`, `eslint`). Añadir cualquier otra requiere acuerdo del equipo.
+Dependencias de ejecución: `react`, `react-dom`. Todo lo demás es de desarrollo: `vite`, `typescript`,
+`vitest`, `eslint` y lo que estas necesitan para React y TypeScript (`@vitejs/plugin-react`, `@types/react`,
+`@types/react-dom`, `typescript-eslint`). TypeScript se fija en la 6.0 porque `typescript-eslint` todavía no
+admite la 7. Añadir cualquier otra requiere acuerdo del equipo.
 
 ## 3. Arquitectura
 
@@ -46,6 +48,8 @@ Dependencias de ejecución: `react`, `react-dom`. Todo lo demás es de desarroll
 ```
 
 Regla de dependencias: `ui → state → engine → data`. Nunca hacia atrás. `engine` no importa de `react`.
+Única excepción: `data/` usa `import type` de `engine/tipos.ts` para tipar sus datos. Es solo de tipos, se
+borra al compilar y no crea dependencia en ejecución.
 
 ## 4. Estructura del repositorio
 
@@ -55,8 +59,8 @@ src/
     tipos.ts          # tipos del dominio
     prng.ts           # generador con semilla
     diseno.ts         # validarDiseno, presupuestoRestante
-    turno.ts          # siguienteTurno (orden de resolución)
-    salud.ts          # actualizarSalud
+    turno.ts          # iniciarMision, siguienteTurno (orden de resolución)
+    salud.ts          # actualizarSalud, semaforo
     puntuacion.ts     # puntuar
     *.test.ts
   data/
@@ -64,6 +68,7 @@ src/
     catalogo.ts       # módulos y equipo histórico
     eventos.ts        # eventos y opciones
     historias.ts      # tarjetas de historia con fuente
+    *.test.ts         # integridad de los datos
   state/
     reducer.ts        # fases + acciones
   ui/
@@ -71,11 +76,12 @@ src/
   styles/
     tokens.css        # variables de diseño
 public/img/           # imágenes de respaldo (RNF-02)
+public/fonts/         # tipografías autoalojadas (UX Brief, sección 7)
 docs/
 ```
 
-Convenciones: identificadores y archivos de código en inglés si el equipo lo prefiere (ver supuestos del README);
-textos visibles al usuario en español y solo en `data/` y `ui/`.
+Convenciones: identificadores y archivos de código en español, tal como aparecen en las secciones 5 y 6
+(decidido en la fase 0); textos visibles al usuario en español y solo en `data/` y `ui/`.
 
 ## 5. Modelo de datos
 
@@ -101,12 +107,13 @@ interface Item {              // módulo o equipo histórico
 }
 
 interface Efectos {
-  energiaProduccion?: number;   // por turno
+  energiaProduccion?: number;   // por turno, no depende del sol (reactor)
+  energiaSolar?: number;        // por turno, se multiplica por factorSolar (paneles)
   energiaConsumo?: number;      // por turno
   alimentoProduccion?: number;
   soporteVital?: number;        // capacidad de reciclado
   blindaje?: number;            // reduce dosis de radiación
-  saludBonus?: Partial<Record<Indicador, number>>;
+  saludBonus?: Partial<Record<Indicador, number>>;  // por turno; `radiacion` se ignora (se deriva de la dosis)
   ciencia?: number;             // puntos por turno
   resistenciaPolvo?: number;    // reduce penalización de tormenta de polvo
 }
@@ -121,7 +128,7 @@ interface Astronauta {
 }
 
 interface Recursos {
-  energia: number;          // 0..capacidad
+  energia: number;          // 0..CAPACIDAD_ENERGIA (parametros.ts)
   alimento: number;
   oxigeno: number;
   agua: number;
@@ -141,6 +148,31 @@ interface Opcion {
   id: string;
   texto: string;
   efectos: EfectosTurno;      // cambios puntuales en recursos, dosis, salud, ciencia
+}
+
+interface EfectosTurno {      // solo valen para el turno en que se elige la opción
+  recursos?: Partial<Recursos>;                 // suma o resta directa al almacén
+  dosis?: number;                               // dosis extra para cada astronauta
+  salud?: Partial<Record<Indicador, number>>;   // suma o resta directa; `radiacion` se ignora
+  ciencia?: number;
+  factorSolar?: number;                         // 0..1, por defecto 1 (paso 2)
+  multiplicadorRadiacion?: number;              // por defecto 1 (paso 4)
+}
+
+interface Instantanea {       // foto del final de un turno
+  turno: number;
+  recursos: Recursos;
+  tripulacion: Astronauta[];
+}
+
+interface Historia {
+  id: string;
+  nombre: string;
+  lugar: string;
+  anio: string;               // texto: admite rangos como "1969–72"
+  texto: string;              // 2–3 frases para 8–14 años
+  fuente: string;             // URL de la NASA
+  verificada: boolean;
 }
 
 interface Estado {
@@ -164,22 +196,44 @@ interface Estado {
 ### 6.1 Contrato
 
 ```ts
+function validarDiseno(config: Configuracion, itemIds: string[]): ResultadoDiseno
+function iniciarMision(config: Configuracion, itemIds: string[]): Estado
 function siguienteTurno(estado: Estado, opcionId: string): Estado
 ```
 
-Pura: mismo estado y misma opción producen el mismo resultado. El azar sale de `estado.rng`.
+`siguienteTurno` es pura: mismo estado y misma opción producen el mismo resultado. El azar sale de `estado.rng`.
+
+- `validarDiseno` devuelve `{ valido, presupuestoUsado, errores }`. Rechaza: turnos fuera de 10–20, un ítem
+  que no existe o no es del destino, un equipo histórico repetido y superar el presupuesto. Los módulos sí se
+  pueden repetir (dos paneles solares).
+- `iniciarMision` crea el estado del turno 1: reservas iniciales, tripulación con salud 100, primer evento
+  sorteado y las historias de los equipos históricos del diseño ya desbloqueadas. Lanza un error si el diseño
+  no es válido.
+- `siguienteTurno` lanza un error si la opción no existe en el evento actual y devuelve el mismo estado si la
+  misión ya terminó.
+- `iniciarMision` devuelve el estado con `fase: 'juego'`. Después el motor no cambia `fase`: solo fija
+  `resultado`. La fase la mueve el reducer.
 
 ### 6.2 Orden de resolución de un turno
 
-1. Aplicar los `efectos` de la opción elegida al evento actual.
-2. **Energía:** `balance = produccion × factorSolar − consumo`. `factorSolar` baja con tormenta de polvo
-   (Marte), reducido por `resistenciaPolvo`. Se actualiza el almacén y no baja de 0.
-3. **Soporte vital y alimento:** consumo por tripulante y turno; la producción y el reciclado compensan en parte.
-   Si falta energía, la eficiencia del soporte vital baja.
-4. **Radiación:** `dosisTurno = base(destino) × multiplicadorEvento × (1 − blindaje)`; se suma a cada astronauta.
+1. Aplicar los `efectos` de la opción elegida al evento actual: cambios directos en recursos, dosis, salud y
+   ciencia. Tras aplicarlos, recursos e indicadores se acotan a su rango (un descanso con la salud a 100 no
+   evita el desgaste del turno; una opción con coste no deja un almacén en negativo). Un evento no tiene efectos propios: `factorSolar` y `multiplicadorRadiacion` vienen de la opción
+   y valen solo para este turno.
+2. **Energía:** `balance = energiaProduccion + energiaSolar × factorSolarEfectivo − consumo`, con
+   `factorSolarEfectivo = 1 − (1 − factorSolar) × (1 − resistenciaPolvo)`. `factorSolar` baja con tormenta de
+   polvo (Marte). El consumo es el de la base por tripulante más el de los ítems. El almacén queda entre 0 y
+   `CAPACIDAD_ENERGIA`. `coberturaEnergia` es la parte del consumo que se pudo cubrir (0..1).
+3. **Soporte vital y alimento:** consumo por tripulante y turno. El reciclado devuelve hasta `soporteVital`
+   unidades de oxígeno y de agua, y el invernadero produce alimento; ambos se multiplican por
+   `coberturaEnergia`, así que sin energía rinden menos. Si un almacén no alcanza, queda en 0 y se anota qué
+   parte del consumo se cubrió.
+4. **Radiación:** `dosisTurno = base(destino) × multiplicadorRadiacion × (1 − blindaje)`; se suma a cada
+   astronauta. El blindaje total se limita a `BLINDAJE_MAX`.
 5. **Salud** (6.3).
-6. **Ciencia:** suma de `ciencia` de los ítems activos, con la penalización si hay déficit de energía.
-7. **Historias:** si la opción o el ítem desbloquea una historia, se añade a `historiasDesbloqueadas`.
+6. **Ciencia:** suma de `ciencia` de los ítems, multiplicada por `coberturaEnergia`. La ciencia total no baja de 0.
+7. **Historias:** las de los equipos históricos se desbloquean al lanzar la misión (`iniciarMision`); la de un
+   evento educativo (`Evento.historiaId`), al resolver ese evento, con cualquier opción.
 8. **Siguiente evento:** se sortea entre los de `destinos` compatibles, ponderado por `peso`.
 9. **Fin:** `abortada` si algún indicador de algún astronauta llega a 0; `exito` si se completan los turnos.
 
@@ -195,8 +249,13 @@ función no modifica el estado de entrada.
 | `suenoEstres` | Pasan los turnos y hay eventos duros. | Zona de descanso, acción de descanso. |
 | `musculoHueso` | Pasa el tiempo con gravedad baja (Luna ≈ 0,17 g, Marte ≈ 0,38 g). | Gimnasio, acción de ejercicio. |
 
-Semáforo: **verde ≥ 70**, **ámbar 40–69**, **rojo < 40**. La gravedad y el factor de pérdida por destino
-están en `parametros.ts`.
+Semáforo: **verde ≥ 70**, **ámbar 40–69**, **rojo < 40**. El factor de pérdida por destino está en
+`parametros.ts`; la gravedad no se usa como número en el cálculo.
+
+- `radiacion` no se suma ni se resta: se calcula como `100 × (1 − dosis / LIMITE_DOSIS)`.
+- Ningún indicador representa el aire o el agua. Si falta oxígeno o agua, `nutricion`, `suenoEstres` y
+  `musculoHueso` pierden una penalización fuerte, proporcional a la parte que faltó.
+- Con el alimento cubierto, `nutricion` se recupera un poco cada turno.
 
 ### 6.4 Puntuación
 
@@ -204,7 +263,10 @@ están en `parametros.ts`.
 
 ### 6.5 Parámetros
 
-Todo el balance vive en `data/parametros.ts` con comentarios de procedencia. Los valores de radiación
+Las constantes globales del balance viven en `data/parametros.ts` con comentarios de procedencia; los costes
+y efectos de cada ítem están en `data/catalogo.ts` y los pesos y efectos de cada evento en `data/eventos.ts`. Ahí están también el
+presupuesto, la capacidad y la carga inicial de energía, y las reservas iniciales de alimento, oxígeno y
+agua, que cubren solo una parte de la misión y crecen con la tripulación y los turnos. Los valores de radiación
 se calibran con fuentes públicas de la NASA (por ejemplo, las mediciones del instrumento RAD de Curiosity)
 cuando haya tiempo; hasta entonces son plausibles y se marcan `// PROVISIONAL`.
 
@@ -218,8 +280,16 @@ La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo us
 ## 8. Datos y contenido
 
 - Formato: archivos TypeScript tipados (`data/*.ts`), que dan validación en compilación.
-- Cada `Historia` incluye `fuente` (URL NASA) y `verificada: boolean`.
-- Prueba automática: ninguna historia con `verificada: false` se incluye en la compilación de entrega.
+- Cada `Historia` incluye `fuente` (URL NASA) y `verificada: boolean`. Todas nacen con `verificada: false` y
+  solo una persona del equipo las pasa a `true`.
+- Hasta la fase 5, `texto` es el marcador `[PENDIENTE fase 5]` y la `fuente` es una URL de nasa.gov que se
+  comprobó que responde. La imagen y su texto alternativo se añaden a `Historia` en la fase 5.
+- Prueba automática de entrega: ninguna historia con `verificada: false` se incluye en la compilación de
+  entrega. Se activa en la fase 5; hasta entonces no forma parte de `npm run test`, porque fallaría siempre.
+- Contenido mínimo actual: 7 módulos (panel solar, reactor, invernadero, reciclador, blindaje, zona de
+  descanso, gimnasio), 7 equipos históricos (tabla del README, sin Surveyor 3) y 6 eventos (tormenta solar,
+  tormenta de polvo, fallo de equipo, fuga de agua, día tranquilo y Surveyor 3 como evento educativo).
+- Los nombres de la tripulación (Lucía, Marco, Aiko y un cuarto provisional) están en `parametros.ts`.
 - Imágenes: `public/img/`, formato WebP, máximo ~150 kB cada una, con texto alternativo obligatorio en el dato.
 - Licencia: confirmar las condiciones de uso de los medios de la NASA antes de publicar (supuesto abierto).
 - RF-10 (opcional): consulta a la API de imágenes de la NASA con tiempo límite y respaldo local; sin clave, a
@@ -233,6 +303,7 @@ La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo us
 | Propiedades simples | 1 000 partidas con semillas distintas: sin recursos negativos ni indicadores fuera de rango. | Vitest |
 | Reproducibilidad | Misma semilla y mismas decisiones dan el mismo resultado. | Vitest |
 | Datos | Todas las referencias `historiaId` existen; todo ítem histórico tiene historia y fuente. | Vitest |
+| Arquitectura | Ningún archivo de `engine/` importa React, `ui/` ni `state/`. | Vitest |
 | Manual | Guion de demo completo en móvil y portátil, sin red. | Persona del equipo |
 
 No se hacen pruebas de interfaz automatizadas en el MVP.
@@ -268,7 +339,11 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 
 | Tema | Opción por defecto | Se decide |
 |---|---|---|
-| Idioma del código | Inglés en identificadores | Fase 0 |
-| Netlify o GitHub Pages | Netlify | Fase 0 |
+| Idioma del código | Español en identificadores | Decidido en la fase 0 |
+| Netlify o GitHub Pages | Netlify | Con el despliegue de prueba (pendiente, no se hizo en la fase 0) |
+| Preajustes de partida y dificultad | Solo rellenan RF-01 (supuesto del README) | Fase 2 |
+| Eventos de varios turnos | No: cada evento afecta a su turno | Fase 3 |
+| Opción con coste y almacén vacío | Se permite y el almacén queda en 0 (sale gratis) | Fase 3 |
+| Efecto de Curiosity en la alerta de dosis | Solo interfaz; en el motor da ciencia | Fase 4 |
 | Valores de balance | Los de `parametros.ts` | Fase 3 |
 | RF-10 (API de imágenes) | No hacer | Tras fase 5 |

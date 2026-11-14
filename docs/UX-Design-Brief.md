@@ -35,7 +35,7 @@ sistema de diseño completo.
 
 | Contexto | Ejemplo |
 |---|---|
-| Evento | "Tormenta de polvo en camino. Tus paneles solares producirán menos durante 2 días." |
+| Evento | "Tormenta de polvo. Tus paneles solares producen menos hoy." |
 | Alerta de salud | "Lucía necesita descansar. Su sueño está bajo." |
 | Tarjeta de historia | "En 1971, los astronautas del Apolo 15 condujeron por primera vez este vehículo en la Luna." (dato a verificar antes de publicar) |
 
@@ -51,12 +51,13 @@ Inicio → Diseño de misión → Juego (turnos) → Bitácora
 ### 5.1 Inicio
 Título, frase de una línea, botón **Empezar**. Elección de destino (Luna/Marte) con ilustración y
 una línea de contexto ("Gravedad 1/6: cuesta mantener los músculos"). Selectores de tripulación y duración.
+Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y se pueden cambiar (supuesto abierto en el README).
 
 ### 5.2 Diseño de misión
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│ Presupuesto: 62 / 100 puntos              [ Lanzar ▶ ]   │
+│ Presupuesto: 37 / 100 puntos              [ Lanzar ▶ ]   │
 ├───────────────────────────┬──────────────────────────────┤
 │ CATÁLOGO                  │ TU MISIÓN                    │
 │ [Módulos] [Equipo real]   │  • Panel solar          -8   │
@@ -81,15 +82,17 @@ una línea de contexto ("Gravedad 1/6: cuesta mantener los músculos"). Selector
 ├──────────────────────────────────────┬───────────────────┤
 │  EVENTO                              │ TRIPULACIÓN       │
 │  Tormenta de polvo                   │ Lucía      ● ● ▲ ●│
-│  Tus paneles producirán menos        │ Marco      ● ● ● ●│
-│  durante 2 días.                     │ Aiko       ▲ ● ● ■│
+│  Tus paneles solares producen        │ Marco      ● ● ● ●│
+│  menos hoy.                          │ Aiko       ▲ ● ● ■│
 │                                      │ (toca para ver)   │
 │  [ Ahorrar energía ]                 │                   │
 │  [ Seguir con todo ]                 │ Tendencia ╱╲_╱    │
 │  [ Sacar el rover a explorar ]       │                   │
 └──────────────────────────────────────┴───────────────────┘
 ```
-- Barra superior fija con los 5 indicadores globales.
+- Barra superior fija con los 5 indicadores globales: los 4 recursos y ☢, la dosis media de la tripulación como
+  porcentaje del límite de la misión (más alto es peor). El indicador de salud `radiacion` va al revés: 100 es sano.
+- Cada evento afecta solo al día en que ocurre; el texto no promete efectos de varios días.
 - Zona central: **evento y opciones**, con letra grande.
 - Lateral: tripulación con 4 indicadores cada uno (radiación, nutrición, sueño, huesos).
 - En móvil: el lateral pasa a una pestaña inferior o a una hoja deslizable.

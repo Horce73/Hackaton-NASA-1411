@@ -6,9 +6,7 @@ son los de [../README.md](../README.md).
 
 ## 1. Problema y oportunidad
 
-Los jóvenes conocen la exploración espacial como imágenes sueltas. Pocos entienden **por qué**
-una misión es difícil (energía, comida, aire, radiación y salud a la vez) ni que en la Luna y en Marte
-hay equipo real de la NASA todavía allí.
+Los jóvenes conocen la exploración espacial como imágenes sueltas. Pocos entienden **por qué** una misión es difícil (energía, comida, aire, radiación y salud a la vez) ni que en la Luna y en Marte hay equipo real de la NASA todavía allí.
 
 Un juego corto convierte esas restricciones en decisiones propias y la historia del equipo real en
 una recompensa, no en una lección.
@@ -66,7 +64,7 @@ RF-06 (gráfica de tendencia), RF-10 (imágenes de la API de la NASA), RF-11 (so
 | Equipo histórico | 6 (3 de la Luna, 3 de Marte) |
 | Eventos | 6 |
 | Indicadores de salud | 4 por astronauta |
-| Configuraciones de partida fijas | 3 (Luna fácil, Luna difícil, Marte) |
+| Preajustes de partida | 3 (Luna fácil, Luna difícil, Marte): rellenan las elecciones de RF-01 y se pueden cambiar |
 
 ## 6. Criterios de aceptación (MVP)
 
@@ -74,12 +72,12 @@ RF-06 (gráfica de tendencia), RF-10 (imágenes de la API de la NASA), RF-11 (so
 |---|---|
 | RF-01 | **Dado** la pantalla inicial, **cuando** elijo destino, tripulación (2–4) y duración (10–20), **entonces** puedo continuar al diseño; valores fuera de rango no son seleccionables. |
 | RF-02 | **Dado** un presupuesto de 100 puntos, **cuando** intento añadir un elemento que lo supera, **entonces** el botón queda desactivado y se explica por qué. |
-| RF-03 | **Dado** una partida en curso, **cuando** termina un turno, **entonces** se actualizan los 4 recursos y nunca quedan por debajo de 0. |
+| RF-03 | **Dado** una partida en curso, **cuando** termina un turno, **entonces** se actualizan los 4 recursos (energía, alimento, oxígeno y agua) y la dosis de radiación, y ningún recurso queda por debajo de 0. |
 | RF-04 | **Dado** un turno, **cuando** aparece un evento, **entonces** hay 2 o 3 opciones y la elegida cambia el resultado. |
 | RF-05 | **Dado** el panel de salud, **cuando** un indicador baja de 40, **entonces** su color pasa a rojo **y** aparece un icono y un texto, no solo color. |
 | RF-07 | **Dado** el catálogo, **cuando** añado un equipo histórico y juego, **entonces** su efecto de juego se aplica en la simulación. |
-| RF-08 | **Dado** un equipo histórico usado, **cuando** se desbloquea, **entonces** se muestra una tarjeta con año, lugar, 2–3 frases y fuente. |
-| RF-09 | **Dado** el fin de la misión (por turnos o aborto), **entonces** se muestra victoria o derrota, puntuación y las historias desbloqueadas. |
+| RF-08 | **Dado** un equipo histórico en el diseño, **cuando** se lanza la misión (o se resuelve un evento educativo), **entonces** su historia se desbloquea y se muestra una tarjeta con año, lugar, 2–3 frases y fuente. |
+| RF-09 | **Dado** el fin de la misión (por turnos o aborto), **entonces** se muestra si la misión terminó con éxito o abortada, la puntuación y las historias desbloqueadas. |
 
 ## 7. Métricas de éxito
 
@@ -104,7 +102,7 @@ Dependencias externas: ninguna obligatoria. Solo RF-10 usaría la API de imágen
 
 | Riesgo | Mitigación |
 |---|---|
-| El juego resulta demasiado difícil o aburrido. | 3 configuraciones fijas, semilla aleatoria fija para la demo y una ronda de prueba con alguien ajeno al equipo. |
+| El juego resulta demasiado difícil o aburrido. | 3 preajustes de partida, semilla aleatoria fija para la demo y una ronda de prueba con alguien ajeno al equipo. |
 | Se percibe como juego sin contenido real. | Tarjetas de historia con fuente y equipo real en el núcleo de la mecánica. |
 | Se pasa el tiempo en el diseño y no se llega a jugar. | La partida jugable (fase 3) tiene prioridad sobre el pulido visual. |
 

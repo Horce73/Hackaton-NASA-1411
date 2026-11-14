@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+/* Paleta de la interfaz 3D. Convive con tokens.css: las pantallas portadas usan
+   estas variables desde Tailwind, y los módulos CSS heredados conservan --fondo. */
+@theme {
+  --color-bg: #0b1020;
+  --color-surface: #141b34;
+  --color-surface-elevated: #1b2444;
+  --color-border: rgba(201, 211, 232, 0.14);
+  --color-border-strong: rgba(201, 211, 232, 0.28);
+  --color-text: #f2f5ff;
+  --color-text-muted: #a6b2d0;
+  --color-mars: #e2674a;
+  --color-mars-hover: #f07b5f;
+  --color-moon: #c9d3e8;
+  --color-ok: #4cd7a1;
+  --color-warn: #f5b942;
+  --color-danger: #ff6b6b;
+  --color-on-accent: #0b1020;
+
+  /* Las fuentes del repo ya se cargan en base.css. */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

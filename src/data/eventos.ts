@@ -1,4 +1,5 @@
-// Eventos y opciones (RF-04). Pesos y efectos son PROVISIONALES.
+// Eventos y opciones (RF-04). Pesos y efectos son PROVISIONALES (balance de juego).
+// Unidades: energía en puntos, oxígeno y alimento en kg, agua en litros, dosis en mSv.
 // Cada efecto vale solo para el turno en que se elige la opción.
 // Los textos siguen el tono del UX Brief (sección 4): frases cortas y de "tú".
 
@@ -65,7 +66,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'usar-reservas',
         texto: 'Usar las reservas de aire',
-        efectos: { recursos: { oxigeno: -4 } },
+        efectos: { recursos: { oxigeno: -4.3 } },
       },
     ],
   },
@@ -79,12 +80,12 @@ export const EVENTOS: Evento[] = [
       {
         id: 'sellar',
         texto: 'Salir a sellar la fuga',
-        efectos: { recursos: { agua: -2 }, dosis: 3 },
+        efectos: { recursos: { agua: -5 }, dosis: 1 },
       },
       {
         id: 'racionar',
         texto: 'Racionar el agua hoy',
-        efectos: { recursos: { agua: -4 }, salud: { nutricion: -3 } },
+        efectos: { recursos: { agua: -10 }, salud: { nutricion: -3 } },
       },
     ],
   },
@@ -103,7 +104,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'ejercicio',
         texto: 'Hacer ejercicio',
-        efectos: { salud: { musculoHueso: 8 }, recursos: { alimento: -1 } },
+        efectos: { salud: { musculoHueso: 8 }, recursos: { alimento: -1.8 } },
       },
       {
         id: 'ciencia',
@@ -123,7 +124,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'visitar',
         texto: 'Ir a verla',
-        efectos: { ciencia: 6, dosis: 2, recursos: { energia: -5 } },
+        efectos: { ciencia: 6, dosis: 0.7, recursos: { energia: -5 } },
       },
       {
         id: 'seguir-plan',

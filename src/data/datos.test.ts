@@ -1,6 +1,7 @@
 // Integridad de los datos y regla de dependencias (TRD sección 9).
 
 import { expect, test } from 'vitest';
+import { AVISOS } from './avisos';
 import { CATALOGO } from './catalogo';
 import { EVENTOS } from './eventos';
 import { HISTORIAS } from './historias';
@@ -41,6 +42,13 @@ test('toda historia tiene nombre, lugar, año y una fuente de nasa.gov', () => {
   }
 });
 
+test('todo aviso tiene sus textos, un dato y una fuente de nasa.gov', () => {
+  for (const [id, aviso] of Object.entries(AVISOS)) {
+    expect(new URL(aviso.fuente).hostname, id).toMatch(/(^|\.)nasa\.gov$/);
+    expect(aviso.nombre && aviso.ok && aviso.riesgo && aviso.dato, id).toBeTruthy();
+  }
+});
+
 test('cada evento tiene 2 o 3 opciones y peso positivo (RF-04)', () => {
   for (const evento of EVENTOS) {
     expect(evento.opciones.length, evento.id).toBeGreaterThanOrEqual(2);
@@ -65,6 +73,7 @@ test('ningún texto visible usa raya larga', () => {
     ...CATALOGO.map((i) => i.nombre),
     ...EVENTOS.flatMap((e) => [e.titulo, e.texto, ...e.opciones.map((o) => o.texto)]),
     ...HISTORIAS.flatMap((h) => [h.nombre, h.texto]),
+    ...Object.values(AVISOS).flatMap((a) => [a.nombre, a.ok, a.riesgo, a.dato]),
   ];
   expect(textos.filter((t) => t.includes('—'))).toEqual([]);
 });

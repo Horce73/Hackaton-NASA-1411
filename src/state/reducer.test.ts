@@ -47,3 +47,30 @@ test('las acciones de diseño no hacen nada fuera del diseño y REINICIAR vuelve
   expect(reducer(ESTADO_INICIAL, { tipo: 'CONFIRMAR_DISENO' })).toBe(ESTADO_INICIAL);
   expect(aplicar({ tipo: 'INICIAR', config }, { tipo: 'REINICIAR' })).toBe(ESTADO_INICIAL);
 });
+
+function jugarHastaElFinal(estado: EstadoApp): EstadoApp {
+  while (estado.fase === 'juego') {
+    const { partida } = estado;
+    const opcion = partida.eventoActual!.opciones.find((o) => reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId: o.id }) !== estado)!;
+    estado = reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id });
+  }
+  return estado;
+}
+
+test('ELEGIR_OPCION avanza el turno y al terminar pasa a la bitácora (RF-04, RF-09)', () => {
+  const lanzada = aplicar({ tipo: 'INICIAR', config }, anadir('reciclador'), anadir('panel-solar'), { tipo: 'CONFIRMAR_DISENO' });
+  const opcionId = lanzada.fase === 'juego' ? lanzada.partida.eventoActual!.opciones[0].id : '';
+  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId })).toMatchObject({ fase: 'juego', partida: { turno: 2 } });
+  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId: 'no-existe' })).toBe(lanzada);
+
+  const final = jugarHastaElFinal(lanzada);
+  expect(final.fase).toBe('bitacora');
+  expect(final).toMatchObject({ partida: { resultado: expect.stringMatching(/exito|abortada/) } });
+});
+
+test('REPETIR vuelve a lanzar la misma misión con la misma semilla', () => {
+  const lanzada = aplicar({ tipo: 'INICIAR', config }, anadir('reciclador'), { tipo: 'CONFIRMAR_DISENO' });
+  const repetida = reducer(jugarHastaElFinal(lanzada), { tipo: 'REPETIR' });
+  expect(repetida).toEqual(lanzada);
+  expect(reducer(lanzada, { tipo: 'REPETIR' })).toBe(lanzada);
+});

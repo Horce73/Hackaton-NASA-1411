@@ -1,5 +1,5 @@
 import { validarDiseno } from '../engine/diseno';
-import { iniciarMision } from '../engine/turno';
+import { iniciarMision, recursoQueFalta, siguienteTurno } from '../engine/turno';
 import type { Configuracion, Estado } from '../engine/tipos';
 
 // Antes de lanzar no existe un Estado de partida (TRD, sección 7).
@@ -13,6 +13,8 @@ export type Accion =
   | { tipo: 'AÑADIR_ITEM'; itemId: string }
   | { tipo: 'QUITAR_ITEM'; itemId: string }
   | { tipo: 'CONFIRMAR_DISENO' }
+  | { tipo: 'ELEGIR_OPCION'; opcionId: string }
+  | { tipo: 'REPETIR' }
   | { tipo: 'REINICIAR' };
 
 export const ESTADO_INICIAL: EstadoApp = { fase: 'inicio' };
@@ -37,6 +39,18 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
     case 'CONFIRMAR_DISENO':
       return estado.fase === 'diseno'
         ? { fase: 'juego', partida: iniciarMision(estado.config, estado.itemIds) }
+        : estado;
+    case 'ELEGIR_OPCION': {
+      if (estado.fase !== 'juego') return estado;
+      const { partida } = estado;
+      const existe = partida.eventoActual?.opciones.some((o) => o.id === accion.opcionId);
+      if (!existe || recursoQueFalta(partida, accion.opcionId)) return estado;
+      const siguiente = siguienteTurno(partida, accion.opcionId);
+      return { fase: siguiente.resultado ? 'bitacora' : 'juego', partida: siguiente };
+    }
+    case 'REPETIR':
+      return estado.fase === 'bitacora'
+        ? { fase: 'juego', partida: iniciarMision(estado.partida.config, estado.partida.diseno.itemIds) }
         : estado;
     case 'REINICIAR':
       return ESTADO_INICIAL;

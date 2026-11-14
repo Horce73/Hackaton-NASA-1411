@@ -88,7 +88,7 @@ export function avisosDiseno(config: Configuracion, itemIds: string[]): AvisoDis
   const alimentoProducido = efectos.reduce((suma, e) => suma + (e.alimentoProduccion ?? 0), 0);
   const bonusMusculo = efectos.reduce((suma, e) => suma + (e.saludBonus?.musculoHueso ?? 0), 0);
   const bonusSueno = efectos.reduce((suma, e) => suma + (e.saludBonus?.suenoEstres ?? 0), 0);
-  const usoMision = (consumo: number) => Math.max(0, consumo * tripulantes - reciclado) * turnos;
+  const usoMision = (consumo: number) => consumo * Math.max(0, tripulantes - reciclado) * turnos;
 
   return [
     { id: 'energia', ok: ENERGIA_INICIAL + energiaPorTurno * turnos >= 0 },

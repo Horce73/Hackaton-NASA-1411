@@ -6,7 +6,7 @@ import { CAPACIDAD_ENERGIA, PRESUPUESTO } from '../data/parametros';
 import { validarDiseno } from './diseno';
 import { siguiente } from './prng';
 import { puntuar } from './puntuacion';
-import { iniciarMision, siguienteTurno } from './turno';
+import { iniciarMision, recursoQueFalta, siguienteTurno } from './turno';
 import type { Configuracion, Estado } from './tipos';
 
 // Configuración, diseño y decisiones salen de la semilla, así que cada partida es distinta y repetible.
@@ -34,7 +34,7 @@ function partidaAleatoria(semilla: number) {
   const estados: Estado[] = [iniciarMision(config, itemIds)];
   while (!estados[estados.length - 1].resultado) {
     const estado = estados[estados.length - 1];
-    const opciones = estado.eventoActual!.opciones;
+    const opciones = estado.eventoActual!.opciones.filter((o) => !recursoQueFalta(estado, o.id));
     estados.push(siguienteTurno(estado, opciones[azar(opciones.length)].id));
   }
   return { config, itemIds, estados };
@@ -90,7 +90,8 @@ test('semillas distintas dan partidas distintas', () => {
     const ids: string[] = [];
     while (!estado.resultado) {
       ids.push(estado.eventoActual!.id);
-      estado = siguienteTurno(estado, estado.eventoActual!.opciones[0].id);
+      const e = estado;
+      estado = siguienteTurno(e, e.eventoActual!.opciones.find((o) => !recursoQueFalta(e, o.id))!.id);
     }
     return ids;
   };

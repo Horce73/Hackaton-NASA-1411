@@ -113,7 +113,7 @@ interface Efectos {
   energiaSolar?: number;        // por turno, se multiplica por factorSolar (paneles)
   energiaConsumo?: number;      // por turno
   alimentoProduccion?: number;
-  soporteVital?: number;        // capacidad de reciclado
+  soporteVital?: number;        // tripulantes cuyo consumo de oxígeno y agua recicla
   blindaje?: number;            // reduce dosis de radiación
   saludBonus?: Partial<Record<Indicador, number>>;  // por turno; `radiacion` se ignora (se deriva de la dosis)
   ciencia?: number;             // puntos por turno
@@ -126,14 +126,14 @@ interface Astronauta {
   id: string;
   nombre: string;
   salud: Record<Indicador, number>;   // 0..100
-  dosis: number;                      // acumulada, unidad abstracta
+  dosis: number;                      // acumulada, en mSv
 }
 
 interface Recursos {
-  energia: number;          // 0..CAPACIDAD_ENERGIA (parametros.ts)
-  alimento: number;
-  oxigeno: number;
-  agua: number;
+  energia: number;          // 0..CAPACIDAD_ENERGIA (parametros.ts), puntos abstractos
+  alimento: number;         // kg
+  oxigeno: number;          // kg
+  agua: number;             // litros
 }
 
 interface Evento {
@@ -217,8 +217,11 @@ function siguienteTurno(estado: Estado, opcionId: string): Estado
 - `iniciarMision` crea el estado del turno 1: reservas iniciales, tripulación con salud 100, primer evento
   sorteado y las historias de los equipos históricos del diseño ya desbloqueadas. Lanza un error si el diseño
   no es válido.
-- `siguienteTurno` lanza un error si la opción no existe en el evento actual y devuelve el mismo estado si la
-  misión ya terminó.
+- `siguienteTurno` lanza un error si la opción no existe en el evento actual o está bloqueada, y devuelve el
+  mismo estado si la misión ya terminó.
+- `recursoQueFalta(estado, opcionId)` dice qué recurso impide elegir una opción: una opción que resta de un
+  almacén más de lo que hay queda bloqueada y la interfaz la deshabilita con el motivo. Si todas las opciones
+  del evento estuvieran bloqueadas, ninguna lo está (el almacén queda en 0), para que la partida no se atasque.
 - `iniciarMision` devuelve el estado con `fase: 'juego'`. Después el motor no cambia `fase`: solo fija
   `resultado`. La fase la mueve el reducer.
 
@@ -232,8 +235,8 @@ function siguienteTurno(estado: Estado, opcionId: string): Estado
    `factorSolarEfectivo = 1 − (1 − factorSolar) × (1 − resistenciaPolvo)`. `factorSolar` baja con tormenta de
    polvo (Marte). El consumo es el de la base por tripulante más el de los ítems. El almacén queda entre 0 y
    `CAPACIDAD_ENERGIA`. `coberturaEnergia` es la parte del consumo que se pudo cubrir (0..1).
-3. **Soporte vital y alimento:** consumo por tripulante y turno. El reciclado devuelve hasta `soporteVital`
-   unidades de oxígeno y de agua, y el invernadero produce alimento; ambos se multiplican por
+3. **Soporte vital y alimento:** consumo por tripulante y turno. El reciclado cubre el consumo de oxígeno y
+   de agua de hasta `soporteVital` tripulantes, y el invernadero produce alimento; ambos se multiplican por
    `coberturaEnergia`, así que sin energía rinden menos. Si un almacén no alcanza, queda en 0 y se anota qué
    parte del consumo se cubrió.
 4. **Radiación:** `dosisTurno = base(destino) × multiplicadorRadiacion × (1 − blindaje)`; se suma a cada
@@ -271,6 +274,14 @@ Semáforo: **verde ≥ 70**, **ámbar 40–69**, **rojo < 40**. El factor de pé
 
 ### 6.5 Parámetros
 
+**Calibración (fase 3).** Cinco valores usan cifras de la NASA, con su fuente en `parametros.ts` y sin
+verificar todavía por el equipo: oxígeno 1,08 kg por persona y día, agua potable 2,5 L, comida 1,8 kg (con
+envase), dosis en Marte 0,67 mSv al día (instrumento RAD de Curiosity) y dosis en una misión de superficie
+0,5 mSv al día (usada para la Luna). El resto sigue siendo balance de juego y se marca `// PROVISIONAL`: la
+energía (puntos abstractos), las reservas, el desgaste de sueño y músculo, los efectos de los eventos y el
+límite de dosis de la misión. Ese límite es mucho menor que el real (600 mSv en toda la carrera de un
+astronauta) porque con cifras reales la radiación no se notaría en 10–20 días.
+
 Las constantes globales del balance viven en `data/parametros.ts` con comentarios de procedencia; los costes
 y efectos de cada ítem están en `data/catalogo.ts` y los pesos y efectos de cada evento en `data/eventos.ts`. Ahí están también el
 presupuesto, la capacidad y la carga inicial de energía, y las reservas iniciales de alimento, oxígeno y
@@ -281,7 +292,7 @@ cuando haya tiempo; hasta entonces son plausibles y se marcan `// PROVISIONAL`.
 ## 7. Estado de interfaz
 
 El reducer maneja las acciones: `INICIAR`, `AÑADIR_ITEM`, `QUITAR_ITEM`, `CONFIRMAR_DISENO`,
-`ELEGIR_OPCION`, `CERRAR_TARJETA`, `REINICIAR`. La interfaz no calcula reglas del juego: solo lee `Estado`.
+`ELEGIR_OPCION`, `CERRAR_TARJETA`, `REPETIR` (misma misión y misma semilla), `REINICIAR`. La interfaz no calcula reglas del juego: solo lee `Estado`.
 
 Antes de lanzar todavía no existe un `Estado` de partida, así que el reducer guarda un `EstadoApp` con tres
 formas: `{ fase: 'inicio' }`, `{ fase: 'diseno', config, itemIds }` y `{ fase: 'juego' | 'bitacora', partida }`,
@@ -356,7 +367,7 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Netlify o GitHub Pages | GitHub Pages | Decidido; despliegue de prueba hecho en la fase 0 |
 | Preajustes de partida y dificultad | Solo rellenan RF-01: Luna fácil 2 tripulantes y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14 (provisionales, en `parametros.ts`) | Decidido en la fase 2 |
 | Eventos de varios turnos | No: cada evento afecta a su turno | Fase 3 |
-| Opción con coste y almacén vacío | Se permite y el almacén queda en 0 (sale gratis) | Fase 3 |
+| Opción con coste y almacén vacío | La opción queda bloqueada con el motivo visible | Decidido en la fase 3 |
 | Efecto de Curiosity en la alerta de dosis | Solo interfaz; en el motor da ciencia | Fase 4 |
-| Valores de balance | Los de `parametros.ts` | Fase 3 |
+| Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3 | Ajuste fino en la fase 6 |
 | RF-10 (API de imágenes) | No hacer | Tras fase 5 |

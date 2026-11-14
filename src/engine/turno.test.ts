@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { EVENTOS } from '../data/eventos';
 import { DOSIS_BASE, ENERGIA_INICIAL } from '../data/parametros';
-import { iniciarMision, siguienteTurno } from './turno';
+import { iniciarMision, recursoQueFalta, siguienteTurno } from './turno';
 import type { Configuracion, Estado } from './tipos';
 
 const marte: Configuracion = { destino: 'marte', tripulantes: 2, turnos: 10, semilla: 7 };
@@ -10,6 +10,10 @@ const BASE_MARTE = ['panel-solar', 'panel-solar', 'reciclador'];
 
 function conEvento(estado: Estado, eventoId: string): Estado {
   return { ...estado, eventoActual: EVENTOS.find((e) => e.id === eventoId) };
+}
+
+function primeraLibre(estado: Estado): string {
+  return estado.eventoActual!.opciones.find((o) => !recursoQueFalta(estado, o.id))!.id;
 }
 
 function congelar<T>(valor: T): T {
@@ -96,8 +100,8 @@ test('sin energía el reciclador deja de compensar el consumo de oxígeno', () =
 
 test('guarda una instantánea por turno y avanza el contador', () => {
   let estado = iniciarMision(marte, BASE_MARTE);
-  estado = siguienteTurno(estado, estado.eventoActual!.opciones[0].id);
-  estado = siguienteTurno(estado, estado.eventoActual!.opciones[0].id);
+  estado = siguienteTurno(estado, primeraLibre(estado));
+  estado = siguienteTurno(estado, primeraLibre(estado));
   expect(estado.turno).toBe(3);
   expect(estado.historial.map((h) => h.turno)).toEqual([1, 2]);
   expect(estado.historial[1].recursos).toEqual(estado.recursos);
@@ -128,7 +132,7 @@ test('la misión se aborta si un indicador llega a 0', () => {
 test('una misión terminada ya no cambia', () => {
   let estado = iniciarMision(marte, BASE_MARTE);
   while (!estado.resultado) {
-    estado = siguienteTurno(estado, estado.eventoActual!.opciones[0].id);
+    estado = siguienteTurno(estado, primeraLibre(estado));
   }
   expect(siguienteTurno(estado, 'descansar')).toBe(estado);
 });
@@ -141,7 +145,24 @@ test('rechaza una opción que no es del evento actual', () => {
 test('siguienteTurno no modifica el estado de entrada', () => {
   const estado = congelar(iniciarMision(marte, [...BASE_MARTE, 'curiosity']));
   const copia = structuredClone(estado);
-  const nuevo = siguienteTurno(estado, estado.eventoActual!.opciones[0].id);
+  const nuevo = siguienteTurno(estado, primeraLibre(estado));
   expect(estado).toEqual(copia);
   expect(nuevo).not.toBe(estado);
+});
+
+test('una opción que cuesta más de lo que hay queda bloqueada (decisión de la fase 3)', () => {
+  const inicial = iniciarMision(luna, []);
+  const sinEnergia = conEvento({ ...inicial, recursos: { ...inicial.recursos, energia: 3 } }, 'surveyor-3');
+  expect(recursoQueFalta(sinEnergia, 'visitar')).toBe('energia');
+  expect(recursoQueFalta(sinEnergia, 'seguir-plan')).toBeUndefined();
+  expect(() => siguienteTurno(sinEnergia, 'visitar')).toThrow(/bloqueada/);
+  expect(siguienteTurno(sinEnergia, 'seguir-plan').turno).toBe(2);
+});
+
+test('si todas las opciones costaran demasiado, ninguna se bloquea', () => {
+  const inicial = iniciarMision(luna, []);
+  const sinAgua = conEvento({ ...inicial, recursos: { ...inicial.recursos, agua: 1 } }, 'fuga-agua');
+  expect(recursoQueFalta(sinAgua, 'sellar')).toBeUndefined();
+  expect(recursoQueFalta(sinAgua, 'racionar')).toBeUndefined();
+  expect(siguienteTurno(sinAgua, 'sellar').recursos.agua).toBe(0);
 });

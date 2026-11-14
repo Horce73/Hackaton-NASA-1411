@@ -90,8 +90,8 @@ va dentro del estado (`estado.eventoActual`) y cada evento afecta solo a su turn
 
 Los parámetros globales (consumos, dosis por turno, desgaste de salud) viven en un único archivo de datos
 (`src/data/parametros.ts`); los costes y efectos de cada ítem y evento, en `catalogo.ts` y `eventos.ts`. Se calibran con fuentes públicas de la NASA (por ejemplo, las
-mediciones del instrumento RAD de Curiosity para radiación en Marte). Hasta tener esa calibración, se usan
-valores plausibles y se anotan como tales.
+mediciones del instrumento RAD de Curiosity para radiación en Marte). Desde la fase 3, los consumos de oxígeno, agua y comida y la dosis
+diaria de radiación usan cifras de la NASA (detalle en el TRD 6.5); el resto son valores de juego y se anotan como tales.
 
 ## Arquitectura propuesta
 
@@ -194,7 +194,9 @@ se entrega eso con las fases 4 y 5 reducidas.
 |---|---|
 | RF-01, RF-02 | Hecho: pantallas de inicio y de diseño de misión, con avisos previos al lanzamiento |
 | RF-07 | Catálogo con equipo histórico hecho; su efecto ya se aplica en el motor |
-| RF-03 a RF-05, RF-08, RF-09 | Motor hecho y probado (`src/engine/`, `src/data/`); falta la interfaz |
+| RF-03, RF-04, RF-09 | Hecho: partida jugable de principio a fin (fase 3); consumos y radiación con cifras de la NASA, sin verificar |
+| RF-05 | Parcial: resumen de salud con icono, número y texto; falta el panel con alertas (fase 4) |
+| RF-08 | Parcial: se desbloquea la historia y la bitácora la lista con su fuente; faltan texto, imagen y tarjeta (fase 5) |
 | RNF-04 | Hecho: el motor no importa React (hay prueba) |
 | RF-06, RF-10 a RF-12, RNF-01 a RNF-03, RNF-05 | Sin empezar |
 | Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

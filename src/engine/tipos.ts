@@ -16,7 +16,7 @@ export interface Efectos {
   energiaSolar?: number; // por turno, se multiplica por factorSolar (paneles)
   energiaConsumo?: number; // por turno
   alimentoProduccion?: number;
-  soporteVital?: number; // capacidad de reciclado
+  soporteVital?: number; // tripulantes cuyo consumo de oxígeno y agua recicla
   blindaje?: number; // reduce dosis de radiación
   saludBonus?: Partial<Record<Indicador, number>>; // por turno; `radiacion` se ignora
   ciencia?: number; // puntos por turno
@@ -37,14 +37,14 @@ export interface Astronauta {
   id: string;
   nombre: string;
   salud: Record<Indicador, number>; // 0..100
-  dosis: number; // acumulada, unidad abstracta
+  dosis: number; // acumulada, en mSv
 }
 
 export interface Recursos {
   energia: number; // 0..CAPACIDAD_ENERGIA
-  alimento: number;
-  oxigeno: number;
-  agua: number;
+  alimento: number; // kg
+  oxigeno: number; // kg
+  agua: number; // litros
 }
 
 // Solo valen para el turno en que se elige la opción.

@@ -30,7 +30,7 @@ export const CATALOGO: Item[] = [
     tipo: 'modulo',
     coste: 15,
     destinos: AMBOS,
-    efectos: { alimentoProduccion: 2, energiaConsumo: 3 },
+    efectos: { alimentoProduccion: 3.6, energiaConsumo: 3 }, // 3,6 kg al día: la comida de 2 tripulantes
   },
   {
     id: 'reciclador',

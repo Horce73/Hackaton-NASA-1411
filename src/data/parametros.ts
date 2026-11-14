@@ -1,6 +1,8 @@
-// Única fuente del balance del juego.
-// TODOS los valores son PROVISIONALES: plausibles para jugar, sin calibrar con fuentes de la NASA.
-// Las unidades son abstractas (puntos), no medidas reales. Se calibran en la fase 3 (TRD 6.5).
+// Única fuente del balance del juego (TRD 6.5).
+// Dos clases de valores:
+// - FUENTE NASA: cifra tomada de un documento de la NASA, leído el 2026-11-14. Nadie del equipo la ha
+//   contrastado todavía. Unidades reales: kg, litros y mSv por persona y día.
+// - PROVISIONAL: balance de juego, sin base real. La energía se mide en puntos abstractos.
 
 import type { Destino, Preajuste } from '../engine/tipos';
 
@@ -24,10 +26,16 @@ export const CAPACIDAD_ENERGIA = 100; // PROVISIONAL
 export const ENERGIA_INICIAL = 50; // PROVISIONAL
 export const CONSUMO_ENERGIA_POR_TRIPULANTE = 3; // PROVISIONAL, por turno
 
-// Alimento y soporte vital: consumo por tripulante y turno
-export const CONSUMO_ALIMENTO = 1; // PROVISIONAL
-export const CONSUMO_OXIGENO = 1; // PROVISIONAL
-export const CONSUMO_AGUA = 1; // PROVISIONAL
+// Alimento y soporte vital: consumo por tripulante y turno (1 turno = 1 día)
+// FUENTE NASA: "about 1.8 kg of food plus packaging per person per day" en la Estación Espacial.
+// https://humanresearchroadmap.nasa.gov/evidence/reports/food.pdf
+export const CONSUMO_ALIMENTO = 1.8; // kg
+// FUENTE NASA: "Daily oxygen consumption (with exercise) - 1.083 kg/person/day" (OCHMO-TB-002).
+// https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-002-eclss.pdf
+export const CONSUMO_OXIGENO = 1.08; // kg
+// FUENTE NASA: "approximately 2.5 L of potable water for hydration per crewmember per day" (OCHMO-TB-002).
+// Solo cuenta el agua para beber, no la de higiene.
+export const CONSUMO_AGUA = 2.5; // litros
 
 // Reservas iniciales: parte del consumo de toda la misión que ya viaja en la nave.
 export const RESERVA_ALIMENTO = 0.7; // PROVISIONAL
@@ -35,9 +43,16 @@ export const RESERVA_OXIGENO = 0.6; // PROVISIONAL
 export const RESERVA_AGUA = 0.6; // PROVISIONAL
 
 // Radiación
-// PROVISIONAL y sin calibrar: también el orden (Luna por encima de Marte) está por confirmar con fuentes.
-export const DOSIS_BASE: Record<Destino, number> = { luna: 2, marte: 1.5 };
-export const LIMITE_DOSIS = 100; // PROVISIONAL: dosis con la que el indicador llega a 0
+// Dosis por día en mSv, sin blindaje.
+// FUENTE NASA (Marte): "an average of 0.67 millisieverts per day" en el cráter Gale, instrumento RAD de Curiosity.
+// https://www.nasa.gov/news-release/nasa-rover-results-include-first-age-measurement-on-mars-and-help-for-human-exploration/
+// FUENTE NASA (Luna): "for a surface-based mission, the radiation environment exposure is approximately
+// 0.5 mSv per day" (OCHMO-TB-020). Es un análisis genérico de superficie, no una medida en la Luna.
+// https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-020-radiation-protection.pdf
+export const DOSIS_BASE: Record<Destino, number> = { luna: 0.5, marte: 0.67 };
+// PROVISIONAL (juego): dosis en mSv con la que el indicador llega a 0. El límite real de la NASA es de
+// 600 mSv en toda la carrera (OCHMO-TB-020); con él la radiación no se notaría en 10-20 días.
+export const LIMITE_DOSIS = 30;
 export const BLINDAJE_MAX = 0.9; // PROVISIONAL: el blindaje nunca anula toda la dosis
 
 // Salud (TRD 6.3)

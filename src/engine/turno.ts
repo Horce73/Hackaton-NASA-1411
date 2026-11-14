@@ -12,7 +12,7 @@ import {
 import { itemsDe, reservasIniciales, validarDiseno } from './diseno';
 import { siguiente } from './prng';
 import { actualizarSalud, limitar } from './salud';
-import type { Astronauta, Configuracion, Destino, Efectos, Estado, Evento, Indicador } from './tipos';
+import type { Astronauta, Configuracion, Destino, Efectos, Estado, Evento, Indicador, Opcion, Recursos } from './tipos';
 
 type EfectoNumerico = Exclude<keyof Efectos, 'saludBonus'>;
 
@@ -60,6 +60,20 @@ export function iniciarMision(config: Configuracion, itemIds: string[]): Estado 
   };
 }
 
+function recursoInsuficiente(recursos: Recursos, opcion: Opcion): keyof Recursos | undefined {
+  const cambios = opcion.efectos.recursos ?? {};
+  return (Object.keys(cambios) as (keyof Recursos)[]).find((r) => recursos[r] + (cambios[r] ?? 0) < 0);
+}
+
+// Recurso que impide elegir una opción. Si todas las opciones del evento estuvieran bloqueadas,
+// ninguna lo está: la partida no se puede atascar.
+export function recursoQueFalta(estado: Estado, opcionId: string): keyof Recursos | undefined {
+  const opciones = estado.eventoActual?.opciones ?? [];
+  if (opciones.every((o) => recursoInsuficiente(estado.recursos, o))) return undefined;
+  const opcion = opciones.find((o) => o.id === opcionId);
+  return opcion && recursoInsuficiente(estado.recursos, opcion);
+}
+
 // Resuelve un turno en el orden del TRD 6.2. Pura: no modifica `estado`.
 export function siguienteTurno(estado: Estado, opcionId: string): Estado {
   if (estado.resultado) return estado;
@@ -67,6 +81,8 @@ export function siguienteTurno(estado: Estado, opcionId: string): Estado {
   if (!evento) throw new Error('No hay evento que resolver.');
   const opcion = evento.opciones.find((o) => o.id === opcionId);
   if (!opcion) throw new Error(`La opción "${opcionId}" no existe en el evento "${evento.id}".`);
+  const falta = recursoQueFalta(estado, opcionId);
+  if (falta) throw new Error(`La opción "${opcionId}" está bloqueada: falta ${falta}.`);
 
   const { config } = estado;
   const tripulantes = config.tripulantes;
@@ -95,9 +111,10 @@ export function siguienteTurno(estado: Estado, opcionId: string): Estado {
   const consumoOxigeno = CONSUMO_OXIGENO * tripulantes;
   const consumoAgua = CONSUMO_AGUA * tripulantes;
   const consumoAlimento = CONSUMO_ALIMENTO * tripulantes;
-  const reciclado = total('soporteVital') * coberturaEnergia;
-  const usoOxigeno = Math.max(0, consumoOxigeno - reciclado);
-  const usoAgua = Math.max(0, consumoAgua - reciclado);
+  // Parte de la tripulación cuyo consumo cubre el reciclado (0..1).
+  const reciclado = Math.min(1, (total('soporteVital') * coberturaEnergia) / tripulantes);
+  const usoOxigeno = consumoOxigeno * (1 - reciclado);
+  const usoAgua = consumoAgua * (1 - reciclado);
   // Parte del consumo que no se pudo cubrir (0 = todo cubierto).
   const faltaOxigeno = Math.max(0, usoOxigeno - oxigeno) / consumoOxigeno;
   const faltaAgua = Math.max(0, usoAgua - agua) / consumoAgua;

@@ -152,6 +152,9 @@ export class EscenaPlaneta {
   private camTargetSuave = new THREE.Vector3(-2.4, 2.5, 0);
   private orbitaAngulo = 0.55;
   private trauma = 0;
+  // UX Brief 9 y 10: sin giro automático, sacudidas ni animaciones decorativas si el usuario pide menos movimiento.
+  private readonly movimientoReducido =
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
   // Entrada teclado / ratón / táctil
   private teclas = new Set<string>();
@@ -828,6 +831,7 @@ export class EscenaPlaneta {
   }
 
   public registrarTrauma(cantidad: number) {
+    if (this.movimientoReducido) return;
     this.trauma = Math.min(1, this.trauma + cantidad);
   }
 
@@ -1019,7 +1023,7 @@ export class EscenaPlaneta {
 
   private animarEscena(dt: number, ahoraSec: number) {
     // Animar antena de la base central y hélices del helicóptero Ingenuity
-    this.grupoBase.traverse((obj) => {
+    if (!this.movimientoReducido) this.grupoBase.traverse((obj) => {
       if (obj.name === 'antena-rotatoria') {
         obj.rotation.y += dt * 0.7;
       } else if (obj.name === 'rotores-ingenuity') {
@@ -1032,7 +1036,7 @@ export class EscenaPlaneta {
 
     // Animar balizas y cristales de nodos interactivos
     for (const nodo of this.nodos) {
-      if (!nodo.grupo || nodo.completado) continue;
+      if (!nodo.grupo || nodo.completado || this.movimientoReducido) continue;
       if (nodo.tipo === 'hielo') {
         nodo.grupo.rotation.y += dt * 0.55;
       } else {
@@ -1226,7 +1230,7 @@ export class EscenaPlaneta {
     const k = 1 - Math.exp(-9.5 * dt);
 
     if (this.modo === 'orbita') {
-      this.orbitaAngulo += dt * 0.14;
+      if (!this.movimientoReducido) this.orbitaAngulo += dt * 0.14;
       const radio = 19.5;
       this.tmpVecA.set(
         Math.sin(this.orbitaAngulo) * radio,

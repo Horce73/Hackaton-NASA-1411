@@ -49,7 +49,7 @@ function crearCanvas(w: number, h: number): [HTMLCanvasElement, CanvasRenderingC
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
-  return [c, c.getContext('2d')!];
+  return [c, c.getContext('2d', { willReadFrequently: true })!];
 }
 
 /**

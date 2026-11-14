@@ -1,14 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { sonido } from '../audio/sonido';
 import { GRAVEDAD } from '../data/parametros';
 import type { EstadoTelemetria3D, EventoAccion3D, ModoCamara3D } from '../three/EscenaPlaneta';
-import { Vista3D, type Vista3DRef } from '../three/Vista3D';
+import type { Vista3DRef } from '../three/Vista3D';
 import { PantallaBitacora } from './bitacora/PantallaBitacora';
 import { TarjetaHistoria } from './comun/TarjetaHistoria';
 import { useEstado } from './comun/EstadoContext';
 import { PantallaDiseno } from './diseno/PantallaDiseno';
 import { PantallaInicio } from './inicio/PantallaInicio';
 import { PantallaJuego } from './juego/PantallaJuego';
+
+// Three.js se descarga aparte (TRD RNF-05): la interfaz responde enseguida y el fondo 3D aparece al llegar.
+const Vista3D = lazy(() => import('../three/Vista3D').then((m) => ({ default: m.Vista3D })));
 
 const MAPA_ESTADO_BODY = {
   inicio: 'title',
@@ -86,16 +89,18 @@ export function App() {
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
       {/* Un único lienzo WebGL persistente para toda la experiencia */}
-      <Vista3D
-        ref={vista3dRef}
-        destino={config.destino}
-        itemIds={itemIds}
-        modo={modo3d}
-        eventoActualId={estado.fase === 'juego' ? (estado.partida.eventoActual?.id ?? null) : null}
-        turno={estado.fase === 'juego' ? estado.partida.turno : 0}
-        onTelemetria={setTelemetria}
-        onAccionCompletada={manejarAccion3D}
-      />
+      <Suspense fallback={null}>
+        <Vista3D
+          ref={vista3dRef}
+          destino={config.destino}
+          itemIds={itemIds}
+          modo={modo3d}
+          eventoActualId={estado.fase === 'juego' ? (estado.partida.eventoActual?.id ?? null) : null}
+          turno={estado.fase === 'juego' ? estado.partida.turno : 0}
+          onTelemetria={setTelemetria}
+          onAccionCompletada={manejarAccion3D}
+        />
+      </Suspense>
 
       {estado.fase === 'inicio' && <PantallaInicio config={estado.config} dispatch={dispatch} />}
 

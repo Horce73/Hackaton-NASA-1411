@@ -15,18 +15,21 @@ juego, y se anotan como tales en `src/data/parametros.ts`.
 
 | Tema | Decisión | Alternativa descartada | Motivo |
 |---|---|---|---|
-| Framework | React 18 + Vite + TypeScript estricto | Phaser, Three.js | Juego por turnos con mucha interfaz; un motor gráfico sería más trabajo. |
+| Framework | React 18 + Vite + TypeScript estricto | Phaser | Juego por turnos con mucha interfaz. |
+| Escena 3D | Three.js, solo en `three/` (PR #2, fase 5) | Motor de juego completo | Exploración del planeta en 3D; el motor por turnos sigue siendo TypeScript puro. |
 | Estado | `useReducer` + Context | Zustand, Redux | Una sola pantalla activa; el estado de partida cabe en un reducer. |
 | Navegación | Máquina de fases en el reducer | React Router | Solo 4 pantallas y ninguna necesita URL propia. |
-| Estilos | CSS Modules + variables CSS | Tailwind | Menos configuración y tokens centralizados. |
+| Estilos | Tailwind v4 junto a CSS Modules y variables CSS (PR #2) | Solo CSS Modules | Las pantallas del PR #2 usan Tailwind; los tokens siguen en `styles/tokens.css`. |
+| Iconos | `lucide-react` (PR #2) | Iconos SVG propios | Usado por las pantallas del PR #2. |
 | Gráficas | SVG propio (sparklines) | Recharts, D3 | Evitar dependencia y peso para 2 gráficas simples. |
 | Pruebas | Vitest | Jest | Viene con Vite, arranque inmediato. |
 | Despliegue | GitHub Pages | Netlify, servidor propio | Sitio estático, sin variables secretas. |
 | Aleatoriedad | PRNG con semilla (mulberry32, 10 líneas) | `Math.random` | Partidas reproducibles y demo estable. |
 
-Dependencias de ejecución: `react`, `react-dom`. Todo lo demás es de desarrollo: `vite`, `typescript`,
-`vitest`, `eslint` y lo que estas necesitan para React y TypeScript (`@vitejs/plugin-react`, `@types/react`,
-`@types/react-dom`, `typescript-eslint`). TypeScript se fija en la 6.0 porque `typescript-eslint` todavía no
+Dependencias de ejecución: `react`, `react-dom`, `three` y `lucide-react` (las dos últimas, del PR #2). Todo lo
+demás es de desarrollo: `vite`, `typescript`, `vitest`, `eslint`, `tailwindcss` y `@tailwindcss/vite`, y lo que
+necesitan para React y TypeScript (`@vitejs/plugin-react`, `@types/react`, `@types/react-dom`, `@types/three`,
+`typescript-eslint`). TypeScript se fija en la 6.0 porque `typescript-eslint` todavía no
 admite la 7. Añadir cualquier otra requiere acuerdo del equipo.
 
 ## 3. Arquitectura
@@ -48,6 +51,8 @@ admite la 7. Añadir cualquier otra requiere acuerdo del equipo.
 ```
 
 Regla de dependencias: `ui → state → engine → data`. Nunca hacia atrás. `engine` no importa de `react`.
+La escena 3D cuelga de `ui`: `ui → three → physics → engine → data`, y `three` usa también `audio`.
+`engine`, `physics` y `audio` no importan de `react` ni de `three`.
 Única excepción: `data/` usa `import type` de `engine/tipos.ts` para tipar sus datos. Es solo de tipos, se
 borra al compilar y no crea dependencia en ejecución.
 
@@ -72,11 +77,21 @@ src/
     *.test.ts         # integridad de los datos
   state/
     reducer.ts        # fases + acciones
+  physics/
+    fisica3d.ts       # controlador del astronauta con gravedad lunar y marciana
+  three/
+    EscenaPlaneta.ts  # escena, cámara y nodos interactivos
+    modelos3d.ts      # astronauta, base y equipo NASA
+    texturas.ts       # texturas procedurales
+    Vista3D.tsx       # puente con React
+  audio/
+    sonido.ts         # efectos sintetizados con Web Audio (RF-11)
   ui/
     inicio/ diseno/ juego/ salud/ bitacora/ comun/
   styles/
     tokens.css        # variables de diseño
     base.css          # tipografías, reinicio mínimo, foco y cursor
+    tailwind.css      # entrada de Tailwind v4
 public/img/           # imágenes de respaldo (RNF-02)
 public/fonts/         # tipografías autoalojadas (UX Brief, sección 7)
 docs/
@@ -220,7 +235,7 @@ function siguienteTurno(estado: Estado, opcionId: string): Estado
 - `avisosDiseno(config, itemIds)` devuelve los avisos previos al lanzamiento (UX Brief 5.2): una lista de
   `{ id, ok }` para `energia`, `soporteVital`, `alimento`, `radiacion`, `musculoHueso` y `suenoEstres`. Proyecta
   la misión sin eventos con las mismas fórmulas del turno: avisa si la energía se agota, si las reservas de
-  aire, agua o alimento no llegan al último turno, si no hay blindaje y si músculo o sueño acabarían por debajo del verde.
+  aire, agua o alimento no llegan al último turno, si no hay blindaje y si músculo o sueño acabarían en rojo (sin contar el descanso y el ejercicio que elija el jugador).
   Los textos, el dato real que lo explica y su fuente NASA están en `data/avisos.ts` (`verificada: false`
   hasta que alguien los confirme). Un aviso no impide lanzar.
 - `iniciarMision` crea el estado del turno 1: reservas iniciales, tripulación con salud 100, primer evento
@@ -387,5 +402,5 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Eventos de varios turnos | No: cada evento afecta a su turno | Fase 3 |
 | Opción con coste y almacén vacío | La opción queda bloqueada con el motivo visible | Decidido en la fase 3 |
 | Efecto de Curiosity en la alerta de dosis | Alerta temprana de radiación (`alertaRadiacion`); no cambia la simulación | Decidido en la fase 4 |
-| Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3 | Ajuste fino en la fase 6 |
+| Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3. Objetivo de la fase 6, en victorias con decisiones al azar sobre el diseño sugerido: Luna fácil 70–85 %, Luna difícil 20–35 %, Marte 35–55 %; decidiendo bien, los tres se ganan casi siempre. Las cifras de la NASA no se tocan | Decidido en la fase 6 |
 | RF-10 (API de imágenes) | No hacer | Tras fase 5 |

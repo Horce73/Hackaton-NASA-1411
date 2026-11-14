@@ -40,7 +40,7 @@ export const AVISOS: Record<AvisoId, TextoAviso> = {
   },
   musculoHueso: {
     nombre: 'Músculos y huesos',
-    ok: 'Tu equipo mantiene músculos y huesos.',
+    ok: 'Los músculos y huesos aguantan. Haz ejercicio los días tranquilos.',
     riesgo: 'Con poca gravedad los músculos y huesos se debilitan. Añade un gimnasio.',
     dato: 'En microgravedad los astronautas pierden entre un 1 y un 2 % de masa ósea al mes, aunque hagan ejercicio.',
     fuente: 'https://science.nasa.gov/biological-physical/investigations/mabl-a/',
@@ -48,7 +48,7 @@ export const AVISOS: Record<AvisoId, TextoAviso> = {
   },
   suenoEstres: {
     nombre: 'Descanso',
-    ok: 'Tu equipo tiene dónde descansar.',
+    ok: 'El descanso aguanta. Descansa los días tranquilos.',
     riesgo: 'Muchos días sin descansar bien agotan al equipo. Añade una zona de descanso.',
     dato: 'La NASA estudia cómo cambia el comportamiento de un grupo que vive aislado en un espacio pequeño durante mucho tiempo.',
     fuente: 'https://www.nasa.gov/hrp/hazards/',

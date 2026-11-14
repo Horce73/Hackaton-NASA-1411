@@ -128,6 +128,7 @@ export interface Preajuste {
   destino: Destino;
   tripulantes: 2 | 3 | 4;
   turnos: number;
+  itemsSugeridos: string[]; // diseño listo para lanzar, válido para este preajuste
 }
 
 export interface AlertaSalud {

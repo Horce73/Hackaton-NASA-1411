@@ -1,11 +1,14 @@
 // Integridad de los datos y regla de dependencias (TRD sección 9).
 
 import { expect, test } from 'vitest';
+import { validarDiseno } from '../engine/diseno';
+import { iniciarMision } from '../engine/turno';
+import type { Configuracion } from '../engine/tipos';
 import { AVISOS } from './avisos';
 import { CATALOGO, CATALOGO_POR_ID } from './catalogo';
 import { EVENTOS, EVENTOS_REPARABLES, EVENTO_SURVEYOR } from './eventos';
 import { HISTORIAS } from './historias';
-import { NOMBRES_TRIPULACION } from './parametros';
+import { NOMBRES_TRIPULACION, PREAJUSTES } from './parametros';
 
 const idsHistorias = HISTORIAS.map((h) => h.id);
 
@@ -98,6 +101,19 @@ test('engine/ no importa React, ui/ ni state/ (RNF-04)', () => {
   expect(Object.keys(fuentes).length).toBeGreaterThan(5);
   for (const [archivo, codigo] of Object.entries(fuentes)) {
     expect(codigo, archivo).not.toMatch(/(from|import)\s*\(?\s*['"](react|[./]*\/(ui|state)\/)/);
+  }
+});
+
+test('cada preajuste trae un diseño sugerido válido y lanzable', () => {
+  for (const preajuste of PREAJUSTES) {
+    const config: Configuracion = {
+      destino: preajuste.destino,
+      tripulantes: preajuste.tripulantes,
+      turnos: preajuste.turnos,
+      semilla: 1,
+    };
+    expect(validarDiseno(config, preajuste.itemsSugeridos).valido, preajuste.id).toBe(true);
+    expect(() => iniciarMision(config, preajuste.itemsSugeridos), preajuste.id).not.toThrow();
   }
 });
 

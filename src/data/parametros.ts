@@ -12,11 +12,62 @@ export const TURNOS_MIN = 10; // RF-01
 export const TURNOS_MAX = 20; // RF-01
 
 // PROVISIONAL: preajustes que rellenan la pantalla de inicio (supuesto abierto del README).
+// Cada uno trae un diseño sugerido que ya es válido: el jugador puede lanzarlo o editarlo.
 export const PREAJUSTES: Preajuste[] = [
-  { id: 'luna-facil', nombre: 'Luna fácil', destino: 'luna', tripulantes: 2, turnos: 10 },
-  { id: 'luna-dificil', nombre: 'Luna difícil', destino: 'luna', tripulantes: 4, turnos: 20 },
-  { id: 'marte', nombre: 'Marte', destino: 'marte', tripulantes: 3, turnos: 14 },
+  {
+    id: 'luna-facil',
+    nombre: 'Luna fácil',
+    destino: 'luna',
+    tripulantes: 2,
+    turnos: 10,
+    itemsSugeridos: [
+      'panel-solar',
+      'panel-solar',
+      'reciclador',
+      'invernadero',
+      'gimnasio',
+      'zona-descanso',
+      'retrorreflector',
+    ],
+  },
+  {
+    id: 'luna-dificil',
+    nombre: 'Luna difícil',
+    destino: 'luna',
+    tripulantes: 4,
+    turnos: 20,
+    itemsSugeridos: [
+      'reactor',
+      'panel-solar',
+      'reciclador',
+      'reciclador',
+      'invernadero',
+      'blindaje',
+      'gimnasio',
+      'zona-descanso',
+    ],
+  },
+  {
+    id: 'marte',
+    nombre: 'Marte',
+    destino: 'marte',
+    tripulantes: 3,
+    turnos: 14,
+    itemsSugeridos: [
+      'reactor',
+      'reciclador',
+      'invernadero',
+      'blindaje',
+      'gimnasio',
+      'zona-descanso',
+      'curiosity',
+      'sojourner',
+    ],
+  },
 ];
+
+// Semilla fija para demos y para el enlace con ?seed=.
+export const SEMILLA_DEMO = 20260412;
 
 // El cuarto nombre es PROVISIONAL: el UX Brief solo da los tres primeros.
 export const NOMBRES_TRIPULACION = ['Lucía', 'Marco', 'Aiko', 'Dani'];

@@ -143,6 +143,17 @@ export interface ResultadoDiseno {
   errores: string[];
 }
 
+// Cambio neto de un turno (RF-04). La interfaz lo muestra al cerrar el día.
+export interface DeltaTurno {
+  energia: number;
+  alimento: number;
+  oxigeno: number;
+  agua: number;
+  dosisMedia: number; // mSv que sumó el turno a cada astronauta, en promedio
+  ciencia: number;
+  opcionTexto: string;
+}
+
 export interface Estado {
   fase: Fase;
   config: Configuracion;
@@ -156,4 +167,6 @@ export interface Estado {
   ciencia: number;
   rng: number; // estado del PRNG
   resultado?: 'exito' | 'abortada';
+  motivoFin?: string; // texto de cierre para la bitácora
+  ultimoDelta?: DeltaTurno; // cambio neto del último turno resuelto
 }

@@ -103,8 +103,9 @@ test('guarda una instantánea por turno y avanza el contador', () => {
   estado = siguienteTurno(estado, primeraLibre(estado));
   estado = siguienteTurno(estado, primeraLibre(estado));
   expect(estado.turno).toBe(3);
-  expect(estado.historial.map((h) => h.turno)).toEqual([1, 2]);
-  expect(estado.historial[1].recursos).toEqual(estado.recursos);
+  // El historial arranca con la instantánea del día 0, que es la línea base de las gráficas.
+  expect(estado.historial.map((h) => h.turno)).toEqual([0, 1, 2]);
+  expect(estado.historial[2].recursos).toEqual(estado.recursos);
 });
 
 test('la misión termina con éxito al completar los turnos', () => {
@@ -114,7 +115,7 @@ test('la misión termina con éxito al completar los turnos', () => {
   }
   expect(estado.resultado).toBe('exito');
   expect(estado.turno).toBe(10);
-  expect(estado.historial).toHaveLength(10);
+  expect(estado.historial).toHaveLength(11); // día 0 más los diez turnos
   expect(estado.eventoActual).toBeUndefined();
 });
 
@@ -165,4 +166,41 @@ test('si todas las opciones costaran demasiado, ninguna se bloquea', () => {
   expect(recursoQueFalta(sinAgua, 'sellar')).toBeUndefined();
   expect(recursoQueFalta(sinAgua, 'racionar')).toBeUndefined();
   expect(siguienteTurno(sinAgua, 'sellar').recursos.agua).toBe(0);
+});
+
+test('el delta del turno refleja el cambio neto de cada recurso (RF-04)', () => {
+  const inicial = conEvento(iniciarMision(marte, BASE_MARTE), 'dia-tranquilo');
+  const nuevo = siguienteTurno(inicial, 'descansar');
+  const delta = nuevo.ultimoDelta!;
+  expect(delta.opcionTexto).toBe('Descansar');
+  expect(delta.energia).toBeCloseTo(nuevo.recursos.energia - inicial.recursos.energia);
+  expect(delta.alimento).toBeCloseTo(nuevo.recursos.alimento - inicial.recursos.alimento);
+  expect(delta.oxigeno).toBeCloseTo(nuevo.recursos.oxigeno - inicial.recursos.oxigeno);
+  expect(delta.agua).toBeCloseTo(nuevo.recursos.agua - inicial.recursos.agua);
+  expect(delta.ciencia).toBe(nuevo.ciencia - inicial.ciencia);
+});
+
+test('el motivo de fin explica el cierre de la misión', () => {
+  let exito = iniciarMision(marte, [...BASE_MARTE, 'invernadero', 'gimnasio', 'zona-descanso']);
+  while (!exito.resultado) exito = siguienteTurno(conEvento(exito, 'dia-tranquilo'), 'descansar');
+  expect(exito.motivoFin).toMatch(/Misión cumplida/);
+
+  let aborto = iniciarMision({ ...marte, turnos: 20 }, ['panel-solar']);
+  while (!aborto.resultado) aborto = siguienteTurno(conEvento(aborto, 'dia-tranquilo'), 'descansar');
+  expect(aborto.motivoFin).toMatch(/se aborta/);
+});
+
+test('el sorteo no repite el evento del día anterior si hay alternativa', () => {
+  const inicial = conEvento(iniciarMision(marte, BASE_MARTE), 'dia-tranquilo');
+  const nuevo = siguienteTurno(inicial, 'descansar');
+  expect(nuevo.eventoActual?.id).not.toBe('dia-tranquilo');
+});
+
+test('un evento educativo no vuelve a salir cuando su historia ya está desbloqueada', () => {
+  let estado: Estado = conEvento(iniciarMision(luna, []), 'dia-tranquilo');
+  estado = { ...estado, historiasDesbloqueadas: ['surveyor-3'] };
+  for (let i = 0; i < 20 && !estado.resultado; i++) {
+    estado = siguienteTurno(conEvento(estado, 'dia-tranquilo'), 'descansar');
+    expect(estado.eventoActual?.id).not.toBe('surveyor-3');
+  }
 });

@@ -68,7 +68,8 @@ test('1 000 partidas con semillas distintas: ningún recurso negativo ni indicad
     }
     const final = estados[estados.length - 1];
     expect(final.turno).toBeLessThanOrEqual(config.turnos);
-    expect(final.historial).toHaveLength(final.turno);
+    // Una instantánea por turno resuelto, más la línea base del día 0.
+    expect(final.historial).toHaveLength(final.turno + 1);
     expect(Number.isInteger(puntuar(final))).toBe(true);
     resultados[final.resultado!]++;
   }

@@ -46,7 +46,7 @@ export const CATALOGO: Item[] = [
     tipo: 'modulo',
     coste: 10,
     destinos: AMBOS,
-    efectos: { blindaje: 0.3 },
+    efectos: { blindaje: 0.45 },
   },
   {
     id: 'zona-descanso',

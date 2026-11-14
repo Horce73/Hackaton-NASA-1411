@@ -176,11 +176,20 @@ se entrega eso con las fases 4 y 5 reducidas.
 
 ## Guion de demo (3 minutos)
 
-1. Elegir Marte y gastar el presupuesto, incluyendo Curiosity (RF-01, RF-02, RF-07).
-2. Ver la tarjeta de historia de Curiosity (RF-08).
-3. Jugar 3–4 turnos con una tormenta de polvo (RF-03, RF-04).
-4. Mostrar el panel de salud con una alerta de radiación (RF-05).
-5. Abrir la bitácora final con las historias desbloqueadas (RF-09).
+Abrir con la semilla fija para que los eventos salgan siempre igual:
+https://horce73.github.io/Hackaton-NASA-1411/?seed=12 (en local, `npm run dev` y `?seed=12`).
+Recorrido comprobado en Chrome el 2026-11-14.
+
+1. **Inicio:** pulsar el preajuste **Marte** y **Empezar** (RF-01).
+2. **Diseño:** enseñar el presupuesto, la pestaña **Equipo NASA** con Curiosity y la previsión técnica.
+   Pulsar **Lanzar misión** (RF-02, RF-07).
+3. **Tarjetas:** se abren las de Curiosity y Sojourner con foto, año y fuente (RF-08). Cerrar con **Entendido**.
+4. **Día 1, tormenta de polvo:** elegir **Ahorrar energía**; los paneles solares rinden menos (RF-03, RF-04).
+5. **Día 2, tormenta solar:** elegir **Seguir trabajando fuera** para mostrar el riesgo.
+6. **Día 3:** abrir **Salud**: Curiosity avisa de la radiación antes de que sea peligrosa (RF-05).
+   Opcional: pulsar **Explorar 3D [H]** y caminar con WASD hasta un equipo de la NASA.
+7. **Cierre:** **Abortar** y **Confirmar regreso** para abrir la bitácora con puntuación, tendencia e
+   historias desbloqueadas (RF-06, RF-09).
 
 ## Documentos
 
@@ -197,7 +206,11 @@ se entrega eso con las fases 4 y 5 reducidas.
 | RF-03, RF-04, RF-09 | Hecho: partida jugable de principio a fin (fase 3); consumos y radiación con cifras de la NASA, sin verificar |
 | RF-05 | Hecho: panel de salud con icono, número, barra y texto, y alertas agrupadas; Curiosity avisa antes de la radiación |
 | RF-06 | Hecho: tendencia de salud media y recursos en el juego (desplegable) y en la bitácora |
-| RF-08 | Hecho: tarjeta de historia (modal en partida y en bitácora) con imágenes WebP y textos; pendiente de verificación por el equipo (fase 5) |
+| RF-08 | Hecho: tarjeta de historia (modal en partida y en bitácora) con imágenes WebP y textos; textos verificados por el equipo el 2026-11-14 |
 | RNF-04 | Hecho: el motor no importa React (hay prueba) |
-| RF-10 a RF-12, RNF-01 a RNF-03, RNF-05 | Sin empezar |
+| RF-11 | Hecho en el PR #2: efectos de sonido sintetizados con Web Audio (`src/audio/`) |
+| RNF-01, RNF-02 | Hecho: sitio estático; datos, fuentes e imágenes van en el repo (RF-10 no se hace) |
+| RNF-03 | Hecho (fase 6): Lighthouse accesibilidad 100 en inicio; contrastes, teclado, foco y `prefers-reduced-motion` comprobados en Chrome, también en el 3D |
+| RNF-05 | Hecho (fase 6): 69 kB comprimidos al arrancar; el 3D (149 kB) se descarga aparte. Lighthouse rendimiento 57 móvil / 65 escritorio, medido con gráficos por software |
+| RF-10, RF-12 | Sin empezar (opcionales) |
 | Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

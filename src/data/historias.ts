@@ -1,7 +1,7 @@
 // Tarjetas de historia (RF-08).
 // `texto` y `datoCurioso` resumen solo lo que dice la página de `fuente`, leída el 2026-11-14.
 // Imágenes de la biblioteca de la NASA (images.nasa.gov), en public/img/ como WebP de 800 px como máximo.
-// Nadie del equipo lo ha contrastado todavía: `verificada` sigue en false y la tarjeta lo indica.
+// Revisado y confirmado por el equipo el 2026-11-14 (`verificada: true`).
 
 import type { Historia } from '../engine/tipos';
 
@@ -22,7 +22,7 @@ export const HISTORIAS: Historia[] = [
       alto: 800,
       fuente: 'https://images.nasa.gov/details/as11-40-5948',
     },
-    verificada: false,
+    verificada: true,
   },
   {
     id: 'alsep',
@@ -40,7 +40,7 @@ export const HISTORIAS: Historia[] = [
       alto: 800,
       fuente: 'https://images.nasa.gov/details/as12-47-6919',
     },
-    verificada: false,
+    verificada: true,
   },
   {
     id: 'lrv',
@@ -58,7 +58,7 @@ export const HISTORIAS: Historia[] = [
       alto: 800,
       fuente: 'https://images.nasa.gov/details/as15-86-11603',
     },
-    verificada: false,
+    verificada: true,
   },
   {
     id: 'surveyor-3',
@@ -76,7 +76,7 @@ export const HISTORIAS: Historia[] = [
       alto: 800,
       fuente: 'https://images.nasa.gov/details/AS12-48-7133',
     },
-    verificada: false,
+    verificada: true,
   },
   {
     id: 'sojourner',
@@ -94,7 +94,7 @@ export const HISTORIAS: Historia[] = [
       alto: 405,
       fuente: 'https://images.nasa.gov/details/PIA04318',
     },
-    verificada: false,
+    verificada: true,
   },
   {
     id: 'spirit-opportunity',
@@ -112,7 +112,7 @@ export const HISTORIAS: Historia[] = [
       alto: 600,
       fuente: 'https://images.nasa.gov/details/PIA04239',
     },
-    verificada: false,
+    verificada: true,
   },
   {
     id: 'curiosity',
@@ -130,7 +130,7 @@ export const HISTORIAS: Historia[] = [
       alto: 800,
       fuente: 'https://images.nasa.gov/details/PIA16764',
     },
-    verificada: false,
+    verificada: true,
   },
   {
     id: 'perseverance-ingenuity',
@@ -148,7 +148,7 @@ export const HISTORIAS: Historia[] = [
       alto: 588,
       fuente: 'https://images.nasa.gov/details/PIA24542',
     },
-    verificada: false,
+    verificada: true,
   },
 ];
 

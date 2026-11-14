@@ -100,17 +100,19 @@ export const RESERVA_AGUA = 0.6; // PROVISIONAL
 export const DOSIS_BASE: Record<Destino, number> = { luna: 0.5, marte: 0.67 };
 // PROVISIONAL (juego): dosis en mSv con la que el indicador llega a 0. El límite real de la NASA es de
 // 600 mSv en toda la carrera (OCHMO-TB-020); con él la radiación no se notaría en 10-20 días.
-export const LIMITE_DOSIS = 30;
+export const LIMITE_DOSIS = 20;
 export const BLINDAJE_MAX = 0.9; // PROVISIONAL: el blindaje nunca anula toda la dosis
 
 // Salud (TRD 6.3)
+// Balance de la fase 6 (TRD 13): con el diseño sugerido y decisiones al azar se gana el 71 % en Luna fácil,
+// el 29 % en Luna difícil y el 48 % en Marte; decidiendo bien, el 100 % (300 partidas por preajuste).
 export const UMBRAL_VERDE = 70; // TRD 6.3
 export const UMBRAL_AMBAR = 40; // TRD 6.3 y criterio RF-05 del PRD
 export const PERDIDA_NUTRICION = 15; // PROVISIONAL: por turno sin nada de alimento
 export const RECUPERACION_NUTRICION = 3; // PROVISIONAL: por turno con el alimento cubierto
-export const DESGASTE_SUENO = 3; // PROVISIONAL: por turno
+export const DESGASTE_SUENO = 5.5; // PROVISIONAL: por turno
 // PROVISIONAL: a menor gravedad, más pérdida. Las gravedades (0,17 g y 0,38 g) son las del TRD 6.3.
-export const PERDIDA_MUSCULO: Record<Destino, number> = { luna: 4, marte: 3 };
+export const PERDIDA_MUSCULO: Record<Destino, number> = { luna: 6.5, marte: 6 };
 // PROVISIONAL: por turno sin nada de oxígeno o de agua, a nutrición, sueño/estrés y músculo/hueso.
 export const PENALIZACION_SOPORTE_VITAL = 25;
 

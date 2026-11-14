@@ -1,4 +1,5 @@
-// Eventos y opciones (RF-04). Pesos y efectos son PROVISIONALES (balance de juego).
+// Eventos y opciones (RF-04). Pesos y efectos son PROVISIONALES (balance de juego, ajustado en la fase 6:
+// las opciones arriesgadas castigan más para que decidir bien importe).
 // Unidades: energía en puntos, oxígeno y alimento en kg, agua en litros, dosis en mSv.
 // Cada efecto vale solo para el turno en que se elige la opción.
 // Los textos siguen el tono del UX Brief (sección 4): frases cortas y de "tú".
@@ -23,7 +24,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'seguir-fuera',
         texto: 'Seguir trabajando fuera',
-        efectos: { multiplicadorRadiacion: 6, ciencia: 5 },
+        efectos: { multiplicadorRadiacion: 16, ciencia: 5 },
       },
     ],
   },
@@ -32,7 +33,7 @@ export const EVENTOS: Evento[] = [
     titulo: 'Tormenta de polvo',
     texto: 'Tus paneles solares producen menos hoy.',
     destinos: ['marte'],
-    peso: 3,
+    peso: 6,
     opciones: [
       {
         id: 'ahorrar-energia',
@@ -42,7 +43,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'seguir-con-todo',
         texto: 'Seguir con todo',
-        efectos: { factorSolar: 0.4 },
+        efectos: { factorSolar: 0.4, salud: { suenoEstres: -20 } },
       },
       {
         id: 'explorar',
@@ -61,7 +62,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'reparar',
         texto: 'Repararla ahora',
-        efectos: { recursos: { energia: -10 }, salud: { suenoEstres: -3 } },
+        efectos: { recursos: { energia: -10 }, salud: { suenoEstres: -8 } },
       },
       {
         id: 'usar-reservas',
@@ -85,7 +86,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'racionar',
         texto: 'Racionar el agua hoy',
-        efectos: { recursos: { agua: -10 }, salud: { nutricion: -3 } },
+        efectos: { recursos: { agua: -10 }, salud: { nutricion: -15 } },
       },
     ],
   },
@@ -109,7 +110,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'ciencia',
         texto: 'Trabajar en ciencia',
-        efectos: { ciencia: 4, salud: { suenoEstres: -3 } },
+        efectos: { ciencia: 4, salud: { suenoEstres: -10 } },
       },
     ],
   },
@@ -124,7 +125,7 @@ export const EVENTOS: Evento[] = [
       {
         id: 'visitar',
         texto: 'Ir a verla',
-        efectos: { ciencia: 6, dosis: 0.7, recursos: { energia: -5 } },
+        efectos: { ciencia: 6, dosis: 3, recursos: { energia: -5 } },
       },
       {
         id: 'seguir-plan',

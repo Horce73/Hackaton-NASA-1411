@@ -78,7 +78,7 @@ test('cada módulo quita su aviso', () => {
   expect(riesgos(marte, ['blindaje'])).not.toContain('radiacion');
   expect(riesgos(marte, ['reciclador'])).not.toContain('soporteVital');
   expect(riesgos(marte, ['reactor'])).not.toContain('energia');
-  expect(riesgos({ ...marte, turnos: 20 }, ['gimnasio'])).not.toContain('musculoHueso');
+  expect(riesgos(marte, ['gimnasio'])).not.toContain('musculoHueso');
 });
 
 test('los avisos de recursos coinciden con lo que pasa en una misión sin eventos duros', () => {

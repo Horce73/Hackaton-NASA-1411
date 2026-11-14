@@ -13,7 +13,7 @@ import {
   RESERVA_OXIGENO,
   TURNOS_MAX,
   TURNOS_MIN,
-  UMBRAL_VERDE,
+  UMBRAL_AMBAR,
 } from '../data/parametros';
 import type { AvisoDiseno, Configuracion, Item, Recursos, ResultadoDiseno } from './tipos';
 
@@ -101,7 +101,7 @@ export function avisosDiseno(config: Configuracion, itemIds: string[]): AvisoDis
       ok: reservas.alimento + alimentoProducido * turnos >= CONSUMO_ALIMENTO * tripulantes * turnos,
     },
     { id: 'radiacion', ok: efectos.some((e) => (e.blindaje ?? 0) > 0) },
-    { id: 'musculoHueso', ok: 100 - (PERDIDA_MUSCULO[config.destino] - bonusMusculo) * turnos >= UMBRAL_VERDE },
-    { id: 'suenoEstres', ok: 100 - (DESGASTE_SUENO - bonusSueno) * turnos >= UMBRAL_VERDE },
+    { id: 'musculoHueso', ok: 100 - (PERDIDA_MUSCULO[config.destino] - bonusMusculo) * turnos >= UMBRAL_AMBAR },
+    { id: 'suenoEstres', ok: 100 - (DESGASTE_SUENO - bonusSueno) * turnos >= UMBRAL_AMBAR },
   ];
 }

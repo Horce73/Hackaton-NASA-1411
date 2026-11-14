@@ -76,7 +76,7 @@ RF-06 (gráfica de tendencia), RF-10 (imágenes de la API de la NASA), RF-11 (so
 | RF-04 | **Dado** un turno, **cuando** aparece un evento, **entonces** hay 2 o 3 opciones y la elegida cambia el resultado. |
 | RF-05 | **Dado** el panel de salud, **cuando** un indicador baja de 40, **entonces** su color pasa a rojo **y** aparece un icono y un texto, no solo color. |
 | RF-07 | **Dado** el catálogo, **cuando** añado un equipo histórico y juego, **entonces** su efecto de juego se aplica en la simulación. |
-| RF-08 | **Dado** un equipo histórico en el diseño, **cuando** se lanza la misión (o se resuelve un evento educativo), **entonces** su historia se desbloquea y se muestra una tarjeta con año, lugar, 2–3 frases y fuente. |
+| RF-08 | **Dado** un equipo histórico en el diseño, **cuando** se lanza la misión (o se resuelve un evento educativo), **entonces** su historia se desbloquea y se muestra una tarjeta con imagen, año, lugar, 2–3 frases y fuente. |
 | RF-09 | **Dado** el fin de la misión (por turnos o aborto), **entonces** se muestra si la misión terminó con éxito o abortada, la puntuación y las historias desbloqueadas. |
 
 ## 7. Métricas de éxito

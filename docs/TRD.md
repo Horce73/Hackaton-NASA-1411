@@ -21,7 +21,7 @@ juego, y se anotan como tales en `src/data/parametros.ts`.
 | Estilos | CSS Modules + variables CSS | Tailwind | Menos configuración y tokens centralizados. |
 | Gráficas | SVG propio (sparklines) | Recharts, D3 | Evitar dependencia y peso para 2 gráficas simples. |
 | Pruebas | Vitest | Jest | Viene con Vite, arranque inmediato. |
-| Despliegue | Netlify o GitHub Pages | Servidor propio | Sitio estático, sin variables secretas. |
+| Despliegue | GitHub Pages | Netlify, servidor propio | Sitio estático, sin variables secretas. |
 | Aleatoriedad | PRNG con semilla (mulberry32, 10 líneas) | `Math.random` | Partidas reproducibles y demo estable. |
 
 Dependencias de ejecución: `react`, `react-dom`. Todo lo demás es de desarrollo: `vite`, `typescript`,
@@ -319,7 +319,8 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 ## 11. Construcción y despliegue
 
 - `npm run dev`, `npm run test`, `npm run build`. Salida estática en `dist/`.
-- Despliegue en Netlify (arrastrar `dist/`) o GitHub Pages (ajustar `base` en `vite.config.ts`).
+- Despliegue en GitHub Pages con `.github/workflows/deploy.yml` (lanzamiento manual). `base: './'` en
+  `vite.config.ts` evita depender del nombre del repo.
 - Sin variables de entorno ni secretos. Sin cookies ni analítica. Solo `localStorage` para RF-12.
 - Despliegue de prueba en la fase 0 y despliegue final con tiempo de reserva (ver fases del README).
 
@@ -340,7 +341,7 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Tema | Opción por defecto | Se decide |
 |---|---|---|
 | Idioma del código | Español en identificadores | Decidido en la fase 0 |
-| Netlify o GitHub Pages | Netlify | Con el despliegue de prueba (pendiente, no se hizo en la fase 0) |
+| Netlify o GitHub Pages | GitHub Pages | Decidido; el despliegue de prueba está preparado y falta ejecutarlo |
 | Preajustes de partida y dificultad | Solo rellenan RF-01 (supuesto del README) | Fase 2 |
 | Eventos de varios turnos | No: cada evento afecta a su turno | Fase 3 |
 | Opción con coste y almacén vacío | Se permite y el almacén queda en 0 (sale gratis) | Fase 3 |

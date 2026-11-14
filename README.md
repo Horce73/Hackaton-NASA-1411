@@ -192,4 +192,7 @@ se entrega eso con las fases 4 y 5 reducidas.
 
 | Requisito | Estado |
 |---|---|
-| RF-01 a RF-12, RNF-01 a RNF-05 | Sin empezar |
+| RF-01 a RF-05, RF-07 a RF-09 | Motor hecho y probado (`src/engine/`, `src/data/`); falta la interfaz |
+| RNF-04 | Hecho: el motor no importa React (hay prueba) |
+| RF-06, RF-10 a RF-12, RNF-01 a RNF-03, RNF-05 | Sin empezar |
+| Despliegue de prueba (fase 0) | Preparado para GitHub Pages (`.github/workflows/deploy.yml`, manual); falta ejecutarlo |

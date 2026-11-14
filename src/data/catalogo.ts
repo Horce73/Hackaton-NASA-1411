@@ -128,3 +128,8 @@ export const CATALOGO: Item[] = [
     historiaId: 'perseverance-ingenuity',
   },
 ];
+
+// Índice por id para la escena 3D y el motor, que resuelven ítems por identificador.
+export const CATALOGO_POR_ID: Record<string, Item> = Object.fromEntries(
+  CATALOGO.map((item) => [item.id, item]),
+);

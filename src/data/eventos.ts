@@ -135,3 +135,10 @@ export const EVENTOS: Evento[] = [
     historiaId: 'surveyor-3',
   },
 ];
+
+// La capa 3D no conoce ids de contenido: si el evento del día está en esta lista,
+// la escena ofrece un punto de reparación. Si se agrega un evento de avería, va acá.
+export const EVENTOS_REPARABLES = ['fallo-equipo', 'fuga-agua', 'tormenta-polvo', 'tormenta-solar'];
+
+// Evento que desbloquea la historia de la Surveyor 3; la escena lo usa para su nodo.
+export const EVENTO_SURVEYOR = 'surveyor-3';

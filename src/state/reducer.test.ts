@@ -1,71 +1,155 @@
 import { expect, test } from 'vitest';
 import { EVENTOS } from '../data/eventos';
+import { PREAJUSTES, TURNOS_MAX, TURNOS_MIN } from '../data/parametros';
 import type { Configuracion } from '../engine/tipos';
-import { ESTADO_INICIAL, reducer, type Accion, type EstadoApp } from './reducer';
+import { crearEstadoInicial, ESTADO_INICIAL, reducer, type Accion, type EstadoApp } from './reducer';
 
-const config: Configuracion = { destino: 'marte', tripulantes: 3, turnos: 14, semilla: 5 };
+const marte: Configuracion = { destino: 'marte', tripulantes: 3, turnos: 14, semilla: 5 };
 
-function aplicar(...acciones: Accion[]): EstadoApp {
-  return acciones.reduce(reducer, ESTADO_INICIAL);
-}
+type EstadoDiseno = Extract<EstadoApp, { fase: 'diseno' }>;
+type EstadoJuego = Extract<EstadoApp, { fase: 'juego' }>;
+
 const anadir = (itemId: string): Accion => ({ tipo: 'AÑADIR_ITEM', itemId });
+const quitar = (itemId: string): Accion => ({ tipo: 'QUITAR_ITEM', itemId });
 
-test('INICIAR pasa al diseño con la misión vacía', () => {
-  expect(aplicar({ tipo: 'INICIAR', config })).toEqual({ fase: 'diseno', config, itemIds: [] });
-});
+function enDiseno(config: Configuracion): EstadoDiseno {
+  const inicio = reducer(crearEstadoInicial(config.semilla), { tipo: 'INICIAR', config });
+  const limpio = reducer(inicio, { tipo: 'LIMPIAR_DISENO' });
+  if (limpio.fase !== 'diseno') throw new Error('esperaba la fase de diseño');
+  return limpio;
+}
 
-test('INICIAR ignora una configuración fuera de rango (RF-01)', () => {
-  expect(aplicar({ tipo: 'INICIAR', config: { ...config, turnos: 30 } })).toBe(ESTADO_INICIAL);
-});
+function disenar(itemIds: string[], config: Configuracion = marte): EstadoDiseno {
+  return itemIds.reduce<EstadoDiseno>((estado, itemId) => {
+    const siguiente = reducer(estado, anadir(itemId));
+    if (siguiente.fase !== 'diseno') throw new Error('esperaba la fase de diseño');
+    return siguiente;
+  }, enDiseno(config));
+}
 
-test('añadir y quitar elementos', () => {
-  const estado = aplicar({ tipo: 'INICIAR', config }, anadir('panel-solar'), anadir('panel-solar'), anadir('curiosity'), {
-    tipo: 'QUITAR_ITEM',
-    itemId: 'panel-solar',
+function lanzar(itemIds: string[], config: Configuracion = marte): EstadoJuego {
+  const estado = reducer(disenar(itemIds, config), { tipo: 'CONFIRMAR_DISENO' });
+  if (estado.fase !== 'juego') throw new Error('no se lanzó la misión');
+  return estado;
+}
+
+function jugarHastaElFinal(estado: EstadoApp): EstadoApp {
+  let actual = estado;
+  // Tope defensivo: una partida nunca debería superar los turnos más las tarjetas.
+  for (let pasos = 0; pasos < 100 && actual.fase === 'juego'; pasos++) {
+    if (actual.tarjetas.length > 0) {
+      actual = reducer(actual, { tipo: 'CERRAR_TARJETA' });
+      continue;
+    }
+    const opcion = actual.partida.eventoActual!.opciones.find(
+      (o) => reducer(actual, { tipo: 'ELEGIR_OPCION', opcionId: o.id }) !== actual,
+    )!;
+    actual = reducer(actual, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id });
+  }
+  return actual;
+}
+
+test('el estado inicial arranca en el preajuste base con su diseño sugerido', () => {
+  const preajuste = PREAJUSTES[0];
+  expect(crearEstadoInicial(5)).toMatchObject({
+    fase: 'inicio',
+    config: {
+      destino: preajuste.destino,
+      tripulantes: preajuste.tripulantes,
+      turnos: preajuste.turnos,
+      semilla: 5,
+    },
+    itemIds: preajuste.itemsSugeridos,
   });
-  expect(estado).toMatchObject({ itemIds: ['panel-solar', 'curiosity'] });
+});
+
+test('INICIAR pasa al diseño conservando la configuración', () => {
+  const estado = reducer(crearEstadoInicial(5), { tipo: 'INICIAR', config: marte });
+  expect(estado).toMatchObject({ fase: 'diseno', config: marte, errorDiseno: null });
+});
+
+test('cambiar de destino descarta el equipo histórico que no sirve', () => {
+  const enMarte = reducer(crearEstadoInicial(5), { tipo: 'CAMBIAR_DESTINO', destino: 'marte' });
+  if (enMarte.fase !== 'inicio') throw new Error('esperaba la fase de inicio');
+  expect(enMarte.config.destino).toBe('marte');
+  expect(enMarte.itemIds).not.toContain('retrorreflector');
+  expect(reducer(enMarte, { tipo: 'CAMBIAR_DESTINO', destino: 'marte' })).toBe(enMarte);
+});
+
+test('aplicar un preajuste carga destino, tripulación, duración y diseño', () => {
+  const preajuste = PREAJUSTES.find((p) => p.id === 'marte')!;
+  const estado = reducer(crearEstadoInicial(5), { tipo: 'APLICAR_PREAJUSTE', preajusteId: 'marte' });
+  expect(estado).toMatchObject({
+    config: {
+      destino: preajuste.destino,
+      tripulantes: preajuste.tripulantes,
+      turnos: preajuste.turnos,
+    },
+    itemIds: preajuste.itemsSugeridos,
+  });
+});
+
+test('cambiar la duración la acota al rango permitido (RF-01)', () => {
+  expect(reducer(crearEstadoInicial(5), { tipo: 'CAMBIAR_TURNOS', turnos: 99 })).toMatchObject({
+    config: { turnos: TURNOS_MAX },
+  });
+  expect(reducer(crearEstadoInicial(5), { tipo: 'CAMBIAR_TURNOS', turnos: 1 })).toMatchObject({
+    config: { turnos: TURNOS_MIN },
+  });
+});
+
+test('añadir y quitar elementos en el diseño', () => {
+  const estado = disenar(['panel-solar', 'panel-solar', 'curiosity']);
+  expect(estado.itemIds).toEqual(['panel-solar', 'panel-solar', 'curiosity']);
+
+  const quitado = reducer(estado, quitar('panel-solar'));
+  if (quitado.fase !== 'diseno') throw new Error('esperaba la fase de diseño');
+  expect(quitado.itemIds).toEqual(['panel-solar', 'curiosity']);
 });
 
 test('no deja añadir lo que supera el presupuesto ni lo que no es del destino (RF-02)', () => {
-  const lleno = aplicar({ tipo: 'INICIAR', config }, ...Array(4).fill(anadir('reactor')));
-  expect(reducer(lleno, anadir('invernadero'))).toBe(lleno);
-  expect(reducer(lleno, anadir('lrv'))).toBe(lleno);
-  expect(reducer(lleno, anadir('reciclador'))).toMatchObject({ itemIds: { length: 5 } });
+  const base = disenar(['reactor', 'reactor', 'reactor', 'reactor']); // 88 puntos
+
+  const conInvernadero = reducer(base, anadir('invernadero')); // 88 + 15 = 103
+  expect(conInvernadero).toMatchObject({
+    fase: 'diseno',
+    itemIds: base.itemIds,
+    errorDiseno: expect.any(String),
+  });
+
+  const conLrv = reducer(base, anadir('lrv')); // equipo lunar en Marte
+  expect(conLrv).toMatchObject({ fase: 'diseno', itemIds: base.itemIds });
+
+  const conReciclador = reducer(base, anadir('reciclador')); // 88 + 12 = 100
+  expect(conReciclador).toMatchObject({ fase: 'diseno', itemIds: { length: 5 }, errorDiseno: null });
 });
 
 test('CONFIRMAR_DISENO lanza la misión con el diseño elegido', () => {
-  const estado = aplicar({ tipo: 'INICIAR', config }, anadir('reciclador'), anadir('curiosity'), {
-    tipo: 'CONFIRMAR_DISENO',
-  });
+  const estado = reducer(disenar(['reciclador', 'curiosity']), { tipo: 'CONFIRMAR_DISENO' });
   expect(estado).toMatchObject({
     fase: 'juego',
-    partida: { turno: 1, config, diseno: { itemIds: ['reciclador', 'curiosity'] }, historiasDesbloqueadas: ['curiosity'] },
+    partida: {
+      turno: 1,
+      config: marte,
+      diseno: { itemIds: ['reciclador', 'curiosity'] },
+      historiasDesbloqueadas: ['curiosity'],
+    },
   });
 });
 
 test('las acciones de diseño no hacen nada fuera del diseño y REINICIAR vuelve al inicio', () => {
   expect(reducer(ESTADO_INICIAL, anadir('reactor'))).toBe(ESTADO_INICIAL);
   expect(reducer(ESTADO_INICIAL, { tipo: 'CONFIRMAR_DISENO' })).toBe(ESTADO_INICIAL);
-  expect(aplicar({ tipo: 'INICIAR', config }, { tipo: 'REINICIAR' })).toBe(ESTADO_INICIAL);
+  expect(reducer(enDiseno(marte), { tipo: 'REINICIAR' })).toEqual(crearEstadoInicial(5));
 });
 
-function jugarHastaElFinal(estado: EstadoApp): EstadoApp {
-  while (estado.fase === 'juego') {
-    if (estado.tarjetas.length > 0) {
-      estado = reducer(estado, { tipo: 'CERRAR_TARJETA' });
-      continue;
-    }
-    const { partida } = estado;
-    const opcion = partida.eventoActual!.opciones.find((o) => reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId: o.id }) !== estado)!;
-    estado = reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id });
-  }
-  return estado;
-}
-
 test('ELEGIR_OPCION avanza el turno y al terminar pasa a la bitácora (RF-04, RF-09)', () => {
-  const lanzada = aplicar({ tipo: 'INICIAR', config }, anadir('reciclador'), anadir('panel-solar'), { tipo: 'CONFIRMAR_DISENO' });
-  const opcionId = lanzada.fase === 'juego' ? lanzada.partida.eventoActual!.opciones[0].id : '';
-  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId })).toMatchObject({ fase: 'juego', partida: { turno: 2 } });
+  const lanzada = lanzar(['reciclador', 'panel-solar']);
+  const opcionId = lanzada.partida.eventoActual!.opciones[0].id;
+  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId })).toMatchObject({
+    fase: 'juego',
+    partida: { turno: 2 },
+  });
   expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId: 'no-existe' })).toBe(lanzada);
 
   const final = jugarHastaElFinal(lanzada);
@@ -74,28 +158,97 @@ test('ELEGIR_OPCION avanza el turno y al terminar pasa a la bitácora (RF-04, RF
 });
 
 test('REPETIR vuelve a lanzar la misma misión con la misma semilla', () => {
-  const lanzada = aplicar({ tipo: 'INICIAR', config }, anadir('reciclador'), { tipo: 'CONFIRMAR_DISENO' });
+  const lanzada = lanzar(['reciclador']);
   const repetida = reducer(jugarHastaElFinal(lanzada), { tipo: 'REPETIR' });
   expect(repetida).toEqual(lanzada);
   expect(reducer(lanzada, { tipo: 'REPETIR' })).toBe(lanzada);
 });
 
 test('al lanzar se muestran las tarjetas del equipo histórico, una a una (RF-08)', () => {
-  const lanzada = aplicar({ tipo: 'INICIAR', config }, anadir('curiosity'), anadir('sojourner'), { tipo: 'CONFIRMAR_DISENO' });
+  const lanzada = lanzar(['curiosity', 'sojourner']);
   expect(lanzada).toMatchObject({ fase: 'juego', tarjetas: ['curiosity', 'sojourner'] });
-  const opcionId = lanzada.fase === 'juego' ? lanzada.partida.eventoActual!.opciones[0].id : '';
+
+  const opcionId = lanzada.partida.eventoActual!.opciones[0].id;
   // Con una tarjeta abierta no se puede jugar el turno.
   expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId })).toBe(lanzada);
-  const sinTarjetas = aplicar({ tipo: 'INICIAR', config }, anadir('curiosity'), anadir('sojourner'), { tipo: 'CONFIRMAR_DISENO' }, { tipo: 'CERRAR_TARJETA' }, { tipo: 'CERRAR_TARJETA' });
-  expect(sinTarjetas).toMatchObject({ tarjetas: [] });
+
+  const sinTarjetas = reducer(reducer(lanzada, { tipo: 'CERRAR_TARJETA' }), { tipo: 'CERRAR_TARJETA' });
+  expect(sinTarjetas).toMatchObject({ fase: 'juego', tarjetas: [] });
   expect(reducer(sinTarjetas, { tipo: 'CERRAR_TARJETA' })).toBe(sinTarjetas);
 });
 
+test('al cerrar la última tarjeta de una misión terminada se pasa a la bitácora', () => {
+  const lanzada = lanzar(['curiosity']);
+  const terminada: EstadoJuego = {
+    ...lanzada,
+    partida: { ...lanzada.partida, resultado: 'exito' },
+  };
+  expect(reducer(terminada, { tipo: 'CERRAR_TARJETA' })).toMatchObject({ fase: 'bitacora' });
+});
+
 test('un evento educativo abre su tarjeta al resolverse', () => {
-  const luna: Configuracion = { ...config, destino: 'luna' };
-  const lanzada = aplicar({ tipo: 'INICIAR', config: luna }, anadir('reciclador'), { tipo: 'CONFIRMAR_DISENO' });
-  if (lanzada.fase !== 'juego') throw new Error('no se lanzó');
+  const lanzada = lanzar(['reciclador'], { ...marte, destino: 'luna' });
   const surveyor = EVENTOS.find((e) => e.id === 'surveyor-3')!;
-  const conEvento: EstadoApp = { ...lanzada, partida: { ...lanzada.partida, eventoActual: surveyor } };
-  expect(reducer(conEvento, { tipo: 'ELEGIR_OPCION', opcionId: 'seguir-plan' })).toMatchObject({ tarjetas: ['surveyor-3'] });
+  const conEvento: EstadoJuego = {
+    ...lanzada,
+    partida: { ...lanzada.partida, eventoActual: surveyor },
+  };
+  expect(reducer(conEvento, { tipo: 'ELEGIR_OPCION', opcionId: 'seguir-plan' })).toMatchObject({
+    tarjetas: ['surveyor-3'],
+  });
+});
+
+test('completar una tarea de exploración 3D da la recompensa, avisa y no se repite', () => {
+  const lanzada = lanzar(['panel-solar', 'reciclador']);
+  const antes = lanzada.partida;
+
+  const conHielo = reducer(lanzada, { tipo: 'COMPLETAR_TAREA_3D', tarea: 'hielo', nodoId: 'hielo-1' });
+  expect(conHielo).toMatchObject({ fase: 'juego', nodos3dCompletados: ['hielo-1'] });
+  if (conHielo.fase !== 'juego') throw new Error('esperaba la fase de juego');
+
+  expect(conHielo.partida.recursos.agua).toBe(antes.recursos.agua + 6);
+  expect(conHielo.partida.recursos.oxigeno).toBe(antes.recursos.oxigeno + 4);
+  expect(conHielo.partida.ciencia).toBe(antes.ciencia + 4);
+  expect(conHielo.avisoCampo).toContain('+6');
+
+  // El mismo nodo no se cobra dos veces.
+  expect(
+    reducer(conHielo, { tipo: 'COMPLETAR_TAREA_3D', tarea: 'hielo', nodoId: 'hielo-1' }),
+  ).toBe(conHielo);
+});
+
+test('inspeccionar un equipo NASA abre su historia y suma ciencia', () => {
+  const lanzada = lanzar(['panel-solar']);
+  const antes = lanzada.partida;
+  const conHistoria = reducer(lanzada, {
+    tipo: 'COMPLETAR_TAREA_3D',
+    tarea: 'historia',
+    nodoId: 'nodo-equipo-curiosity',
+    historiaId: 'curiosity',
+  });
+  if (conHistoria.fase !== 'juego') throw new Error('esperaba la fase de juego');
+
+  expect(conHistoria.tarjetas).toContain('curiosity');
+  expect(conHistoria.partida.historiasDesbloqueadas).toContain('curiosity');
+  expect(conHistoria.partida.ciencia).toBe(antes.ciencia + 3);
+});
+
+test('el aviso de campo se limpia a pedido', () => {
+  const conAviso = reducer(lanzar(['panel-solar']), {
+    tipo: 'COMPLETAR_TAREA_3D',
+    tarea: 'averia',
+    nodoId: 'averia-1',
+  });
+  const limpio = reducer(conAviso, { tipo: 'LIMPIAR_AVISO_CAMPO' });
+  if (limpio.fase !== 'juego') throw new Error('esperaba la fase de juego');
+  expect(limpio.avisoCampo).toBeNull();
+});
+
+test('ABORTAR_MISION cierra la partida como abortada', () => {
+  const abortada = reducer(lanzar(['panel-solar']), { tipo: 'ABORTAR_MISION' });
+  expect(abortada).toMatchObject({
+    fase: 'bitacora',
+    partida: { resultado: 'abortada', motivoFin: expect.stringContaining('abortar') },
+  });
+  expect(reducer(ESTADO_INICIAL, { tipo: 'ABORTAR_MISION' })).toBe(ESTADO_INICIAL);
 });

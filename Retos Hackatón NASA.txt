@@ -1,0 +1,22 @@
+Retos Hackatón NASA:
+
+1. Historias del espacio 
+Cuenta a jóvenes exploradores la historia de los equipos 
+que la NASA dejó en la Luna y Marte 
+
+3. Astronautas junior
+Crea un juego para gestionar una base lunar o marciana:
+energía, alimentos, radiación y soporte vital. 
+
+5. Salud en órbita 
+Desarrolla software para que los astronautas monitoreen
+su salud durante misiones largas.
+
+8. Fuego en microgravedad 
+Crea un panel con IA que permita explorar investigaciones sobre 
+combustión y seguridad contra incendios 
+
+13. Diseña tu misión espacial 
+Desarrolla un juego para diseñar y simular una misión 
+tomando decisiones de ingeniería y administrando recursos limitados 
+

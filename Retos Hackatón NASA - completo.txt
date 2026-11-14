@@ -1,0 +1,34 @@
+Retos Hackatón NASA:
+
+1. Historias del espacio
+Cuenta a jóvenes exploradores la historia de los equipos
+que la NASA dejó en la Luna y Marte
+2. Detectives de la Tierra
+Analiza datos de la NASA para detectar cambios ambientales
+a lo largo del tiempo y evaluar su importancia
+3. Astronautas junior
+Crea un juego para gestionar una base lunar o marciana:
+energía, alimentos, radiación y soporte vital.
+4. Aterrizar en la luna
+Diseña una herramienta para
+comparar lugares y fechas de aterrizaje según la luz solar y la comunicación con la Tierra
+5. Salud en órbita
+Desarrolla software para que los astronautas monitoreen su salud durante misiones largas.
+6. La Tierra vista por radar
+Usa datos de NISAR para visualizar cambios en glaciares , bosques y otras zonas de la superficie terrestre
+7. Agricultura con datos NASA
+Combina observaciones satelitales, suelos y cultivos para ayudar a planificar rotaciones agrícolas más resistentes.
+8. Fuego en microgravedad
+Crea un panel con IA que permita explorar investigaciones sobre combustión y seguridad contra incendios
+9. Incendios: conecta los datos
+Integra registros de MODIS y VIIRS en una aplicación web para analizar la actividad de incendios a lo largo del tiempo
+10. La Luna y Marte en la Tierra
+Identifica lugares terrestres con condiciones comparables a las de la Luna y Marte para apoyar pruebas de futuras misiones.
+11. Un mapa par aexplorar Marte
+Combina datos de distintas misiones en un mapa por capas para planificar rutas y explorar el planeta rojo
+12. Planeta X y Spherex
+Crea una herramienta web para comparar imágenes del cielo y detectar objetos que cambian con el tiempo
+13. Diseña tu misión espacial
+Desarrolla un juego para diseñar y simular una misión tomando decisiones de ingeniería y administrando recursos limitados
+14. Escucha nuestro planeta
+Transforma visualizaciones del Earth Information Center (EIC) en una experiencia de imágenes y sonidos generados en tiempo real

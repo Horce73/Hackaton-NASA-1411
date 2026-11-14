@@ -38,7 +38,13 @@ test('toda referencia historiaId de un evento existe', () => {
 test('toda historia tiene nombre, lugar, año y una fuente de nasa.gov', () => {
   for (const historia of HISTORIAS) {
     expect(new URL(historia.fuente).hostname, historia.id).toMatch(/(^|\.)nasa\.gov$/);
-    expect(historia.nombre && historia.lugar && historia.anio, historia.id).toBeTruthy();
+    expect(historia.nombre && historia.lugar && historia.anio && historia.datoCurioso, historia.id).toBeTruthy();
+    expect(new URL(historia.imagen.fuente).hostname, historia.id).toBe('images.nasa.gov');
+    expect(historia.imagen.alt.length, historia.id).toBeGreaterThan(10);
+    // 2 o 3 frases (RF-08)
+    const frases = historia.texto.split(/(?<=\.)\s+/).length;
+    expect(frases, historia.id).toBeGreaterThanOrEqual(2);
+    expect(frases, historia.id).toBeLessThanOrEqual(3);
   }
 });
 
@@ -72,10 +78,15 @@ test('ningún texto visible usa raya larga', () => {
   const textos = [
     ...CATALOGO.map((i) => i.nombre),
     ...EVENTOS.flatMap((e) => [e.titulo, e.texto, ...e.opciones.map((o) => o.texto)]),
-    ...HISTORIAS.flatMap((h) => [h.nombre, h.texto]),
+    ...HISTORIAS.flatMap((h) => [h.nombre, h.texto, h.datoCurioso, h.imagen.alt]),
     ...Object.values(AVISOS).flatMap((a) => [a.nombre, a.ok, a.riesgo, a.dato]),
   ];
   expect(textos.filter((t) => t.includes('—'))).toEqual([]);
+});
+
+test('cada imagen de historia existe en public/img', () => {
+  const imagenes = Object.keys(import.meta.glob('../../public/img/*.webp')).map((r) => r.replace('../../public/', ''));
+  for (const historia of HISTORIAS) expect(imagenes, historia.id).toContain(historia.imagen.src);
 });
 
 test('engine/ no importa React, ui/ ni state/ (RNF-04)', () => {

@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
+    "test:entrega": "ENTREGA=1 vitest run src/data/entrega.test.ts",
     "lint": "eslint ."
   },
   "dependencies": {

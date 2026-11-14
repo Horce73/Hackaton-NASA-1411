@@ -1,9 +1,11 @@
+import { HISTORIAS } from '../../data/historias';
 import { reservasIniciales } from '../../engine/diseno';
 import { recursoQueFalta } from '../../engine/turno';
 import type { EfectosTurno, Estado, Recursos } from '../../engine/tipos';
 import { useEstado } from '../comun/EstadoContext';
 import { numero, porcentajeDosis, RECURSOS } from '../comun/formato';
 import { Icono } from '../comun/Icono';
+import { TarjetaHistoria } from '../comun/TarjetaHistoria';
 import { Alertas } from '../salud/Alertas';
 import { Tendencias } from '../salud/Tendencias';
 import { Tripulacion } from '../salud/Tripulacion';
@@ -39,8 +41,9 @@ function consecuencia(efectos: EfectosTurno): string {
   return partes.length ? partes.join(', ') : 'Sin cambios extra';
 }
 
-export function Juego({ partida }: { partida: Estado }) {
+export function Juego({ partida, tarjetas }: { partida: Estado; tarjetas: string[] }) {
   const { dispatch } = useEstado();
+  const tarjeta = HISTORIAS.find((h) => h.id === tarjetas[0]);
   const evento = partida.eventoActual;
   // Cambio que dejó el último turno: se compara con el final del turno anterior (o con el inicio).
   const jugados = partida.historial.length;
@@ -132,6 +135,7 @@ export function Juego({ partida }: { partida: Estado }) {
           </details>
         </section>
       </div>
+      {tarjeta && <TarjetaHistoria key={tarjeta.id} historia={tarjeta} onCerrar={() => dispatch({ tipo: 'CERRAR_TARJETA' })} />}
     </main>
   );
 }

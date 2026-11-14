@@ -86,7 +86,15 @@ export interface Historia {
   lugar: string;
   anio: string; // texto: admite rangos
   texto: string;
-  fuente: string; // URL de la NASA
+  datoCurioso: string;
+  fuente: string; // URL de la NASA de la que salen texto y dato
+  imagen: {
+    src: string; // relativa a public/
+    alt: string;
+    ancho: number;
+    alto: number;
+    fuente: string; // página en images.nasa.gov
+  };
   verificada: boolean;
 }
 

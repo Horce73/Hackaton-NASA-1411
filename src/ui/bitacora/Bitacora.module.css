@@ -52,22 +52,10 @@
   gap: var(--e2);
 }
 .historias li {
-  padding-bottom: var(--e2);
-  border-bottom: 1px solid var(--borde);
-}
-.historias h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 1.25rem;
-}
-.historias h3 svg {
-  flex: none;
-  color: var(--aviso);
-}
-.pendiente {
-  color: var(--texto-suave);
-  font-size: 0.9375rem;
+  overflow: hidden;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
 }
 
 .acciones {

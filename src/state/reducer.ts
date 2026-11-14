@@ -6,7 +6,8 @@ import type { Configuracion, Estado } from '../engine/tipos';
 export type EstadoApp =
   | { fase: 'inicio' }
   | { fase: 'diseno'; config: Configuracion; itemIds: string[] }
-  | { fase: 'juego' | 'bitacora'; partida: Estado };
+  | { fase: 'juego'; partida: Estado; tarjetas: string[] } // historias por mostrar (RF-08)
+  | { fase: 'bitacora'; partida: Estado };
 
 export type Accion =
   | { tipo: 'INICIAR'; config: Configuracion }
@@ -14,6 +15,7 @@ export type Accion =
   | { tipo: 'QUITAR_ITEM'; itemId: string }
   | { tipo: 'CONFIRMAR_DISENO' }
   | { tipo: 'ELEGIR_OPCION'; opcionId: string }
+  | { tipo: 'CERRAR_TARJETA' }
   | { tipo: 'REPETIR' }
   | { tipo: 'REINICIAR' };
 
@@ -36,21 +38,28 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
       if (posicion < 0) return estado;
       return { ...estado, itemIds: estado.itemIds.filter((_, i) => i !== posicion) };
     }
-    case 'CONFIRMAR_DISENO':
-      return estado.fase === 'diseno'
-        ? { fase: 'juego', partida: iniciarMision(estado.config, estado.itemIds) }
-        : estado;
+    case 'CONFIRMAR_DISENO': {
+      if (estado.fase !== 'diseno') return estado;
+      const partida = iniciarMision(estado.config, estado.itemIds);
+      return { fase: 'juego', partida, tarjetas: partida.historiasDesbloqueadas };
+    }
     case 'ELEGIR_OPCION': {
-      if (estado.fase !== 'juego') return estado;
+      if (estado.fase !== 'juego' || estado.tarjetas.length > 0) return estado;
       const { partida } = estado;
       const existe = partida.eventoActual?.opciones.some((o) => o.id === accion.opcionId);
       if (!existe || recursoQueFalta(partida, accion.opcionId)) return estado;
       const siguiente = siguienteTurno(partida, accion.opcionId);
-      return { fase: siguiente.resultado ? 'bitacora' : 'juego', partida: siguiente };
+      if (siguiente.resultado) return { fase: 'bitacora', partida: siguiente };
+      const nuevas = siguiente.historiasDesbloqueadas.filter((h) => !partida.historiasDesbloqueadas.includes(h));
+      return { fase: 'juego', partida: siguiente, tarjetas: nuevas };
     }
+    case 'CERRAR_TARJETA':
+      return estado.fase === 'juego' && estado.tarjetas.length > 0
+        ? { ...estado, tarjetas: estado.tarjetas.slice(1) }
+        : estado;
     case 'REPETIR':
       return estado.fase === 'bitacora'
-        ? { fase: 'juego', partida: iniciarMision(estado.partida.config, estado.partida.diseno.itemIds) }
+        ? { fase: 'juego', partida: iniciarMision(estado.partida.config, estado.partida.diseno.itemIds), tarjetas: [] }
         : estado;
     case 'REINICIAR':
       return ESTADO_INICIAL;

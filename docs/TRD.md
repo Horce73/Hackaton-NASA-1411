@@ -174,7 +174,15 @@ interface Historia {
   lugar: string;
   anio: string;               // texto: admite rangos como "1969–72"
   texto: string;              // 2–3 frases para 8–14 años
-  fuente: string;             // URL de la NASA
+  datoCurioso: string;
+  fuente: string;             // URL de la NASA de la que salen texto y dato
+  imagen: {
+    src: string;              // public/img/*.webp
+    alt: string;
+    ancho: number;
+    alto: number;
+    fuente: string;           // página de la imagen en images.nasa.gov
+  };
   verificada: boolean;
 }
 
@@ -299,9 +307,12 @@ cuando haya tiempo; hasta entonces son plausibles y se marcan `// PROVISIONAL`.
 El reducer maneja las acciones: `INICIAR`, `AÑADIR_ITEM`, `QUITAR_ITEM`, `CONFIRMAR_DISENO`,
 `ELEGIR_OPCION`, `CERRAR_TARJETA`, `REPETIR` (misma misión y misma semilla), `REINICIAR`. La interfaz no calcula reglas del juego: solo lee `Estado`.
 
-Antes de lanzar todavía no existe un `Estado` de partida, así que el reducer guarda un `EstadoApp` con tres
-formas: `{ fase: 'inicio' }`, `{ fase: 'diseno', config, itemIds }` y `{ fase: 'juego' | 'bitacora', partida }`,
-donde `partida` es el `Estado` del motor. `AÑADIR_ITEM` no hace nada si `validarDiseno` rechaza el resultado.
+Antes de lanzar todavía no existe un `Estado` de partida, así que el reducer guarda un `EstadoApp` con cuatro
+formas: `{ fase: 'inicio' }`, `{ fase: 'diseno', config, itemIds }`, `{ fase: 'juego', partida, tarjetas }` y
+`{ fase: 'bitacora', partida }`, donde `partida` es el `Estado` del motor y `tarjetas` la cola de historias
+recién desbloqueadas que aún no se han mostrado (RF-08). Mientras quede una tarjeta abierta, `ELEGIR_OPCION`
+no hace nada; `CERRAR_TARJETA` la quita de la cola. `REPETIR` no vuelve a mostrar tarjetas ya vistas. Si la
+misión termina con una tarjeta pendiente, la bitácora muestra la historia completa. `AÑADIR_ITEM` no hace nada si `validarDiseno` rechaza el resultado.
 
 La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo usa una semilla fija.
 
@@ -310,10 +321,12 @@ La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo us
 - Formato: archivos TypeScript tipados (`data/*.ts`), que dan validación en compilación.
 - Cada `Historia` incluye `fuente` (URL NASA) y `verificada: boolean`. Todas nacen con `verificada: false` y
   solo una persona del equipo las pasa a `true`.
-- Hasta la fase 5, `texto` es el marcador `[PENDIENTE fase 5]` y la `fuente` es una URL de nasa.gov que se
-  comprobó que responde. La imagen y su texto alternativo se añaden a `Historia` en la fase 5.
-- Prueba automática de entrega: ninguna historia con `verificada: false` se incluye en la compilación de
-  entrega. Se activa en la fase 5; hasta entonces no forma parte de `npm run test`, porque fallaría siempre.
+- Desde la fase 5, `texto` y `datoCurioso` se redactan solo con lo que dice la página de `fuente`. La imagen
+  sale de la biblioteca de imágenes de la NASA (images.nasa.gov), en WebP de 800 px como máximo.
+- Mientras una historia tenga `verificada: false`, su tarjeta lo dice en pantalla ("Texto pendiente de
+  revisión"), para no presentar como confirmado lo que nadie ha revisado.
+- Prueba de entrega: `npm run test:entrega` falla si queda alguna historia o aviso con `verificada: false`.
+  Va aparte de `npm run test` porque hasta la revisión del equipo fallaría siempre; se pasa antes de la demo.
 - Contenido mínimo actual: 7 módulos (panel solar, reactor, invernadero, reciclador, blindaje, zona de
   descanso, gimnasio), 7 equipos históricos (tabla del README, sin Surveyor 3) y 6 eventos (tormenta solar,
   tormenta de polvo, fallo de equipo, fuga de agua, día tranquilo y Surveyor 3 como evento educativo).

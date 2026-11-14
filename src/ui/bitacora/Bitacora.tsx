@@ -2,7 +2,7 @@ import { HISTORIAS } from '../../data/historias';
 import { puntuar } from '../../engine/puntuacion';
 import type { Estado } from '../../engine/tipos';
 import { useEstado } from '../comun/EstadoContext';
-import { Icono } from '../comun/Icono';
+import { ContenidoHistoria } from '../comun/TarjetaHistoria';
 import { Tendencias } from '../salud/Tendencias';
 import { Tripulacion } from '../salud/Tripulacion';
 import estilos from './Bitacora.module.css';
@@ -55,17 +55,7 @@ export function Bitacora({ partida }: { partida: Estado }) {
           <ul className={estilos.historias}>
             {historias.map((h) => (
               <li key={h.id}>
-                <h3>
-                  <Icono nombre="estrella" /> {h.nombre}
-                </h3>
-                <p>
-                  {h.lugar}, {h.anio}.{' '}
-                  <a href={h.fuente} target="_blank" rel="noreferrer">
-                    Fuente: NASA<span className="solo-lectores"> (se abre en otra pestaña)</span>
-                  </a>
-                </p>
-                {/* TODO fase 5: tarjeta de historia con texto revisado e imagen (RF-08). */}
-                <p className={estilos.pendiente}>La tarjeta con su historia está en preparación.</p>
+                <ContenidoHistoria historia={h} titulo={<h3>{h.nombre}</h3>} />
               </li>
             ))}
           </ul>

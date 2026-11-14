@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { EVENTOS } from '../data/eventos';
 import type { Configuracion } from '../engine/tipos';
 import { ESTADO_INICIAL, reducer, type Accion, type EstadoApp } from './reducer';
 
@@ -50,6 +51,10 @@ test('las acciones de diseño no hacen nada fuera del diseño y REINICIAR vuelve
 
 function jugarHastaElFinal(estado: EstadoApp): EstadoApp {
   while (estado.fase === 'juego') {
+    if (estado.tarjetas.length > 0) {
+      estado = reducer(estado, { tipo: 'CERRAR_TARJETA' });
+      continue;
+    }
     const { partida } = estado;
     const opcion = partida.eventoActual!.opciones.find((o) => reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId: o.id }) !== estado)!;
     estado = reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id });
@@ -73,4 +78,24 @@ test('REPETIR vuelve a lanzar la misma misión con la misma semilla', () => {
   const repetida = reducer(jugarHastaElFinal(lanzada), { tipo: 'REPETIR' });
   expect(repetida).toEqual(lanzada);
   expect(reducer(lanzada, { tipo: 'REPETIR' })).toBe(lanzada);
+});
+
+test('al lanzar se muestran las tarjetas del equipo histórico, una a una (RF-08)', () => {
+  const lanzada = aplicar({ tipo: 'INICIAR', config }, anadir('curiosity'), anadir('sojourner'), { tipo: 'CONFIRMAR_DISENO' });
+  expect(lanzada).toMatchObject({ fase: 'juego', tarjetas: ['curiosity', 'sojourner'] });
+  const opcionId = lanzada.fase === 'juego' ? lanzada.partida.eventoActual!.opciones[0].id : '';
+  // Con una tarjeta abierta no se puede jugar el turno.
+  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId })).toBe(lanzada);
+  const sinTarjetas = aplicar({ tipo: 'INICIAR', config }, anadir('curiosity'), anadir('sojourner'), { tipo: 'CONFIRMAR_DISENO' }, { tipo: 'CERRAR_TARJETA' }, { tipo: 'CERRAR_TARJETA' });
+  expect(sinTarjetas).toMatchObject({ tarjetas: [] });
+  expect(reducer(sinTarjetas, { tipo: 'CERRAR_TARJETA' })).toBe(sinTarjetas);
+});
+
+test('un evento educativo abre su tarjeta al resolverse', () => {
+  const luna: Configuracion = { ...config, destino: 'luna' };
+  const lanzada = aplicar({ tipo: 'INICIAR', config: luna }, anadir('reciclador'), { tipo: 'CONFIRMAR_DISENO' });
+  if (lanzada.fase !== 'juego') throw new Error('no se lanzó');
+  const surveyor = EVENTOS.find((e) => e.id === 'surveyor-3')!;
+  const conEvento: EstadoApp = { ...lanzada, partida: { ...lanzada.partida, eventoActual: surveyor } };
+  expect(reducer(conEvento, { tipo: 'ELEGIR_OPCION', opcionId: 'seguir-plan' })).toMatchObject({ tarjetas: ['surveyor-3'] });
 });

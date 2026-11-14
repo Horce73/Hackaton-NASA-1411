@@ -1,7 +1,0 @@
-.lista {
-  display: grid;
-  gap: var(--e2);
-}
-.vacio {
-  color: var(--texto-suave);
-}

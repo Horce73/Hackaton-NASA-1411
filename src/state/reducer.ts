@@ -2,13 +2,7 @@
 // La partida simulada vive en engine/; acá se guarda solo la intención de la interfaz.
 
 import { CATALOGO_POR_ID } from '../data/catalogo';
-import {
-  PREAJUSTES,
-  PRESUPUESTO,
-  SEMILLA_DEMO,
-  TURNOS_MAX,
-  TURNOS_MIN,
-} from '../data/parametros';
+import { PREAJUSTES, PRESUPUESTO, TURNOS_MAX, TURNOS_MIN } from '../data/parametros';
 import { describirRecompensa } from '../data/recompensas';
 import type { TareaExploracion } from '../data/recompensas';
 import { validarDiseno } from '../engine/diseno';
@@ -49,15 +43,18 @@ export type Accion =
   | { tipo: 'REPETIR' }
   | { tipo: 'REINICIAR' };
 
-// Semilla fija por defecto; ?seed= permite repetir una partida desde la URL.
-export function semillaInicial(): number {
-  if (typeof window === 'undefined') return SEMILLA_DEMO;
-  const valor = new URLSearchParams(window.location.search).get('seed');
-  const numero = valor ? Number(valor) : Number.NaN;
-  return Number.isFinite(numero) && numero > 0 ? Math.floor(numero) : SEMILLA_DEMO;
+// Semilla de una partida nueva: ?seed= fija la semilla para repetir una demo; si no, se sortea.
+// La semilla vive en el estado, así una partida se puede repetir con REPETIR.
+export function semillaNueva(): number {
+  if (typeof window !== 'undefined') {
+    const valor = new URLSearchParams(window.location.search).get('seed');
+    const numero = valor ? Number(valor) : Number.NaN;
+    if (Number.isFinite(numero) && numero > 0) return Math.floor(numero);
+  }
+  return Math.floor(Math.random() * 2 ** 31);
 }
 
-export function crearEstadoInicial(semilla = semillaInicial()): EstadoApp {
+export function crearEstadoInicial(semilla = semillaNueva()): EstadoApp {
   const preajuste = PREAJUSTES[0];
   return {
     fase: 'inicio',
@@ -277,9 +274,10 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
 
     case 'REINICIAR': {
       if (estado.fase === 'inicio') return estado;
-      const semilla =
-        estado.fase === 'diseno' ? estado.config.semilla : estado.partida.config.semilla;
-      return crearEstadoInicial(semilla);
+      // Desde la bitácora se empieza una misión nueva con otra semilla;
+      // desde el diseño se vuelve al inicio conservando lo elegido.
+      if (estado.fase === 'diseno') return crearEstadoInicial(estado.config.semilla);
+      return crearEstadoInicial();
     }
   }
 }

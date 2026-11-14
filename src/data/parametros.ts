@@ -66,9 +66,6 @@ export const PREAJUSTES: Preajuste[] = [
   },
 ];
 
-// Semilla fija para demos y para el enlace con ?seed=.
-export const SEMILLA_DEMO = 20260412;
-
 // El cuarto nombre es PROVISIONAL: el UX Brief solo da los tres primeros.
 export const NOMBRES_TRIPULACION = ['Lucía', 'Marco', 'Aiko', 'Dani'];
 

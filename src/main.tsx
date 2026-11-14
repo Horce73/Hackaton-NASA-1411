@@ -1,8 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles/tokens.css';
-import './styles/base.css';
 import './styles/tailwind.css';
+import './styles/base.css';
 import { App } from './ui/App';
 import { ProveedorEstado } from './ui/comun/EstadoContext';
 

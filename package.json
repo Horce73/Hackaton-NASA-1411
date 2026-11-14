@@ -12,11 +12,13 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.187.0",
     "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^10.15.0",
     "typescript": "~6.0.3",

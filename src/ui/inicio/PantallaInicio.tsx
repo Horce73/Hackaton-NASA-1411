@@ -1,7 +1,8 @@
-import { useEffect, type Dispatch } from 'react';
-import { ArrowRight, Calendar, Compass, Users } from 'lucide-react';
+import { useEffect, useState, type Dispatch } from 'react';
+import { ArrowRight, Calendar, Compass, RotateCcw, Users } from 'lucide-react';
 import { PREAJUSTES, TURNOS_MAX, TURNOS_MIN } from '../../data/parametros';
 import type { Configuracion, Destino } from '../../engine/tipos';
+import { cargarPartida } from '../../state/guardado';
 import type { Accion } from '../../state/reducer';
 import { EmblemaMision } from '../comun/EmblemaMision';
 
@@ -24,6 +25,8 @@ const DESTINOS_INFO: Record<Destino, { titulo: string; gravedad: string; context
 };
 
 export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
+  const [guardada] = useState(cargarPartida); // RF-12: se lee una vez al entrar al inicio
+
   useEffect(() => {
     const manejarTecla = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -192,6 +195,21 @@ export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
             <span>Empezar</span>
             <ArrowRight className="w-5 h-5" aria-hidden="true" />
           </button>
+
+          {guardada && (
+            <button
+              type="button"
+              onClick={() => dispatch({ tipo: 'CONTINUAR_PARTIDA', guardada })}
+              className="w-full inline-flex flex-wrap items-center justify-center gap-x-2 min-h-[48px] rounded-xl border border-[var(--color-border-strong)] bg-[#111830] hover:bg-[var(--color-surface-elevated)] text-[var(--color-text)] font-semibold transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" aria-hidden="true" />
+              <span>Continuar partida</span>
+              <span className="text-xs font-mono text-[var(--color-text-muted)]">
+                {DESTINOS_INFO[guardada.partida.config.destino].titulo} · Día {guardada.partida.turno} /{' '}
+                {guardada.partida.config.turnos}
+              </span>
+            </button>
+          )}
         </div>
 
         <div className="hidden lg:flex items-center gap-2 rounded-xl border border-[var(--color-border)] bg-[#0b1020]/85 px-3.5 py-2 text-xs text-[var(--color-text-muted)]">

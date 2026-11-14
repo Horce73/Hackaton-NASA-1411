@@ -77,6 +77,7 @@ src/
     *.test.ts         # integridad de los datos
   state/
     reducer.ts        # fases + acciones
+    guardado.ts       # partida en curso en localStorage (RF-12)
   physics/
     fisica3d.ts       # controlador del astronauta con gravedad lunar y marciana
   three/
@@ -348,8 +349,7 @@ La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo us
 - Los nombres de la tripulación (Lucía, Marco, Aiko y un cuarto provisional) están en `parametros.ts`.
 - Imágenes: `public/img/`, formato WebP, máximo ~150 kB cada una, con texto alternativo obligatorio en el dato.
 - Licencia: confirmar las condiciones de uso de los medios de la NASA antes de publicar (supuesto abierto).
-- RF-10 (opcional): consulta a la API de imágenes de la NASA con tiempo límite y respaldo local; sin clave, a
-  verificar. Si falla, no se muestra error al usuario.
+- RF-10 (opcional): no se hace (sección 13). Las fotos de las historias ya salen de images.nasa.gov y van en el repo.
 
 ## 9. Pruebas
 
@@ -389,6 +389,7 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | RF-05, RF-06 | `engine/salud.ts`, `ui/salud`, `ui/comun/Sparkline` |
 | RF-07, RF-08 | `data/catalogo.ts`, `data/historias.ts`, `ui/comun/TarjetaHistoria` |
 | RF-09 | `engine/puntuacion.ts`, `ui/bitacora` |
+| RF-12 | `state/guardado.ts`, `ui/comun/EstadoContext.tsx`, `ui/inicio` |
 | RNF-01, RNF-02 | Sin backend; recursos en `public/` |
 | RNF-04 | Carpeta `engine/` sin importar React |
 
@@ -403,4 +404,5 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Opción con coste y almacén vacío | La opción queda bloqueada con el motivo visible | Decidido en la fase 3 |
 | Efecto de Curiosity en la alerta de dosis | Alerta temprana de radiación (`alertaRadiacion`); no cambia la simulación | Decidido en la fase 4 |
 | Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3. Objetivo de la fase 6, en victorias con decisiones al azar sobre el diseño sugerido: Luna fácil 70–85 %, Luna difícil 20–35 %, Marte 35–55 %; decidiendo bien, los tres se ganan casi siempre. Las cifras de la NASA no se tocan | Decidido en la fase 6 |
-| RF-10 (API de imágenes) | No hacer | Tras fase 5 |
+| RF-10 (API de imágenes) | No se hace: las 8 historias ya tienen su foto de images.nasa.gov en el repo, y los resultados en vivo no pasarían la revisión de textos e imágenes para niños | Decidido tras la fase 6 |
+| RF-12 (guardado) | Se guarda solo la partida en curso; el inicio ofrece "Continuar partida" y nunca se reanuda sola. Al terminar la misión se borra | Decidido tras la fase 6 |

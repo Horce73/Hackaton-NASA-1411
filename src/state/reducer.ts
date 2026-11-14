@@ -28,6 +28,7 @@ export type Accion =
   | { tipo: 'CAMBIAR_TURNOS'; turnos: number }
   | { tipo: 'APLICAR_PREAJUSTE'; preajusteId: string }
   | { tipo: 'INICIAR'; config?: Configuracion }
+  | { tipo: 'CONTINUAR_PARTIDA'; guardada: Extract<EstadoApp, { fase: 'juego' }> } // RF-12
   | { tipo: 'VOLVER_INICIO' }
   | { tipo: 'AÑADIR_ITEM'; itemId: string }
   | { tipo: 'QUITAR_ITEM'; itemId: string }
@@ -131,6 +132,10 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
         errorDiseno: null,
       };
     }
+
+    case 'CONTINUAR_PARTIDA':
+      // La partida guardada la lee la interfaz (state/guardado.ts); el reducer sigue siendo puro.
+      return estado.fase === 'inicio' ? accion.guardada : estado;
 
     case 'VOLVER_INICIO': {
       if (estado.fase === 'diseno') {

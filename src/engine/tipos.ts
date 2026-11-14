@@ -21,6 +21,7 @@ export interface Efectos {
   saludBonus?: Partial<Record<Indicador, number>>; // por turno; `radiacion` se ignora
   ciencia?: number; // puntos por turno
   resistenciaPolvo?: number; // reduce penalización de tormenta de polvo
+  alertaRadiacion?: boolean; // la radiación avisa desde ámbar (Curiosity)
 }
 
 export interface Item {
@@ -119,6 +120,13 @@ export interface Preajuste {
   destino: Destino;
   tripulantes: 2 | 3 | 4;
   turnos: number;
+}
+
+export interface AlertaSalud {
+  astronauta: string; // nombre
+  indicador: Indicador;
+  valor: number;
+  temprana: boolean; // aviso en ámbar gracias a alertaRadiacion
 }
 
 export interface ResultadoDiseno {

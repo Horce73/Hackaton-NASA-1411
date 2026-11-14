@@ -3,6 +3,7 @@ import { puntuar } from '../../engine/puntuacion';
 import type { Estado } from '../../engine/tipos';
 import { useEstado } from '../comun/EstadoContext';
 import { Icono } from '../comun/Icono';
+import { Tendencias } from '../salud/Tendencias';
 import { Tripulacion } from '../salud/Tripulacion';
 import estilos from './Bitacora.module.css';
 
@@ -34,6 +35,13 @@ export function Bitacora({ partida }: { partida: Estado }) {
         <h2 id="t-salud">Salud final</h2>
         <div className={estilos.panel}>
           <Tripulacion tripulacion={partida.tripulacion} />
+        </div>
+      </section>
+
+      <section aria-labelledby="t-tendencia">
+        <h2 id="t-tendencia">Cómo fue la misión</h2>
+        <div className={estilos.panel}>
+          <Tendencias partida={partida} />
         </div>
       </section>
 

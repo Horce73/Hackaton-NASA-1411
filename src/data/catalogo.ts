@@ -110,13 +110,12 @@ export const CATALOGO: Item[] = [
     historiaId: 'spirit-opportunity',
   },
   {
-    // La mejora de la alerta de dosis es de interfaz y llega en la fase 4 (supuesto del README).
     id: 'curiosity',
     nombre: 'Curiosity',
     tipo: 'historico',
     coste: 14,
     destinos: ['marte'],
-    efectos: { ciencia: 3 },
+    efectos: { ciencia: 3, alertaRadiacion: true }, // su instrumento RAD mide la radiación
     historiaId: 'curiosity',
   },
   {

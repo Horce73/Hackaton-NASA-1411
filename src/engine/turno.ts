@@ -14,7 +14,7 @@ import { siguiente } from './prng';
 import { actualizarSalud, limitar } from './salud';
 import type { Astronauta, Configuracion, Destino, Efectos, Estado, Evento, Indicador, Opcion, Recursos } from './tipos';
 
-type EfectoNumerico = Exclude<keyof Efectos, 'saludBonus'>;
+type EfectoNumerico = Exclude<keyof Efectos, 'saludBonus' | 'alertaRadiacion'>;
 
 function sortearEvento(destino: Destino, rng: number): { evento: Evento; rng: number } {
   const candidatos = EVENTOS.filter((e) => e.destinos.includes(destino));

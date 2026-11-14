@@ -2,21 +2,21 @@ import { semaforo } from '../../engine/salud';
 import type { Astronauta, Indicador } from '../../engine/tipos';
 import estilos from './Tripulacion.module.css';
 
-const INDICADORES: { id: Indicador; nombre: string }[] = [
+export const INDICADORES: { id: Indicador; nombre: string }[] = [
   { id: 'radiacion', nombre: 'Radiación' },
   { id: 'nutricion', nombre: 'Nutrición' },
   { id: 'suenoEstres', nombre: 'Descanso' },
   { id: 'musculoHueso', nombre: 'Músculos' },
 ];
 const ESTADO = { verde: 'bien', ambar: 'atención', rojo: 'peligro' };
-// Forma distinta por estado, además del color (UX Brief, sección 8).
+// Forma distinta por estado, además del color (UX Brief, sección 8): ● ▲ ■
 const FORMA = {
   verde: <circle cx="8" cy="8" r="6" />,
   ambar: <path d="M8 2l6.5 12h-13z" />,
   rojo: <rect x="2.5" y="2.5" width="11" height="11" />,
 };
 
-// Resumen de salud de la fase 3. El panel con alertas y detalle es de la fase 4 (RF-05).
+// Panel de salud por astronauta (RF-05): icono, número, barra y estado en texto.
 export function Tripulacion({ tripulacion }: { tripulacion: Astronauta[] }) {
   return (
     <ul className={estilos.lista}>
@@ -37,6 +37,9 @@ export function Tripulacion({ tripulacion }: { tripulacion: Astronauta[] }) {
                     {valor}
                     <span className="solo-lectores">, {ESTADO[estado]}</span>
                   </dd>
+                  <span className={estilos.barra} aria-hidden="true">
+                    <span style={{ width: `${valor}%` }} />
+                  </span>
                 </div>
               );
             })}

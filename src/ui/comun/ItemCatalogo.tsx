@@ -2,7 +2,7 @@ import type { Efectos, Item } from '../../engine/tipos';
 import { Icono } from './Icono';
 import estilos from './ItemCatalogo.module.css';
 
-const ETIQUETAS: [keyof Omit<Efectos, 'saludBonus'>, (valor: number) => string][] = [
+const ETIQUETAS: [keyof Omit<Efectos, 'saludBonus' | 'alertaRadiacion'>, (valor: number) => string][] = [
   ['energiaSolar', (v) => `+${v} energía solar al día`],
   ['energiaProduccion', (v) => `+${v} energía al día`],
   ['energiaConsumo', (v) => `-${v} energía al día`],
@@ -17,6 +17,7 @@ function describir(efectos: Efectos): string[] {
   const lineas = ETIQUETAS.flatMap(([campo, texto]) => (efectos[campo] ? [texto(efectos[campo])] : []));
   if (efectos.saludBonus?.suenoEstres) lineas.push(`+${efectos.saludBonus.suenoEstres} descanso al día`);
   if (efectos.saludBonus?.musculoHueso) lineas.push(`+${efectos.saludBonus.musculoHueso} músculos y huesos al día`);
+  if (efectos.alertaRadiacion) lineas.push('Avisa antes de que la radiación sea peligrosa');
   return lineas;
 }
 

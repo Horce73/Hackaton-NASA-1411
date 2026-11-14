@@ -72,7 +72,7 @@ Datos a **verificar contra fuentes NASA antes de mostrarlos**.
 | Surveyor 3 | Luna | 1967 | Evento educativo: piezas recuperadas por Apolo 12. |
 | Sojourner | Marte | 1997 | Ciencia barata, poca energía. |
 | Spirit y Opportunity | Marte | 2004 | Bonus de resistencia al polvo. |
-| Curiosity | Marte | 2012 | Ciencia en el motor. Mide radiación: mejora la alerta de dosis en el panel de salud (fase 4). |
+| Curiosity | Marte | 2012 | Ciencia por turno. Mide radiación: el panel de salud avisa de la dosis antes, en ámbar. |
 | Perseverance e Ingenuity | Marte | 2021 | Ciencia y exploración, coste alto. |
 
 ## Modelo de simulación
@@ -171,7 +171,7 @@ se entrega eso con las fases 4 y 5 reducidas.
 | **Asumido:** no hay requisito de usar datos reales en vivo. | ¿El jurado exige datos de NASA reales y no solo contenido? | Añadir una capa de datos (por ejemplo, radiación medida) a RF-03. | Evaluación. |
 | **Asumido:** las imágenes de NASA se pueden usar en la demo. | ¿Hay reglas de uso de imágenes en la hackatón? | Usar ilustraciones propias. | RF-08, RF-10. |
 | **Asumido:** los 3 preajustes de partida solo rellenan destino, tripulación y duración (RF-01): Luna fácil 2 y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14. El motor no tiene un campo de dificultad. | ¿Qué diferencia "Luna difícil" de "Luna fácil"? | Añadir `dificultad` a `Configuracion` y a `parametros.ts`. | Fase 2. |
-| **Asumido:** el efecto de Curiosity sobre la alerta de dosis es solo de interfaz; en el motor da ciencia. | ¿Debe cambiar también la simulación (por ejemplo, menos dosis en tormenta solar)? | Añadir un campo a `Efectos` y aplicarlo en `engine/turno.ts`. | Fase 4. |
+| **Asumido:** Curiosity adelanta la alerta de radiación (avisa en ámbar) pero no cambia la dosis. | ¿Debe cambiar también la simulación (por ejemplo, menos dosis en tormenta solar)? | Aplicarlo en `engine/turno.ts`. | Balance (fase 6). |
 | **Asumido:** cada evento afecta solo al turno en que ocurre. | ¿Hacen falta eventos que duren varios días? | Añadir efectos activos con duración al `Estado`. | Fase 3. |
 
 ## Guion de demo (3 minutos)
@@ -195,8 +195,9 @@ se entrega eso con las fases 4 y 5 reducidas.
 | RF-01, RF-02 | Hecho: pantallas de inicio y de diseño de misión, con avisos previos al lanzamiento |
 | RF-07 | Catálogo con equipo histórico hecho; su efecto ya se aplica en el motor |
 | RF-03, RF-04, RF-09 | Hecho: partida jugable de principio a fin (fase 3); consumos y radiación con cifras de la NASA, sin verificar |
-| RF-05 | Parcial: resumen de salud con icono, número y texto; falta el panel con alertas (fase 4) |
+| RF-05 | Hecho: panel de salud con icono, número, barra y texto, y alertas agrupadas; Curiosity avisa antes de la radiación |
+| RF-06 | Hecho: tendencia de salud media y recursos en el juego (desplegable) y en la bitácora |
 | RF-08 | Parcial: se desbloquea la historia y la bitácora la lista con su fuente; faltan texto, imagen y tarjeta (fase 5) |
 | RNF-04 | Hecho: el motor no importa React (hay prueba) |
-| RF-06, RF-10 a RF-12, RNF-01 a RNF-03, RNF-05 | Sin empezar |
+| RF-10 a RF-12, RNF-01 a RNF-03, RNF-05 | Sin empezar |
 | Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

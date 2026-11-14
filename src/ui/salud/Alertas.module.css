@@ -1,0 +1,35 @@
+.alertas {
+  margin-bottom: var(--e3);
+}
+.calma {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--texto-suave);
+}
+.calma svg {
+  color: var(--ok);
+}
+.alertas ul {
+  display: grid;
+  gap: var(--e1);
+}
+.alertas li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--e1);
+  padding: 0.75rem;
+  border: 1px solid var(--peligro);
+  border-radius: var(--radio-chico);
+  background: var(--fondo);
+}
+.alertas li svg {
+  margin-top: 0.125rem;
+  color: var(--peligro);
+}
+.alertas li[data-temprana='true'] {
+  border-color: var(--aviso);
+}
+.alertas li[data-temprana='true'] svg {
+  color: var(--aviso);
+}

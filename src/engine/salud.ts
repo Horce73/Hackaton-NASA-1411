@@ -8,7 +8,8 @@ import {
   UMBRAL_AMBAR,
   UMBRAL_VERDE,
 } from '../data/parametros';
-import type { Astronauta, Destino, Indicador } from './tipos';
+import { CATALOGO } from '../data/catalogo';
+import type { AlertaSalud, Astronauta, Destino, Estado, Indicador } from './tipos';
 
 export interface ContextoSalud {
   destino: Destino;
@@ -53,4 +54,21 @@ export function actualizarSalud(astronauta: Astronauta, contexto: ContextoSalud)
 export function semaforo(valor: number): 'verde' | 'ambar' | 'rojo' {
   if (valor >= UMBRAL_VERDE) return 'verde';
   return valor >= UMBRAL_AMBAR ? 'ambar' : 'rojo';
+}
+
+// Alertas del panel de salud (RF-05), de peor a mejor. Curiosity adelanta la de radiación a ámbar.
+export function alertasSalud(estado: Estado): AlertaSalud[] {
+  const temprana = estado.diseno.itemIds.some((id) => CATALOGO.find((i) => i.id === id)?.efectos.alertaRadiacion);
+  return estado.tripulacion
+    .flatMap((a) =>
+      (Object.entries(a.salud) as [Indicador, number][]).flatMap(([indicador, valor]) => {
+        const color = semaforo(valor);
+        if (color === 'rojo') return [{ astronauta: a.nombre, indicador, valor, temprana: false }];
+        if (color === 'ambar' && indicador === 'radiacion' && temprana) {
+          return [{ astronauta: a.nombre, indicador, valor, temprana: true }];
+        }
+        return [];
+      }),
+    )
+    .sort((x, y) => x.valor - y.valor);
 }

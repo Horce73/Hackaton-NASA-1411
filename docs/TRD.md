@@ -60,7 +60,7 @@ src/
     prng.ts           # generador con semilla
     diseno.ts         # validarDiseno, presupuestoRestante, reservasIniciales, avisosDiseno
     turno.ts          # iniciarMision, siguienteTurno (orden de resolución)
-    salud.ts          # actualizarSalud, semaforo
+    salud.ts          # actualizarSalud, semaforo, alertasSalud
     puntuacion.ts     # puntuar
     *.test.ts
   data/
@@ -118,6 +118,7 @@ interface Efectos {
   saludBonus?: Partial<Record<Indicador, number>>;  // por turno; `radiacion` se ignora (se deriva de la dosis)
   ciencia?: number;             // puntos por turno
   resistenciaPolvo?: number;    // reduce penalización de tormenta de polvo
+  alertaRadiacion?: boolean;    // avisa de la radiación desde ámbar, no solo en rojo (Curiosity)
 }
 
 type Indicador = 'radiacion' | 'nutricion' | 'suenoEstres' | 'musculoHueso';
@@ -267,6 +268,10 @@ Semáforo: **verde ≥ 70**, **ámbar 40–69**, **rojo < 40**. El factor de pé
 - Ningún indicador representa el aire o el agua. Si falta oxígeno o agua, `nutricion`, `suenoEstres` y
   `musculoHueso` pierden una penalización fuerte, proporcional a la parte que faltó.
 - Con el alimento cubierto, `nutricion` se recupera un poco cada turno.
+- `alertasSalud(estado)` devuelve las alertas del panel (RF-05): una por astronauta e indicador en rojo,
+  ordenadas de peor a mejor. Si algún ítem del diseño tiene `alertaRadiacion` (Curiosity, que en la realidad
+  mide la radiación con su instrumento RAD), la radiación también avisa en ámbar, marcada como `temprana`.
+  Es solo un aviso: no cambia la simulación.
 
 ### 6.4 Puntuación
 
@@ -353,7 +358,7 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 |---|---|
 | RF-01, RF-02 | `engine/diseno.ts`, `ui/inicio`, `ui/diseno` |
 | RF-03, RF-04 | `engine/turno.ts`, `data/eventos.ts`, `ui/juego` |
-| RF-05, RF-06 | `engine/salud.ts`, `ui/salud` |
+| RF-05, RF-06 | `engine/salud.ts`, `ui/salud`, `ui/comun/Sparkline` |
 | RF-07, RF-08 | `data/catalogo.ts`, `data/historias.ts`, `ui/comun/TarjetaHistoria` |
 | RF-09 | `engine/puntuacion.ts`, `ui/bitacora` |
 | RNF-01, RNF-02 | Sin backend; recursos en `public/` |
@@ -368,6 +373,6 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Preajustes de partida y dificultad | Solo rellenan RF-01: Luna fácil 2 tripulantes y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14 (provisionales, en `parametros.ts`) | Decidido en la fase 2 |
 | Eventos de varios turnos | No: cada evento afecta a su turno | Fase 3 |
 | Opción con coste y almacén vacío | La opción queda bloqueada con el motivo visible | Decidido en la fase 3 |
-| Efecto de Curiosity en la alerta de dosis | Solo interfaz; en el motor da ciencia | Fase 4 |
+| Efecto de Curiosity en la alerta de dosis | Alerta temprana de radiación (`alertaRadiacion`); no cambia la simulación | Decidido en la fase 4 |
 | Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3 | Ajuste fino en la fase 6 |
 | RF-10 (API de imágenes) | No hacer | Tras fase 5 |

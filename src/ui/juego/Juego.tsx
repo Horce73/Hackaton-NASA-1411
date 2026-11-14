@@ -4,6 +4,8 @@ import type { EfectosTurno, Estado, Recursos } from '../../engine/tipos';
 import { useEstado } from '../comun/EstadoContext';
 import { numero, porcentajeDosis, RECURSOS } from '../comun/formato';
 import { Icono } from '../comun/Icono';
+import { Alertas } from '../salud/Alertas';
+import { Tendencias } from '../salud/Tendencias';
 import { Tripulacion } from '../salud/Tripulacion';
 import estilos from './Juego.module.css';
 
@@ -119,10 +121,15 @@ export function Juego({ partida }: { partida: Estado }) {
 
         <section className={estilos.tripulacion} aria-labelledby="t-tripulacion">
           <h2 id="t-tripulacion">Tripulación</h2>
+          <Alertas partida={partida} />
           <Tripulacion tripulacion={partida.tripulacion} />
           <p className={estilos.ciencia}>
             Ciencia: <strong>{partida.ciencia}</strong> puntos
           </p>
+          <details className={estilos.tendencia}>
+            <summary>Ver tendencia</summary>
+            <Tendencias partida={partida} />
+          </details>
         </section>
       </div>
     </main>

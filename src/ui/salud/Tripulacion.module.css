@@ -1,21 +1,22 @@
 .lista {
   display: grid;
-  gap: var(--e2);
+  gap: var(--e3);
 }
 .astronauta h3 {
   font-size: 1.125rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--e1);
 }
 .astronauta dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, max(10.5rem, 34%)), 1fr));
-  gap: 0.25rem var(--e2);
+  gap: var(--e1) var(--e3);
   margin: 0;
 }
 .indicador {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--e1);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.25rem var(--e1);
 }
 .indicador dt {
   color: var(--texto-suave);
@@ -34,9 +35,29 @@
 .indicador[data-estado='ambar'] svg {
   color: var(--aviso);
 }
-.indicador[data-estado='rojo'] svg {
-  color: var(--peligro);
-}
+.indicador[data-estado='rojo'] svg,
 .indicador[data-estado='rojo'] dd {
   color: var(--peligro);
+}
+
+/* Barra de 0 a 100: refuerza el número, no lo sustituye. */
+.barra {
+  grid-column: 1 / -1;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: var(--fondo);
+  overflow: hidden;
+}
+.barra span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ok);
+  transition: width var(--transicion);
+}
+.indicador[data-estado='ambar'] .barra span {
+  background: var(--aviso);
+}
+.indicador[data-estado='rojo'] .barra span {
+  background: var(--peligro);
 }

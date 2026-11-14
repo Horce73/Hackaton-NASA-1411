@@ -151,6 +151,25 @@
   color: var(--texto);
 }
 
+.tendencia {
+  margin-top: var(--e2);
+}
+.tendencia summary {
+  display: inline-block;
+  min-height: 44px;
+  padding: 0.625rem 0;
+  color: var(--luna);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+.tendencia summary:hover {
+  color: var(--texto);
+}
+.tendencia[open] summary {
+  margin-bottom: var(--e1);
+}
+
 @media (max-width: 799px) {
   .recursos {
     flex-basis: 100%;

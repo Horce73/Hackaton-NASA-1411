@@ -6,7 +6,8 @@ import {
   PERDIDA_MUSCULO,
   PERDIDA_NUTRICION,
 } from '../data/parametros';
-import { actualizarSalud, semaforo, type ContextoSalud } from './salud';
+import { actualizarSalud, alertasSalud, semaforo, type ContextoSalud } from './salud';
+import { iniciarMision } from './turno';
 import type { Astronauta } from './tipos';
 
 const sana: Astronauta = {
@@ -81,4 +82,33 @@ test('semáforo: verde desde 70, ámbar de 40 a 69, rojo por debajo de 40', () =
   expect(semaforo(69)).toBe('ambar');
   expect(semaforo(40)).toBe('ambar');
   expect(semaforo(39)).toBe('rojo');
+});
+
+test('alertasSalud avisa de cada indicador en rojo, del peor al mejor (RF-05)', () => {
+  const inicial = iniciarMision({ destino: 'marte', tripulantes: 2, turnos: 10, semilla: 1 }, []);
+  expect(alertasSalud(inicial)).toEqual([]);
+  const [lucia, marco] = inicial.tripulacion;
+  const estado = {
+    ...inicial,
+    tripulacion: [
+      { ...lucia, salud: { ...lucia.salud, suenoEstres: 35, radiacion: 60 } },
+      { ...marco, salud: { ...marco.salud, musculoHueso: 12 } },
+    ],
+  };
+  expect(alertasSalud(estado)).toEqual([
+    { astronauta: 'Marco', indicador: 'musculoHueso', valor: 12, temprana: false },
+    { astronauta: 'Lucía', indicador: 'suenoEstres', valor: 35, temprana: false },
+  ]);
+});
+
+test('con Curiosity la radiación avisa ya en ámbar', () => {
+  const inicial = iniciarMision({ destino: 'marte', tripulantes: 2, turnos: 10, semilla: 1 }, ['curiosity']);
+  const [lucia, marco] = inicial.tripulacion;
+  const estado = {
+    ...inicial,
+    tripulacion: [{ ...lucia, salud: { ...lucia.salud, radiacion: 60, nutricion: 65 } }, marco],
+  };
+  expect(alertasSalud(estado)).toEqual([
+    { astronauta: 'Lucía', indicador: 'radiacion', valor: 60, temprana: true },
+  ]);
 });

@@ -7,13 +7,9 @@ import {
   CONSUMO_ENERGIA_POR_TRIPULANTE,
   CONSUMO_OXIGENO,
   DOSIS_BASE,
-  ENERGIA_INICIAL,
   NOMBRES_TRIPULACION,
-  RESERVA_AGUA,
-  RESERVA_ALIMENTO,
-  RESERVA_OXIGENO,
 } from '../data/parametros';
-import { itemsDe, validarDiseno } from './diseno';
+import { itemsDe, reservasIniciales, validarDiseno } from './diseno';
 import { siguiente } from './prng';
 import { actualizarSalud, limitar } from './salud';
 import type { Astronauta, Configuracion, Destino, Efectos, Estado, Evento, Indicador } from './tipos';
@@ -38,7 +34,6 @@ export function iniciarMision(config: Configuracion, itemIds: string[]): Estado 
   const diseno = validarDiseno(config, itemIds);
   if (!diseno.valido) throw new Error(`Diseño no válido: ${diseno.errores.join(' ')}`);
 
-  const consumoMision = config.tripulantes * config.turnos;
   const tripulacion: Astronauta[] = NOMBRES_TRIPULACION.slice(0, config.tripulantes).map(
     (nombre, i) => ({
       id: `astronauta-${i + 1}`,
@@ -55,12 +50,7 @@ export function iniciarMision(config: Configuracion, itemIds: string[]): Estado 
     config,
     diseno: { itemIds: [...itemIds], presupuestoUsado: diseno.presupuestoUsado },
     turno: 1,
-    recursos: {
-      energia: ENERGIA_INICIAL,
-      alimento: Math.ceil(consumoMision * CONSUMO_ALIMENTO * RESERVA_ALIMENTO),
-      oxigeno: Math.ceil(consumoMision * CONSUMO_OXIGENO * RESERVA_OXIGENO),
-      agua: Math.ceil(consumoMision * CONSUMO_AGUA * RESERVA_AGUA),
-    },
+    recursos: reservasIniciales(config),
     tripulacion,
     historial: [],
     eventoActual: sorteo.evento,

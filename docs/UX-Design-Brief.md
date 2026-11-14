@@ -71,7 +71,8 @@ Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y s
 └───────────────────────────┴──────────────────────────────┘
 ```
 - El **★** marca el equipo histórico real.
-- Un resumen de **avisos previos** al lanzamiento ayuda a decidir sin saber de ingeniería.
+- Un resumen de **avisos previos** al lanzamiento ayuda a decidir sin saber de ingeniería. Cada aviso se
+  calcula en el motor y lleva un dato real de la NASA con enlace a su fuente (TRD 6.1). Avisar no impide lanzar.
 - Elementos que superan el presupuesto: deshabilitados con el motivo visible.
 
 ### 5.3 Juego (pantalla principal)

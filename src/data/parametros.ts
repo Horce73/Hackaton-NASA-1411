@@ -2,12 +2,19 @@
 // TODOS los valores son PROVISIONALES: plausibles para jugar, sin calibrar con fuentes de la NASA.
 // Las unidades son abstractas (puntos), no medidas reales. Se calibran en la fase 3 (TRD 6.5).
 
-import type { Destino } from '../engine/tipos';
+import type { Destino, Preajuste } from '../engine/tipos';
 
 // Diseño de misión (RF-01, RF-02)
 export const PRESUPUESTO = 100; // PROVISIONAL (el PRD fija 100 puntos)
 export const TURNOS_MIN = 10; // RF-01
 export const TURNOS_MAX = 20; // RF-01
+
+// PROVISIONAL: preajustes que rellenan la pantalla de inicio (supuesto abierto del README).
+export const PREAJUSTES: Preajuste[] = [
+  { id: 'luna-facil', nombre: 'Luna fácil', destino: 'luna', tripulantes: 2, turnos: 10 },
+  { id: 'luna-dificil', nombre: 'Luna difícil', destino: 'luna', tripulantes: 4, turnos: 20 },
+  { id: 'marte', nombre: 'Marte', destino: 'marte', tripulantes: 3, turnos: 14 },
+];
 
 // El cuarto nombre es PROVISIONAL: el UX Brief solo da los tres primeros.
 export const NOMBRES_TRIPULACION = ['Lucía', 'Marco', 'Aiko', 'Dani'];

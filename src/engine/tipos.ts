@@ -89,6 +89,38 @@ export interface Historia {
   verificada: boolean;
 }
 
+export type AvisoId =
+  | 'energia'
+  | 'soporteVital'
+  | 'alimento'
+  | 'radiacion'
+  | 'musculoHueso'
+  | 'suenoEstres';
+
+// Aviso previo al lanzamiento: ok = false significa que hay riesgo.
+export interface AvisoDiseno {
+  id: AvisoId;
+  ok: boolean;
+}
+
+// Texto de un aviso, con el dato real que lo explica.
+export interface TextoAviso {
+  nombre: string;
+  ok: string;
+  riesgo: string;
+  dato: string;
+  fuente: string; // URL de la NASA
+  verificada: boolean;
+}
+
+export interface Preajuste {
+  id: string;
+  nombre: string;
+  destino: Destino;
+  tripulantes: 2 | 3 | 4;
+  turnos: number;
+}
+
 export interface ResultadoDiseno {
   valido: boolean;
   presupuestoUsado: number;

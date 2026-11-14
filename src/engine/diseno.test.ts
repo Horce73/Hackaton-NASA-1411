@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { PRESUPUESTO } from '../data/parametros';
-import { presupuestoRestante, validarDiseno } from './diseno';
+import { avisosDiseno, presupuestoRestante, validarDiseno } from './diseno';
+import { iniciarMision, siguienteTurno } from './turno';
 import type { Configuracion } from './tipos';
 
 const marte: Configuracion = { destino: 'marte', tripulantes: 3, turnos: 14, semilla: 1 };
@@ -48,4 +49,54 @@ test('rechaza una duración fuera de 10–20 turnos (RF-01)', () => {
 test('presupuestoRestante descuenta el coste de los elementos', () => {
   expect(presupuestoRestante([])).toBe(PRESUPUESTO);
   expect(presupuestoRestante(['panel-solar', 'invernadero'])).toBe(PRESUPUESTO - 8 - 15);
+});
+
+function riesgos(config: Configuracion, itemIds: string[]): string[] {
+  return avisosDiseno(config, itemIds)
+    .filter((a) => !a.ok)
+    .map((a) => a.id);
+}
+
+test('un diseño vacío avisa de todo lo que puede fallar', () => {
+  expect(riesgos({ ...marte, turnos: 20 }, [])).toEqual([
+    'energia',
+    'soporteVital',
+    'alimento',
+    'radiacion',
+    'musculoHueso',
+    'suenoEstres',
+  ]);
+});
+
+test('un diseño completo no deja avisos', () => {
+  const completo = ['panel-solar', 'panel-solar', 'panel-solar', 'reciclador', 'invernadero', 'blindaje', 'gimnasio', 'zona-descanso'];
+  expect(validarDiseno(marte, completo).valido).toBe(true);
+  expect(riesgos(marte, completo)).toEqual([]);
+});
+
+test('cada módulo quita su aviso', () => {
+  expect(riesgos(marte, ['blindaje'])).not.toContain('radiacion');
+  expect(riesgos(marte, ['reciclador'])).not.toContain('soporteVital');
+  expect(riesgos(marte, ['reactor'])).not.toContain('energia');
+  expect(riesgos({ ...marte, turnos: 20 }, ['gimnasio'])).not.toContain('musculoHueso');
+});
+
+test('los avisos de recursos coinciden con lo que pasa en una misión sin eventos duros', () => {
+  // Con "seguir con el plan" no hay cambios directos: el resultado depende solo del diseño.
+  const jugar = (itemIds: string[]) => {
+    let estado = iniciarMision({ ...marte, destino: 'luna' }, itemIds);
+    const evento = { ...estado.eventoActual!, id: 'neutro', opciones: [{ id: 'nada', texto: '', efectos: {} }] };
+    while (!estado.resultado) estado = siguienteTurno({ ...estado, eventoActual: evento }, 'nada');
+    return estado;
+  };
+  const luna = { ...marte, destino: 'luna' as const };
+
+  const sinAvisos = ['reactor', 'reciclador', 'invernadero'];
+  expect(riesgos(luna, sinAvisos)).not.toContain('soporteVital');
+  expect(riesgos(luna, sinAvisos)).not.toContain('alimento');
+  const bien = jugar(sinAvisos);
+  expect(bien.historial.every((h) => h.recursos.oxigeno > 0 && h.recursos.alimento > 0)).toBe(true);
+
+  expect(riesgos(luna, ['reactor'])).toContain('soporteVital');
+  expect(jugar(['reactor']).recursos.oxigeno).toBe(0);
 });

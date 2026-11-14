@@ -1,11 +1,14 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import './styles/tokens.css';
+import './styles/base.css';
+import { App } from './ui/App';
+import { ProveedorEstado } from './ui/comun/EstadoContext';
 
-// Punto de entrada mínimo: la interfaz empieza en la fase 2.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <main>
-      <h1>Misión Legado</h1>
-    </main>
+    <ProveedorEstado>
+      <App />
+    </ProveedorEstado>
   </StrictMode>,
 );

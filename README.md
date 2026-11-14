@@ -170,7 +170,7 @@ se entrega eso con las fases 4 y 5 reducidas.
 | **Asumido:** interfaz y textos en español. Los identificadores del código van en español (decidido, TRD sección 13). | ¿Hay un idioma obligatorio para la entrega? | Traducir la interfaz. | Entrega. |
 | **Asumido:** no hay requisito de usar datos reales en vivo. | ¿El jurado exige datos de NASA reales y no solo contenido? | Añadir una capa de datos (por ejemplo, radiación medida) a RF-03. | Evaluación. |
 | **Asumido:** las imágenes de NASA se pueden usar en la demo. | ¿Hay reglas de uso de imágenes en la hackatón? | Usar ilustraciones propias. | RF-08, RF-10. |
-| **Asumido:** los 3 preajustes de partida solo rellenan destino, tripulación y duración (RF-01); el motor no tiene un campo de dificultad. | ¿Qué diferencia "Luna difícil" de "Luna fácil"? | Añadir `dificultad` a `Configuracion` y a `parametros.ts`. | Fase 2. |
+| **Asumido:** los 3 preajustes de partida solo rellenan destino, tripulación y duración (RF-01): Luna fácil 2 y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14. El motor no tiene un campo de dificultad. | ¿Qué diferencia "Luna difícil" de "Luna fácil"? | Añadir `dificultad` a `Configuracion` y a `parametros.ts`. | Fase 2. |
 | **Asumido:** el efecto de Curiosity sobre la alerta de dosis es solo de interfaz; en el motor da ciencia. | ¿Debe cambiar también la simulación (por ejemplo, menos dosis en tormenta solar)? | Añadir un campo a `Efectos` y aplicarlo en `engine/turno.ts`. | Fase 4. |
 | **Asumido:** cada evento afecta solo al turno en que ocurre. | ¿Hacen falta eventos que duren varios días? | Añadir efectos activos con duración al `Estado`. | Fase 3. |
 
@@ -192,7 +192,9 @@ se entrega eso con las fases 4 y 5 reducidas.
 
 | Requisito | Estado |
 |---|---|
-| RF-01 a RF-05, RF-07 a RF-09 | Motor hecho y probado (`src/engine/`, `src/data/`); falta la interfaz |
+| RF-01, RF-02 | Hecho: pantallas de inicio y de diseño de misión, con avisos previos al lanzamiento |
+| RF-07 | Catálogo con equipo histórico hecho; su efecto ya se aplica en el motor |
+| RF-03 a RF-05, RF-08, RF-09 | Motor hecho y probado (`src/engine/`, `src/data/`); falta la interfaz |
 | RNF-04 | Hecho: el motor no importa React (hay prueba) |
 | RF-06, RF-10 a RF-12, RNF-01 a RNF-03, RNF-05 | Sin empezar |
-| Despliegue de prueba (fase 0) | Preparado para GitHub Pages (`.github/workflows/deploy.yml`, manual); falta ejecutarlo |
+| Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

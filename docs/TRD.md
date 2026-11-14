@@ -58,7 +58,7 @@ src/
   engine/
     tipos.ts          # tipos del dominio
     prng.ts           # generador con semilla
-    diseno.ts         # validarDiseno, presupuestoRestante
+    diseno.ts         # validarDiseno, presupuestoRestante, reservasIniciales, avisosDiseno
     turno.ts          # iniciarMision, siguienteTurno (orden de resolución)
     salud.ts          # actualizarSalud, semaforo
     puntuacion.ts     # puntuar
@@ -68,6 +68,7 @@ src/
     catalogo.ts       # módulos y equipo histórico
     eventos.ts        # eventos y opciones
     historias.ts      # tarjetas de historia con fuente
+    avisos.ts         # textos de los avisos previos, con dato real y fuente
     *.test.ts         # integridad de los datos
   state/
     reducer.ts        # fases + acciones
@@ -75,6 +76,7 @@ src/
     inicio/ diseno/ juego/ salud/ bitacora/ comun/
   styles/
     tokens.css        # variables de diseño
+    base.css          # tipografías, reinicio mínimo, foco y cursor
 public/img/           # imágenes de respaldo (RNF-02)
 public/fonts/         # tipografías autoalojadas (UX Brief, sección 7)
 docs/
@@ -206,6 +208,12 @@ function siguienteTurno(estado: Estado, opcionId: string): Estado
 - `validarDiseno` devuelve `{ valido, presupuestoUsado, errores }`. Rechaza: turnos fuera de 10–20, un ítem
   que no existe o no es del destino, un equipo histórico repetido y superar el presupuesto. Los módulos sí se
   pueden repetir (dos paneles solares).
+- `avisosDiseno(config, itemIds)` devuelve los avisos previos al lanzamiento (UX Brief 5.2): una lista de
+  `{ id, ok }` para `energia`, `soporteVital`, `alimento`, `radiacion`, `musculoHueso` y `suenoEstres`. Proyecta
+  la misión sin eventos con las mismas fórmulas del turno: avisa si la energía se agota, si las reservas de
+  aire, agua o alimento no llegan al último turno, si no hay blindaje y si músculo o sueño acabarían por debajo del verde.
+  Los textos, el dato real que lo explica y su fuente NASA están en `data/avisos.ts` (`verificada: false`
+  hasta que alguien los confirme). Un aviso no impide lanzar.
 - `iniciarMision` crea el estado del turno 1: reservas iniciales, tripulación con salud 100, primer evento
   sorteado y las historias de los equipos históricos del diseño ya desbloqueadas. Lanza un error si el diseño
   no es válido.
@@ -275,6 +283,10 @@ cuando haya tiempo; hasta entonces son plausibles y se marcan `// PROVISIONAL`.
 El reducer maneja las acciones: `INICIAR`, `AÑADIR_ITEM`, `QUITAR_ITEM`, `CONFIRMAR_DISENO`,
 `ELEGIR_OPCION`, `CERRAR_TARJETA`, `REINICIAR`. La interfaz no calcula reglas del juego: solo lee `Estado`.
 
+Antes de lanzar todavía no existe un `Estado` de partida, así que el reducer guarda un `EstadoApp` con tres
+formas: `{ fase: 'inicio' }`, `{ fase: 'diseno', config, itemIds }` y `{ fase: 'juego' | 'bitacora', partida }`,
+donde `partida` es el `Estado` del motor. `AÑADIR_ITEM` no hace nada si `validarDiseno` rechaza el resultado.
+
 La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo usa una semilla fija.
 
 ## 8. Datos y contenido
@@ -341,8 +353,8 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Tema | Opción por defecto | Se decide |
 |---|---|---|
 | Idioma del código | Español en identificadores | Decidido en la fase 0 |
-| Netlify o GitHub Pages | GitHub Pages | Decidido; el despliegue de prueba está preparado y falta ejecutarlo |
-| Preajustes de partida y dificultad | Solo rellenan RF-01 (supuesto del README) | Fase 2 |
+| Netlify o GitHub Pages | GitHub Pages | Decidido; despliegue de prueba hecho en la fase 0 |
+| Preajustes de partida y dificultad | Solo rellenan RF-01: Luna fácil 2 tripulantes y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14 (provisionales, en `parametros.ts`) | Decidido en la fase 2 |
 | Eventos de varios turnos | No: cada evento afecta a su turno | Fase 3 |
 | Opción con coste y almacén vacío | Se permite y el almacén queda en 0 (sale gratis) | Fase 3 |
 | Efecto de Curiosity en la alerta de dosis | Solo interfaz; en el motor da ciencia | Fase 4 |

@@ -17,6 +17,7 @@ test('el día pide las tareas de la opción y una revisión por módulo, no por 
   const tareas = tareasDelDia(estado, 'reparar');
   expect(tareas.map((t) => [t.tipo, t.estacion])).toEqual([
     ['evento', 'item:2'], // la reparación se hace en el reciclador
+    ['evento', 'habitat'], // y la revisión del aire, dentro
     ['mantenimiento', 'item:0'],
     ['mantenimiento', 'item:1'],
     ['mantenimiento', 'item:2'],

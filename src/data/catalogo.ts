@@ -13,6 +13,7 @@ const AMBOS: Destino[] = ['luna', 'marte'];
 export const CATALOGO: Item[] = [
   {
     id: 'panel-solar',
+    tema: 'energia',
     nombre: 'Panel solar',
     tipo: 'modulo',
     coste: 8,
@@ -22,6 +23,7 @@ export const CATALOGO: Item[] = [
   },
   {
     id: 'reactor',
+    tema: 'energia',
     nombre: 'Reactor',
     tipo: 'modulo',
     coste: 22,
@@ -31,6 +33,7 @@ export const CATALOGO: Item[] = [
   },
   {
     id: 'invernadero',
+    tema: 'alimento',
     nombre: 'Invernadero',
     tipo: 'modulo',
     coste: 15,
@@ -40,6 +43,7 @@ export const CATALOGO: Item[] = [
   },
   {
     id: 'reciclador',
+    tema: 'soporteVital',
     nombre: 'Reciclador de aire y agua',
     tipo: 'modulo',
     coste: 12,
@@ -49,6 +53,7 @@ export const CATALOGO: Item[] = [
   },
   {
     id: 'blindaje',
+    tema: 'radiacion',
     nombre: 'Blindaje',
     tipo: 'modulo',
     coste: 10,
@@ -58,6 +63,7 @@ export const CATALOGO: Item[] = [
   },
   {
     id: 'zona-descanso',
+    tema: 'suenoEstres',
     nombre: 'Zona de descanso',
     tipo: 'modulo',
     coste: 8,
@@ -67,6 +73,7 @@ export const CATALOGO: Item[] = [
   },
   {
     id: 'gimnasio',
+    tema: 'musculoHueso',
     nombre: 'Gimnasio',
     tipo: 'modulo',
     coste: 8,

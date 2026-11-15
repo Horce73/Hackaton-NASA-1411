@@ -44,7 +44,7 @@ Prioridad: **M** = imprescindible (MVP), **S** = si hay tiempo, **C** = opcional
 | RF-06 | Gráfica de tendencia de salud y recursos a lo largo de los turnos. | 5 | S |
 | RF-07 | Catálogo con equipo histórico real (ver tabla abajo) que da una ventaja de juego. | 1, 13 | M |
 | RF-08 | Tarjeta de historia al desbloquear un equipo: 2–3 frases, año, lugar y una imagen. Texto apto para 8–14 años. | 1 | M |
-| RF-09 | Final de partida: misión con éxito o abortada, puntuación y bitácora con las historias desbloqueadas. | 1, 3, 13 | M |
+| RF-09 | Final de partida: misión con éxito o abortada, puntuación y bitácora con las historias desbloqueadas. Si se aborta por salud, la bitácora explica la causa con un caso real de la NASA. | 1, 3, 13 | M |
 | RF-10 | Fotos desde la API de imágenes de la NASA, con imágenes estáticas de respaldo. | 1 | C |
 | RF-11 | Efectos de sonido con Web Audio. | — | C |
 | RF-12 | Guardar la última partida en `localStorage`. | — | C |

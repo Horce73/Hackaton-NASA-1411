@@ -251,6 +251,9 @@ export function siguienteTurno(estado: Estado, opcionId: string, pendientes: Tar
       turno: estado.turno,
       rng: estado.rng,
       resultado: critico ? 'abortada' : 'exito',
+      ...(critico && {
+        causaFin: (Object.keys(critico.salud) as Indicador[]).find((indicador) => critico.salud[indicador] <= 0),
+      }),
       motivoFin: critico
         ? `La salud de ${critico.nombre} llegó al límite de seguridad. La misión se aborta y el equipo vuelve a casa.`
         : `Misión cumplida: el equipo completó los ${config.turnos} días previstos.`,

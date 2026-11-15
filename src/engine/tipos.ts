@@ -33,6 +33,7 @@ export interface Item {
   destinos: Destino[];
   efectos: Efectos;
   historiaId?: string; // solo históricos
+  tema?: AvisoId; // de qué trata el módulo: su «¿Por qué?» en el diseño
   // RF-16: revisión del módulo cada `cadaDias` días; `trabajo` en segundos de un no especialista.
   mantenimiento?: { especialidad: Especialidad; trabajo: number; cadaDias: number; etiqueta: string };
 }
@@ -154,6 +155,7 @@ export interface TextoAviso {
   dato: string;
   fuente: string; // URL de la NASA
   verificada: boolean;
+  historia: Archivo; // el porqué con un caso real: «¿Por qué?» en el diseño y causa del final en la bitácora
 }
 
 export interface Preajuste {
@@ -205,5 +207,6 @@ export interface Estado {
   rng: number; // estado del PRNG
   resultado?: 'exito' | 'abortada';
   motivoFin?: string; // texto de cierre para la bitácora
+  causaFin?: Indicador; // indicador que llegó a 0, si la misión se abortó por salud
   ultimoDelta?: DeltaTurno; // cambio neto del último turno resuelto
 }

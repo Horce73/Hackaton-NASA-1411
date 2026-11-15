@@ -188,6 +188,27 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
                           <li key={linea}>{linea}</li>
                         ))}
                       </ul>
+                      {item.tema && (
+                        <details className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-relaxed">
+                          <summary className="cursor-pointer min-h-[32px] inline-flex items-center font-semibold text-[var(--color-moon)]">
+                            ¿Por qué hace falta?
+                          </summary>
+                          <div className="mt-1 space-y-1.5">
+                            <p>{AVISOS[item.tema].dato}</p>
+                            <p>
+                              {AVISOS[item.tema].historia.dato}{' '}
+                              <a
+                                href={AVISOS[item.tema].historia.fuente}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline"
+                              >
+                                Fuente NASA
+                              </a>
+                            </p>
+                          </div>
+                        </details>
+                      )}
                       <div className="flex items-center justify-between gap-2 pt-1">
                         <span className="text-xs font-mono text-[var(--color-text-muted)]">
                           {cantidad > 0 ? `Instalados en 3D: ${cantidad}` : 'Sin instalar'}

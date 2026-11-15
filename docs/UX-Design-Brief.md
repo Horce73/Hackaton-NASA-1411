@@ -113,6 +113,9 @@ Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y s
 - Primer plano (RF-17): al inspeccionar un equipo histórico, la cámara se acerca, el HUD de abajo se oculta y un
   diálogo negro en la parte inferior escribe lo que midió la misión, con su fuente y el botón "Anotar en el cuaderno".
 - En el diseño, cada módulo indica que pide mantenimiento diario y el total de tareas al día.
+- Cada módulo tiene un desplegable «¿Por qué hace falta?» con el dato de la NASA y un caso real (por ejemplo, el
+  blindaje: el Explorer 1 en 1958 y la tormenta solar de 1972). Si la misión se aborta por salud, la bitácora
+  muestra «Por qué pasó» con el mismo caso y, si fue la radiación, la dosis recibida frente al límite de la NASA.
 - El panel del plan muestra primero las tareas de la opción y después el mantenimiento en líneas cortas; el pie con
   el reloj y "Terminar día" queda fijo, sin desplazarse.
 - Pantalla táctil (se detecta el puntero, no el ancho, así vale en vertical y horizontal): joystick bajo el pulgar

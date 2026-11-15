@@ -29,8 +29,6 @@ export interface ConjuntoTexturas {
   cultivoNormal: THREE.CanvasTexture;
   tierraAlbedo: THREE.CanvasTexture;
   tierraRoughness: THREE.CanvasTexture;
-  fobosAlbedo: THREE.CanvasTexture;
-  fobosNormal: THREE.CanvasTexture;
   sombraContacto: THREE.CanvasTexture;
   dispose: () => void;
 }
@@ -783,7 +781,7 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
   const cultivoNormal = registrar(generarNormalDesdeAltura(cCulH, 2.4, maxAnisotropy, 2, 1));
 
   // =========================================================================
-  // 11. PLANETA TIERRA EN EL CIELO LUNAR + FOBOS EN MARTE (512x256 / 256x128)
+  // 11. PLANETA TIERRA EN EL CIELO LUNAR (512x256)
   // =========================================================================
   const [cEarA, ctxEarA] = crearCanvas(512, 256);
   const [cEarR, ctxEarR] = crearCanvas(512, 256);
@@ -830,29 +828,6 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
   const tierraAlbedo = registrar(configurarTextura(cEarA, true, maxAnisotropy, 1, 1));
   const tierraRoughness = registrar(configurarTextura(cEarR, false, maxAnisotropy, 1, 1));
 
-  // Fobos (luna craterizada de Marte)
-  const [cFobA, ctxFobA] = crearCanvas(256, 128);
-  const [cFobH, ctxFobH] = crearCanvas(256, 128);
-  ctxFobA.fillStyle = '#7e635a';
-  ctxFobA.fillRect(0, 0, 256, 128);
-  ctxFobH.fillStyle = '#808080';
-  ctxFobH.fillRect(0, 0, 256, 128);
-  for (let i = 0; i < 38; i++) {
-    const x = randPlanet() * 256;
-    const y = randPlanet() * 128;
-    const r = 4 + randPlanet() * 14;
-    ctxFobA.fillStyle = 'rgba(48,34,30,0.45)';
-    ctxFobA.beginPath();
-    ctxFobA.arc(x, y, r, 0, Math.PI * 2);
-    ctxFobA.fill();
-    ctxFobH.fillStyle = 'rgba(30,30,30,0.6)';
-    ctxFobH.beginPath();
-    ctxFobH.arc(x, y, r, 0, Math.PI * 2);
-    ctxFobH.fill();
-  }
-  const fobosAlbedo = registrar(configurarTextura(cFobA, true, maxAnisotropy, 1, 1));
-  const fobosNormal = registrar(generarNormalDesdeAltura(cFobH, 2.5, maxAnisotropy, 1, 1));
-
   // =========================================================================
   // 12. SOMBRA DE CONTACTO RADIAL
   // =========================================================================
@@ -895,8 +870,6 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
     cultivoNormal,
     tierraAlbedo,
     tierraRoughness,
-    fobosAlbedo,
-    fobosNormal,
     sombraContacto,
     dispose: () => {
       todas.forEach((t) => t.dispose());

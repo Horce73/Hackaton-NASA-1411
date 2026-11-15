@@ -32,6 +32,9 @@ import {
 // El cielo «brumoso y rojo» por el polvo: https://science.nasa.gov/mars/facts/
 const CIELO_MARTE = { horizonte: 0xc99068, cenit: 0x8c5a3e, halo: 0xbfd2e2, roca: 0x7d4129 };
 
+const DISTANCIA_FOBOS = 260;
+const DIRECCION_FOBOS = new THREE.Vector3(0.085, 0.225, -0.97).normalize(); // unos 13° sobre el horizonte, a la derecha del hábitat en la vista de decidir
+
 function crearCieloMarte(): THREE.Mesh {
   const material = new THREE.ShaderMaterial({
     uniforms: {
@@ -305,6 +308,7 @@ export class EscenaPlaneta {
   private grupoNodos = new THREE.Group();
   private grupoCielo = new THREE.Group();
   private cieloMarte: THREE.Mesh | null = null;
+  private fobos: THREE.Mesh | null = null;
 
   private terrenoMesh: THREE.Mesh | null = null;
   // Tripulación (RF-13): `astronauta` y `fisica` son siempre los del tripulante seleccionado.
@@ -659,6 +663,7 @@ export class EscenaPlaneta {
       this.luzHemi.intensity = 0.85;
     }
     this.cieloMarte = null;
+    this.fobos = null;
     if (this.destino === 'marte') {
       this.cieloMarte = crearCieloMarte();
       this.grupoCielo.add(
@@ -716,18 +721,19 @@ export class EscenaPlaneta {
       tierra.rotation.y = -0.6;
       this.grupoCielo.add(tierra);
     } else {
-      const fobos = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(2.6, 2),
-        new THREE.MeshStandardMaterial({
-          map: this.tex.fobosAlbedo,
-          normalMap: this.tex.fobosNormal,
-          normalScale: new THREE.Vector2(1.3, 1.3),
-          roughness: 0.92,
+      // Fobos, pequeño y pálido tras el velo de polvo. Desde Marte se ve a un tercio del ancho de la Luna llena vista
+      // desde la Tierra (unos 0,17°, https://science.nasa.gov/solar-system/planets/mars/nasas-hubble-sees-martian-moon-orbiting-the-red-planet/);
+      // aquí mide el doble, 0,35°, para que no quede en un punto de 2 píxeles. Sigue a la cámara, como el cielo.
+      const radio = DISTANCIA_FOBOS * Math.tan(((0.35 / 2) * Math.PI) / 180);
+      this.fobos = new THREE.Mesh(
+        new THREE.SphereGeometry(radio, 12, 8),
+        new THREE.MeshBasicMaterial({
+          color: new THREE.Color(0x6f6058).lerp(new THREE.Color(CIELO_MARTE.horizonte), 0.3),
           fog: false,
         }),
       );
-      fobos.position.set(42, 32, -64);
-      this.grupoCielo.add(fobos);
+      this.fobos.renderOrder = 0;
+      this.grupoCielo.add(this.fobos);
     }
 
     // Terreno desplazado por groundHeightAt
@@ -904,8 +910,8 @@ export class EscenaPlaneta {
           id: `mod-${id}-${idx}-${k}`,
           x: mx + ejeX * desplazamiento,
           z: mz + ejeZ * desplazamiento,
-          radio: alargado ? 1.25 : id === 'panel-solar' && this.destino === 'luna' ? 0.9 : 1.55,
-          altura: alargado ? 2.7 : 2.1,
+          radio: alargado ? 1.25 : id === 'blindaje' ? 2.1 : id === 'panel-solar' && this.destino === 'luna' ? 0.9 : 1.55,
+          altura: alargado ? 2.7 : id === 'blindaje' ? 3.6 : 2.1,
         });
       });
 
@@ -1245,6 +1251,7 @@ export class EscenaPlaneta {
   private actualizarCielo() {
     if (!this.cieloMarte) return;
     this.cieloMarte.position.copy(this.camera.position);
+    this.fobos?.position.copy(DIRECCION_FOBOS).multiplyScalar(DISTANCIA_FOBOS).add(this.camera.position);
     const u = (this.cieloMarte.material as THREE.ShaderMaterial).uniforms;
     const llegada = this.sol?.visible === true;
     if (llegada && this.sol) u.solDir.value.copy(this.sol.position).sub(this.camera.position);

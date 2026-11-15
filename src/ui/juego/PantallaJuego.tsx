@@ -632,13 +632,18 @@ export function PantallaJuego({
       </div>
 
       <div
-        className={`pointer-events-none flex flex-col justify-between gap-2 ${esTactil ? '' : 'md:flex-row md:items-end'} ${primerPlano || estado.llegada || cierreDia ? 'invisible' : ''}`}
+        className={`relative pointer-events-none flex flex-col justify-between gap-2 ${esTactil ? '' : 'md:flex-row md:items-end'} ${primerPlano || estado.llegada || cierreDia ? 'invisible' : ''}`}
       >
         {evento && (
           <section
             aria-live="polite"
             aria-labelledby="titulo-evento-actual"
-            className="pointer-events-auto w-full md:max-w-lg rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/92 shadow-2xl overflow-hidden"
+            className={`pointer-events-auto w-full md:max-w-lg rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/92 shadow-2xl overflow-hidden ${
+              // En táctil horizontal, plegado va abajo y en el centro, entre el joystick y los botones de acción.
+              esTactil && !panelEventoAbierto
+                ? 'landscape:absolute landscape:bottom-0 landscape:left-1/2 landscape:z-10 landscape:-translate-x-1/2 landscape:w-[min(42vw,26rem)]'
+                : ''
+            }`}
           >
             <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-[#141b34] border-b border-[var(--color-border)]">
               <div className="min-w-0">

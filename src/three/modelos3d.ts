@@ -331,6 +331,7 @@ export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSo
   marco.position.set(0, yMetal + 1.1, radioMetal - 0.05);
   grupo.add(marco);
   const puerta = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.85, 0.12), matEsclusa);
+  puerta.name = 'puerta-esclusa'; // la escena la desliza al salir la tripulación
   puerta.position.set(0, yMetal + 1.05, radioMetal + 0.24);
   grupo.add(puerta);
 
@@ -838,61 +839,23 @@ export function crearModulo3D(itemId: string, tex: ConjuntoTexturas, isSoftwareG
   return g;
 }
 
-export function crearNodoInteractivo3D(
-  tipo: 'hielo' | 'averia' | 'historia',
-  tex: ConjuntoTexturas,
-): THREE.Group {
+export function crearNodoInteractivo3D(tipo: 'averia' | 'historia'): THREE.Group {
   const g = new THREE.Group();
 
-  if (tipo === 'hielo') {
-    const matHielo = new THREE.MeshPhysicalMaterial({
-      map: tex.hieloAlbedo,
-      normalMap: tex.hieloNormal,
-      normalScale: new THREE.Vector2(1.2, 1.2),
-      color: 0x8ae4ff,
-      emissive: 0x16648f,
-      emissiveIntensity: 0.65,
-      roughness: 0.12,
-      metalness: 0.1,
-      clearcoat: 1,
-      clearcoatRoughness: 0.05,
-    });
-    for (let i = 0; i < 4; i++) {
-      const cristal = new THREE.Mesh(new THREE.ConeGeometry(0.22 + i * 0.03, 0.8 + (i % 2) * 0.35, 6), matHielo);
-      const ang = (i * Math.PI) / 2;
-      cristal.position.set(Math.cos(ang) * 0.22, 0.4, Math.sin(ang) * 0.22);
-      cristal.rotation.z = Math.cos(ang) * 0.25;
-      cristal.rotation.x = Math.sin(ang) * 0.25;
-      g.add(cristal);
-    }
-    const hazHielo = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.22, 3.2, 8),
-      new THREE.MeshBasicMaterial({
-        color: 0x7be0ff,
-        transparent: true,
-        opacity: 0.28,
-        depthWrite: false,
-      }),
-    );
-    hazHielo.position.y = 1.9;
-    g.add(hazHielo);
-    g.add(crearSombraContacto(tex.sombraContacto, 0.9));
-  } else {
-    const color = tipo === 'averia' ? 0xff6b6b : 0xf5b942;
-    const anillo = new THREE.Mesh(
-      new THREE.TorusGeometry(0.95, 0.06, 8, 28),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 }),
-    );
-    anillo.rotation.x = Math.PI / 2;
-    anillo.position.y = 0.08;
-    const baliza = new THREE.Mesh(
-      new THREE.OctahedronGeometry(0.28, 0),
-      new THREE.MeshBasicMaterial({ color }),
-    );
-    baliza.name = 'baliza-flotante';
-    baliza.position.y = 2.6;
-    g.add(anillo, baliza);
-  }
+  const color = tipo === 'averia' ? 0xff6b6b : 0xf5b942;
+  const anillo = new THREE.Mesh(
+    new THREE.TorusGeometry(0.95, 0.06, 8, 28),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 }),
+  );
+  anillo.rotation.x = Math.PI / 2;
+  anillo.position.y = 0.08;
+  const baliza = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.28, 0),
+    new THREE.MeshBasicMaterial({ color }),
+  );
+  baliza.name = 'baliza-flotante';
+  baliza.position.y = 2.6;
+  g.add(anillo, baliza);
 
   return g;
 }

@@ -76,6 +76,54 @@ class GestorSonido {
     this.tono(440, 320, 0.18, 'sawtooth', 0.05);
   }
 
+  // Homenaje a «2001: Odisea del espacio»: el inicio de «Así habló Zaratustra» (Richard Strauss, 1896, dominio
+  // público), sintetizado aquí; no se usa ninguna grabación. Do–Sol–Do agudo y el acorde mayor que pasa a menor,
+  // con golpes de timbal.
+  fanfarria(): void {
+    const ctx = this.obtenerCtx();
+    if (!ctx) return;
+    const t0 = ctx.currentTime + 0.05;
+    const metal = (frecuencia: number, inicio: number, duracion: number, volumen: number) => {
+      const osc = ctx.createOscillator();
+      const filtro = ctx.createBiquadFilter();
+      const ganancia = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = frecuencia;
+      filtro.type = 'lowpass';
+      filtro.frequency.setValueAtTime(500, t0 + inicio);
+      filtro.frequency.linearRampToValueAtTime(2200, t0 + inicio + 0.35);
+      ganancia.gain.setValueAtTime(0.0001, t0 + inicio);
+      ganancia.gain.exponentialRampToValueAtTime(volumen, t0 + inicio + 0.25);
+      ganancia.gain.setValueAtTime(volumen, t0 + inicio + duracion - 0.3);
+      ganancia.gain.exponentialRampToValueAtTime(0.0001, t0 + inicio + duracion);
+      osc.connect(filtro);
+      filtro.connect(ganancia);
+      ganancia.connect(ctx.destination);
+      osc.start(t0 + inicio);
+      osc.stop(t0 + inicio + duracion);
+    };
+    const timbal = (frecuencia: number, inicio: number) => {
+      const osc = ctx.createOscillator();
+      const ganancia = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(frecuencia * 1.15, t0 + inicio);
+      osc.frequency.exponentialRampToValueAtTime(frecuencia, t0 + inicio + 0.12);
+      ganancia.gain.setValueAtTime(0.16, t0 + inicio);
+      ganancia.gain.exponentialRampToValueAtTime(0.0001, t0 + inicio + 0.45);
+      osc.connect(ganancia);
+      ganancia.connect(ctx.destination);
+      osc.start(t0 + inicio);
+      osc.stop(t0 + inicio + 0.5);
+    };
+    metal(130.81, 0, 1.6, 0.05); // Do
+    metal(196.0, 1.6, 1.4, 0.05); // Sol
+    metal(261.63, 3.0, 1.2, 0.055); // Do agudo
+    metal(329.63, 4.2, 0.5, 0.05); // Mi: acorde mayor…
+    metal(311.13, 4.7, 1.8, 0.05); // …que pasa a menor (Mi bemol)
+    [261.63, 392.0].forEach((f) => metal(f, 4.2, 2.3, 0.03));
+    [5.4, 5.75, 6.1, 6.45].forEach((inicio, i) => timbal(i % 2 === 0 ? 65.41 : 98.0, inicio));
+  }
+
   exito(): void {
     [440, 554, 659, 880].forEach((frecuencia, indice) => {
       setTimeout(() => this.tono(frecuencia, frecuencia * 1.02, 0.22, 'triangle', 0.07), indice * 95);

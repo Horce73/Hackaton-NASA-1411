@@ -28,14 +28,14 @@ export type ModoCamara3D = 'orbita' | 'tercera_persona' | 'pausa';
 
 export interface ObjetivoCercano {
   id: string;
-  tipo: 'hielo' | 'averia' | 'historia' | 'domo';
+  tipo: 'averia' | 'historia' | 'domo' | 'monolito';
   etiqueta: string;
   subetiqueta: string;
   historiaId?: string;
 }
 
 export interface EventoAccion3D {
-  tipo: 'hielo' | 'averia' | 'historia' | 'domo';
+  tipo: 'averia' | 'historia' | 'domo' | 'monolito';
   nodoId: string;
   etiqueta: string;
   historiaId?: string;
@@ -66,7 +66,7 @@ export interface EntradaTactil3D {
 
 interface NodoEscena {
   id: string;
-  tipo: 'hielo' | 'averia' | 'historia' | 'domo';
+  tipo: 'averia' | 'historia' | 'domo' | 'monolito';
   etiqueta: string;
   subetiqueta: string;
   historiaId?: string;
@@ -185,6 +185,16 @@ export class EscenaPlaneta {
   // Primer plano del cuaderno de misión (RF-17): dónde está cada equipo histórico y a cuál mira la cámara.
   private posHistorias = new Map<string, { centro: THREE.Vector3; tamano: number }>();
   private enfoque: { pos: THREE.Vector3; mira: THREE.Vector3 } | null = null;
+  // Cada día la tripulación empieza dentro y sale por la compuerta, uno a uno (`salida`: segundo en que empezó).
+  private tripulacionFuera = false;
+  private salida: number | null = null;
+  // Al terminar el día vuelven caminando a la compuerta y entran uno a uno (`entrados`: quién ya entró).
+  private entrada: number | null = null;
+  private entrados: boolean[] = [];
+  private puerta: THREE.Object3D | null = null;
+  // Llegada: amanecer con el Sol alineado sobre la antena del hábitat (homenaje a «2001: Odisea del espacio»).
+  private amanecer: number | null = null;
+  private sol: THREE.Sprite | null = null;
   private capaPops: HTMLDivElement;
   private pops = new Map<string, { raiz: HTMLDivElement; barra: HTMLElement; aviso: HTMLElement }>();
   private anilloSeleccion!: THREE.Mesh;
@@ -665,6 +675,7 @@ export class EscenaPlaneta {
     const baseCentral = crearBaseCentral3D(this.destino, this.tex, this.isSoftwareGl);
     baseCentral.position.set(0, yBase, 0);
     this.grupoBase.add(baseCentral);
+    this.puerta = baseCentral.getObjectByName('puerta-esclusa') ?? null;
     this.mallasColisionCam.push(baseCentral);
     this.obstaculos.push({
       id: 'habitat-central',
@@ -752,7 +763,7 @@ export class EscenaPlaneta {
       const yaInspeccionado = info?.historiaId
         ? this.historiasInspeccionadas.has(info.historiaId)
         : false;
-      const baliza = crearNodoInteractivo3D('historia', this.tex);
+      const baliza = crearNodoInteractivo3D('historia');
       baliza.position.set(hx, hy, hz);
       baliza.visible = !yaInspeccionado;
       this.grupoNodos.add(baliza);
@@ -774,32 +785,7 @@ export class EscenaPlaneta {
       });
     });
 
-    // 3. Nodos dinámicos de campo (hielo en cráteres + avería si aplica + Surveyor 3 en Luna)
-    const vetasHielo = [
-      { id: `hielo-1-t${this.turnoActual}`, x: 7.5, z: 12.2 },
-      { id: `hielo-2-t${this.turnoActual}`, x: -19, z: 15 },
-    ];
-    vetasHielo.forEach((veta, idx) => {
-      if (this.nodosCompletadosTurno.has(veta.id)) return;
-      const vy = groundHeightAt(veta.x, veta.z, this.destino);
-      const grupoHielo = crearNodoInteractivo3D('hielo', this.tex);
-      grupoHielo.position.set(veta.x, vy, veta.z);
-      this.grupoNodos.add(grupoHielo);
-
-      this.nodos.push({
-        id: veta.id,
-        tipo: 'hielo',
-        etiqueta: `Veta de hielo subterráneo #${idx + 1}`,
-        subetiqueta: 'Pulsa [E] para extraer (+6 Agua, +4 Oxígeno, +4 Ciencia)',
-        x: veta.x,
-        y: vy,
-        z: veta.z,
-        radio: 2.8,
-        completado: false,
-        grupo: grupoHielo,
-      });
-    });
-
+    // 3. Nodos dinámicos de campo (avería si aplica + Surveyor 3 en Luna)
     // Si es un evento con avería o tormenta, colocar baliza de reparación de campo.
     // La lista de eventos vive en data/eventos.ts: la capa 3D no conoce ids de contenido.
     const esAveria = EVENTOS_REPARABLES.includes(this.eventoActualId ?? '');
@@ -808,7 +794,7 @@ export class EscenaPlaneta {
       const ax = -7.5;
       const az = 8.2;
       const ay = groundHeightAt(ax, az, this.destino);
-      const grupoAveria = crearNodoInteractivo3D('averia', this.tex);
+      const grupoAveria = crearNodoInteractivo3D('averia');
       grupoAveria.position.set(ax, ay, az);
       this.grupoNodos.add(grupoAveria);
 
@@ -826,6 +812,35 @@ export class EscenaPlaneta {
       });
     }
 
+    // Homenaje a «2001: Odisea del espacio» (1968): un monolito negro de proporciones 1:4:9 enterrado en la Luna.
+    // No es un hallazgo real ni da ciencia; el diálogo lo dice.
+    if (this.destino === 'luna') {
+      const mx = -24;
+      const mz = 22;
+      const my = groundHeightAt(mx, mz, this.destino);
+      const monolito = new THREE.Mesh(
+        new THREE.BoxGeometry(2, 4.5, 0.5),
+        new THREE.MeshStandardMaterial({ color: 0x050506, roughness: 0.12, metalness: 0.7 }),
+      );
+      monolito.position.set(mx, my + 2.25, mz);
+      monolito.rotation.y = Math.atan2(-mx, -mz);
+      monolito.castShadow = true;
+      this.grupoBase.add(monolito);
+      this.obstaculos.push({ id: 'monolito', x: mx, z: mz, radio: 1.2, altura: 4.5 });
+      this.posHistorias.set('monolito', { centro: new THREE.Vector3(mx, my, mz), tamano: 5.5 }); // 4,5 m de alto: plano entero
+      this.nodos.push({
+        id: 'nodo-monolito',
+        tipo: 'monolito',
+        etiqueta: 'Un bloque negro',
+        subetiqueta: 'Pulsa [E] para acercarte',
+        x: mx,
+        y: my,
+        z: mz,
+        radio: 3.2,
+        completado: false,
+      });
+    }
+
     // Sonda Surveyor 3 en Luna cuando salga el evento o como hito en el cráter cercano
     if (this.destino === 'luna' && this.eventoActualId === EVENTO_SURVEYOR) {
       const sx = 17;
@@ -836,7 +851,7 @@ export class EscenaPlaneta {
       this.posHistorias.set(EVENTO_SURVEYOR, { centro: new THREE.Vector3(sx, sy, sz), tamano: 2 });
       this.grupoBase.add(sonda);
 
-      const baliza = crearNodoInteractivo3D('historia', this.tex);
+      const baliza = crearNodoInteractivo3D('historia');
       baliza.position.set(sx, sy, sz);
       this.grupoNodos.add(baliza);
 
@@ -913,25 +928,16 @@ export class EscenaPlaneta {
     this.trauma = Math.min(1, this.trauma + cantidad);
   }
 
+  // Solo se actúa con la tripulación fuera, sin animaciones ni primeros planos en curso.
+  private puedeActuar(): boolean {
+    return this.tripulacionFuera && this.salida === null && this.amanecer === null && !this.enfoque;
+  }
+
   public ejecutarAccionCercana(): boolean {
+    if (!this.puedeActuar()) return false;
     if (this.empezarTareaCercana()) return true;
     const cercano = this.obtenerNodoCercano();
     if (!cercano) return false;
-
-    if (cercano.tipo === 'hielo') {
-      this.nodosCompletadosTurno.add(cercano.id);
-      cercano.completado = true;
-      if (cercano.grupo) cercano.grupo.visible = false;
-      this.lanzarRafaga(cercano.x, cercano.y + 0.7, cercano.z, 0x7be0ff, 20);
-      sonido.escaneo();
-      this.onAccionCompletada({
-        tipo: 'hielo',
-        nodoId: cercano.id,
-        etiqueta: cercano.etiqueta,
-      });
-      this.emitirTelemetria(true);
-      return true;
-    }
 
     if (cercano.tipo === 'averia') {
       this.nodosCompletadosTurno.add(cercano.id);
@@ -965,6 +971,11 @@ export class EscenaPlaneta {
         historiaId: cercano.historiaId,
       });
       this.emitirTelemetria(true);
+      return true;
+    }
+
+    if (cercano.tipo === 'monolito') {
+      this.onAccionCompletada({ tipo: 'monolito', nodoId: cercano.id, etiqueta: cercano.etiqueta });
       return true;
     }
 
@@ -1012,9 +1023,6 @@ export class EscenaPlaneta {
   // que es hacia donde está girado cada modelo.
   public enfocarHistoria(historiaId: string | null) {
     const destino = historiaId ? this.posHistorias.get(historiaId) : undefined;
-    // En el primer plano solo se ve el equipo: la tripulación y los avisos flotantes se apartan.
-    this.tripulantes.forEach((t) => (t.rig.root.visible = !destino));
-    this.capaPops.style.visibility = destino ? 'hidden' : '';
     if (!destino) {
       this.enfoque = null;
       return;
@@ -1028,6 +1036,69 @@ export class EscenaPlaneta {
       .addScaledVector(lateral, tamano * 0.8)
       .setY(centro.y + tamano * 0.9);
     this.enfoque = { pos, mira: centro.clone().setY(centro.y + tamano * 0.35) };
+  }
+
+  // Dentro: la cámara mira la base mientras se decide. Fuera: salen uno a uno por la compuerta y caminan unos metros.
+  public setTripulacionFuera(fuera: boolean) {
+    if (fuera === this.tripulacionFuera) return;
+    const estabanFuera = this.tripulacionFuera;
+    this.tripulacionFuera = fuera;
+    this.salida = null;
+    this.entrada = null;
+    const n = this.tripulantes.length;
+    const zPuerta = HABITAT.radioInflable + 0.25; // justo delante de la compuerta, fuera del hábitat
+    if (!fuera) {
+      if (!estabanFuera || this.movimientoReducido || this.amanecer !== null) return;
+      // Corte de cámara a la compuerta: la tripulación ya está en fila delante y entra uno a uno.
+      this.tripulantes.forEach((t, i) => {
+        const x = (i - (n - 1) / 2) * 0.9;
+        const z = zPuerta + 2.4 + i * 0.9;
+        t.fisica = { ...crearEstadoJugadorInicial(this.destino), x, z, y: groundHeightAt(x, z, this.destino), yaw: Math.PI };
+        t.tareaId = null;
+      });
+      this.camPosSuave.set(4.5, 3.2, 16);
+      this.camTargetSuave.set(0, 2.4, 3);
+      this.entrados = this.tripulantes.map(() => false);
+      this.entrada = performance.now() / 1000;
+      return;
+    }
+    this.tripulantes.forEach((t, i) => {
+      const x = (i - (n - 1) / 2) * 0.35;
+      t.fisica = { ...crearEstadoJugadorInicial(this.destino), x, z: zPuerta, y: groundHeightAt(x, zPuerta, this.destino), yaw: 0 };
+      t.tareaId = null;
+    });
+    this.camYaw = 0;
+    this.camPitch = 0.21;
+    this.salida = performance.now() / 1000;
+  }
+
+  public setAmanecer(activo: boolean) {
+    this.amanecer = activo ? performance.now() / 1000 : null;
+    if (activo && !this.sol) {
+      const lienzo = document.createElement('canvas');
+      lienzo.width = lienzo.height = 256;
+      const ctx = lienzo.getContext('2d');
+      if (ctx) {
+        const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+        g.addColorStop(0, 'rgba(255,255,255,1)');
+        g.addColorStop(0.12, 'rgba(255,250,230,1)');
+        g.addColorStop(0.3, 'rgba(255,214,150,0.45)');
+        g.addColorStop(1, 'rgba(255,180,90,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, 256, 256);
+      }
+      this.sol = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: new THREE.CanvasTexture(lienzo),
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+          fog: false,
+        }),
+      );
+      this.sol.scale.set(64, 64, 1);
+      this.scene.add(this.sol);
+    }
+    if (this.sol) this.sol.visible = activo;
   }
 
   public seleccionar(indice: number) {
@@ -1208,6 +1279,10 @@ export class EscenaPlaneta {
     this.tripulantes.forEach((t, i) => {
       const nombre = `${i + 1} · ${ESPECIALIDADES[this.especialidades[i] ?? 'ingenieria'].nombre}`;
       if (t.etiqueta.textContent !== nombre) t.etiqueta.textContent = nombre;
+      if (!t.rig.root.visible) {
+        t.etiqueta.style.display = 'none';
+        return;
+      }
       const esSel = i === this.seleccionado;
       t.etiqueta.style.borderColor = esSel ? '#f5b942' : 'rgba(255,255,255,.25)';
       t.etiqueta.style.fontWeight = esSel ? '800' : '600';
@@ -1292,6 +1367,7 @@ export class EscenaPlaneta {
   }
 
   private obtenerNodoCercano(): NodoEscena | null {
+    if (!this.puedeActuar()) return null;
     let mejor: NodoEscena | null = null;
     let mejorDist = Infinity;
     for (const nodo of this.nodos) {
@@ -1409,17 +1485,13 @@ export class EscenaPlaneta {
       }
     });
 
-    // Animar balizas y cristales de nodos interactivos
+    // Animar las balizas de los nodos interactivos
     for (const nodo of this.nodos) {
       if (!nodo.grupo || nodo.completado || this.movimientoReducido) continue;
-      if (nodo.tipo === 'hielo') {
-        nodo.grupo.rotation.y += dt * 0.55;
-      } else {
-        const baliza = nodo.grupo.getObjectByName('baliza-flotante');
-        if (baliza) {
-          baliza.rotation.y += dt * 1.8;
-          baliza.position.y = 2.4 + Math.sin(ahoraSec * 3.1) * 0.22;
-        }
+      const baliza = nodo.grupo.getObjectByName('baliza-flotante');
+      if (baliza) {
+        baliza.rotation.y += dt * 1.8;
+        baliza.position.y = 2.4 + Math.sin(ahoraSec * 3.1) * 0.22;
       }
     }
 
@@ -1467,14 +1539,56 @@ export class EscenaPlaneta {
     // Física y animación de la tripulación: solo el seleccionado recibe la entrada (RF-13).
     if (this.modo === 'tercera_persona') {
       // Durante el primer plano nadie se mueve: el jugador lee.
-      const entrada = this.enfoque ? { ...ENTRADA_QUIETA, camaraYaw: this.camYaw } : this.construirEntradaMovimiento();
+      const entrada = this.puedeActuar() ? this.construirEntradaMovimiento() : { ...ENTRADA_QUIETA, camaraYaw: this.camYaw };
+      const n = this.tripulantes.length;
+      const tSalida = this.salida === null ? 0 : ahoraSec - this.salida;
+      const tEntrada = this.entrada === null ? 0 : ahoraSec - this.entrada;
+      const zPuerta = HABITAT.radioInflable + 0.25;
       this.tripulantes.forEach((t, i) => {
-        this.moverTripulante(t, i === this.seleccionado ? entrada : { ...ENTRADA_QUIETA, camaraYaw: this.camYaw }, dt, i === this.seleccionado);
+        // En la salida, cada uno aparece en la compuerta 0,7 s después del anterior y camina 1,3 s hacia fuera.
+        // En la entrada, cada uno echa a andar 0,45 s después del anterior y desaparece al llegar a la compuerta.
+        const inicio = i * 0.7;
+        const visible =
+          this.amanecer === null &&
+          (this.entrada !== null
+            ? !this.entrados[i]
+            : this.tripulacionFuera && (this.salida === null || tSalida >= inicio));
+        t.rig.root.visible = visible && !this.enfoque;
+        if (!visible) return;
+        let suya: EntradaMovimiento;
+        if (this.entrada !== null) {
+          const dx = -t.fisica.x;
+          const dz = zPuerta + 0.1 - t.fisica.z;
+          if (Math.hypot(dx, dz) < 0.5) {
+            this.entrados[i] = true;
+            t.rig.root.visible = false;
+            return;
+          }
+          suya =
+            tEntrada < i * 0.45
+              ? { ...ENTRADA_QUIETA, camaraYaw: this.camYaw }
+              : { ...ENTRADA_QUIETA, adelante: 1, camaraYaw: Math.atan2(-dx, -dz) };
+        } else {
+          const caminando = this.salida !== null && tSalida < inicio + 1.3;
+          suya = caminando
+            ? { ...ENTRADA_QUIETA, adelante: 1, derecha: (i - (n - 1) / 2) * 0.5, camaraYaw: Math.PI }
+            : i === this.seleccionado ? entrada : { ...ENTRADA_QUIETA, camaraYaw: this.camYaw };
+        }
+        this.moverTripulante(t, suya, dt, i === this.seleccionado);
       });
-      this.avanzarTrabajo(dtReal);
+      if (this.salida !== null && tSalida > (n - 1) * 0.7 + 1.7) this.salida = null;
+      if (this.entrada !== null && (this.entrados.every(Boolean) || tEntrada > 5)) this.entrada = null;
+      // La compuerta se abre mientras salen o entran y se cierra después.
+      if (this.puerta) {
+        const abierta = this.salida !== null || this.entrada !== null ? 1.35 : 0;
+        this.puerta.position.x += (abierta - this.puerta.position.x) * Math.min(1, dt * 6);
+      }
+      this.capaPops.style.visibility = this.enfoque || this.amanecer !== null ? 'hidden' : '';
+      if (this.puedeActuar()) this.avanzarTrabajo(dtReal);
     } else {
       // En modo órbita, la tripulación espera de pie frente al hábitat.
       this.tripulantes.forEach((t, i) => {
+        t.rig.root.visible = this.modo === 'orbita' || this.tripulacionFuera;
         const x = (i - (this.tripulantes.length - 1) / 2) * 1.8;
         t.rig.root.position.set(x, groundHeightAt(x, 8.2, this.destino), 8.2);
         t.rig.cuerpo.rotation.y = this.movimientoReducido ? 0 : Math.sin(ahoraSec * 0.6 + i) * 0.25;
@@ -1543,6 +1657,33 @@ export class EscenaPlaneta {
       return;
     }
 
+    // Amanecer: desde el suelo, el Sol sube por detrás del hábitat hasta quedar alineado sobre su antena.
+    if (this.amanecer !== null) {
+      const t = Math.min(1, (performance.now() / 1000 - this.amanecer) / 7);
+      const sube = this.movimientoReducido ? 1 : 1 - Math.pow(1 - t, 3);
+      const yCam = groundHeightAt(0, 24, this.destino) + 1.4;
+      // Cima de la antena del hábitat: el Sol termina justo encima, en la línea cámara–antena (dentro del plano lejano).
+      const yAntena = groundHeightAt(0, 0, this.destino) + HABITAT.alturaPlataforma + HABITAT.altoMetal + HABITAT.altoInflable + 1.4;
+      const ySolFinal = yCam + ((yAntena - yCam) / 24) * 230;
+      if (this.sol) this.sol.position.set(0, yCam - 30 + (ySolFinal - yCam + 30 + 6) * sube, -206);
+      this.camera.position.set(0, yCam, 24);
+      this.camPosSuave.copy(this.camera.position);
+      this.camTargetSuave.set(0, yCam + 2 + (yAntena - yCam) * 0.9 * sube, 0);
+      this.camera.lookAt(this.camTargetSuave);
+      return;
+    }
+
+    // Con la tripulación dentro o saliendo, la cámara mira la compuerta desde delante.
+    if (!this.enfoque && (!this.tripulacionFuera || this.salida !== null)) {
+      this.tmpVecA.set(4.5, 3.2, 16);
+      this.tmpVecB.set(0, 2.4, 3);
+      this.camPosSuave.lerp(this.tmpVecA, k * 0.5);
+      this.camTargetSuave.lerp(this.tmpVecB, k * 0.5);
+      this.camera.position.copy(this.camPosSuave);
+      this.camera.lookAt(this.camTargetSuave);
+      return;
+    }
+
     if (this.enfoque) {
       const suave = this.movimientoReducido ? 1 : k * 0.45;
       this.camPosSuave.lerp(this.enfoque.pos, suave);
@@ -1604,7 +1745,7 @@ export class EscenaPlaneta {
     const cercano = this.obtenerNodoCercano();
     const distDomo = Math.hypot(this.fisica.x, this.fisica.z);
     const restantes = this.nodos.filter(
-      (n) => (n.tipo === 'hielo' || n.tipo === 'averia') && !n.completado,
+      (n) => n.tipo === 'averia' && !n.completado,
     ).length;
 
     this.onTelemetria({
@@ -1628,7 +1769,7 @@ export class EscenaPlaneta {
       trabajoTripulacion: this.tripulantes.map((t) => t.tareaId),
       progresoTareas: Object.fromEntries(this.progreso),
       tareaCercana: (() => {
-        const t = this.tareaAlAlcance(this.fisica);
+        const t = this.puedeActuar() ? this.tareaAlAlcance(this.fisica) : null;
         return t ? { id: t.id, etiqueta: t.etiqueta } : null;
       })(),
     });

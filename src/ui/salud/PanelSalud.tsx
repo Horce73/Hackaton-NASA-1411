@@ -31,6 +31,18 @@ function estiloSemaforo(estado: 'verde' | 'ambar' | 'rojo') {
 const ETIQUETA_SEMAFORO = { verde: 'bien', ambar: 'atención', rojo: 'crítico' } as const;
 
 // Monitor biomédico (RF-05): semáforo por indicador y alertas del motor, de peor a mejor.
+// Borde de cada tripulante con el color de su indicador más bajo: se ve de un vistazo quién está en riesgo.
+// El color nunca va solo: cada barra sigue diciendo su estado con texto.
+const BORDE_SALUD = {
+  verde: 'border-[var(--color-ok)]/70',
+  ambar: 'border-[var(--color-warn)]',
+  rojo: 'border-[var(--color-danger)]',
+} as const;
+
+function peorSemaforo(salud: Record<Indicador, number>): keyof typeof BORDE_SALUD {
+  return semaforo(Math.min(...Object.values(salud)));
+}
+
 export function PanelSalud({ partida }: PanelSaludProps) {
   const alertas = alertasSalud(partida);
 
@@ -48,7 +60,7 @@ export function PanelSalud({ partida }: PanelSaludProps) {
           <section
             key={astro.id}
             aria-label={`Estado de ${astro.nombre}`}
-            className="rounded-lg border border-[var(--color-border)] bg-[#0b1020]/55 p-3.5 space-y-2.5"
+            className={`rounded-lg border-2 bg-[#0b1020]/55 p-3.5 space-y-2.5 ${BORDE_SALUD[peorSemaforo(astro.salud)]}`}
           >
             <div className="flex items-center justify-between gap-2">
               <h3 className="font-semibold text-base text-[var(--color-text)]">{astro.nombre}</h3>

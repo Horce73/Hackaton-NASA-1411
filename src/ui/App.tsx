@@ -30,6 +30,8 @@ export function App() {
   const { estado, dispatch } = useEstado();
   const vista3dRef = useRef<Vista3DRef | null>(null);
   const [mostrarSaludExterno, setMostrarSaludExterno] = useState(false);
+  // Homenaje del monolito: primer plano y diálogo, sin pasar por el cuaderno.
+  const [homenaje, setHomenaje] = useState(false);
 
   const enPartida = estado.fase === 'juego' || estado.fase === 'bitacora';
   const config = enPartida ? estado.partida.config : estado.config;
@@ -76,7 +78,9 @@ export function App() {
   }, [estado.fase, estado]);
 
   // Con una historia abierta o la misión terminada, la escena deja de recibir controles.
-  const tarjetasAbiertas = estado.fase === 'juego' && estado.tarjetas.length > 0;
+  // Las tarjetas esperan a que se cierren el resumen del día y el dato curioso.
+  const tarjetasAbiertas =
+    estado.fase === 'juego' && estado.tarjetas.length > 0 && !estado.resumen && !estado.dato;
   const modo3d: ModoCamara3D =
     estado.fase === 'bitacora' || tarjetasAbiertas
       ? 'pausa'
@@ -88,6 +92,10 @@ export function App() {
     (accion: EventoAccion3D) => {
       if (accion.tipo === 'domo') {
         setMostrarSaludExterno(true);
+        return;
+      }
+      if (accion.tipo === 'monolito') {
+        setHomenaje(true);
         return;
       }
       dispatch({
@@ -127,7 +135,9 @@ export function App() {
           tareas={tareas}
           tareasHechas={tareasHechas}
           trabajoActivo={trabajoActivo}
-          enfoque={estado.fase === 'juego' ? estado.closeUp : null}
+          enfoque={estado.fase === 'juego' ? (estado.closeUp ?? (homenaje ? 'monolito' : null)) : null}
+          tripulacionFuera={estado.fase === 'juego' ? estado.tripulacionFuera : true}
+          amanecer={estado.fase === 'juego' && estado.llegada}
           onTelemetria={setTelemetria}
           onAccionCompletada={manejarAccion3D}
           onTareaCompletada={completarTarea}
@@ -155,6 +165,8 @@ export function App() {
           onCambiarEntradaTactil={manejarEntradaTactil}
           onSeleccionarTripulante={seleccionarTripulante}
           tareas={tareas}
+          homenaje={homenaje}
+          onCerrarHomenaje={() => setHomenaje(false)}
           dispatch={dispatch}
         />
       )}
@@ -163,7 +175,7 @@ export function App() {
         <PantallaBitacora partida={estado.partida} dispatch={dispatch} />
       )}
 
-      {estado.fase === 'juego' && estado.tarjetas.length > 0 && (
+      {estado.fase === 'juego' && tarjetasAbiertas && (
         <TarjetaHistoria
           key={estado.tarjetas[0]}
           historiaId={estado.tarjetas[0]}

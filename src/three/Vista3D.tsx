@@ -25,6 +25,8 @@ interface Vista3DProps {
   tareasHechas: string[];
   trabajoActivo: boolean;
   enfoque: string | null; // historia en primer plano (RF-17)
+  tripulacionFuera: boolean;
+  amanecer: boolean; // toma de llegada
   onTelemetria: (estado: EstadoTelemetria3D) => void;
   onAccionCompletada: (accion: EventoAccion3D) => void;
   onTareaCompletada: (tareaId: string) => void;
@@ -42,6 +44,8 @@ export const Vista3D = forwardRef<Vista3DRef, Vista3DProps>(function Vista3D(
     tareasHechas,
     trabajoActivo,
     enfoque,
+    tripulacionFuera,
+    amanecer,
     onTelemetria,
     onAccionCompletada,
     onTareaCompletada,
@@ -116,6 +120,14 @@ export const Vista3D = forwardRef<Vista3DRef, Vista3DProps>(function Vista3D(
   useEffect(() => {
     escenaRef.current?.enfocarHistoria(enfoque);
   }, [enfoque]);
+
+  useEffect(() => {
+    escenaRef.current?.setTripulacionFuera(tripulacionFuera);
+  }, [tripulacionFuera]);
+
+  useEffect(() => {
+    escenaRef.current?.setAmanecer(amanecer);
+  }, [amanecer]);
 
   return (
     <div

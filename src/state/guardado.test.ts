@@ -14,9 +14,11 @@ function almacenFalso() {
   };
 }
 
-// Juega con la primera opción disponible, cerrando las tarjetas de historia.
+// Juega con la primera opción disponible, cerrando el resumen, el dato y las tarjetas de historia.
 function avanzar(estado: EstadoApp, dias: number): EstadoApp {
   for (let i = 0; i < dias && estado.fase === 'juego'; i++) {
+    if (estado.resumen) estado = reducer(estado, { tipo: 'CERRAR_RESUMEN', conDato: true });
+    if (estado.fase === 'juego' && estado.dato) estado = reducer(estado, { tipo: 'CERRAR_DATO' });
     while (estado.fase === 'juego' && estado.tarjetas.length > 0) estado = reducer(estado, { tipo: 'CERRAR_TARJETA' });
     if (estado.fase !== 'juego') break;
     const { partida } = estado;

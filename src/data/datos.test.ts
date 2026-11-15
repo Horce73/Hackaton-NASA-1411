@@ -7,6 +7,7 @@ import type { Configuracion } from '../engine/tipos';
 import { AVISOS } from './avisos';
 import { CATALOGO, CATALOGO_POR_ID } from './catalogo';
 import { EVENTOS, EVENTOS_REPARABLES, EVENTO_SURVEYOR } from './eventos';
+import { DATOS_DESTINO, datosDeLaMision } from './datosCuriosos';
 import { HISTORIAS } from './historias';
 import { NOMBRES_TRIPULACION, PREAJUSTES } from './parametros';
 
@@ -107,8 +108,20 @@ test('ningún texto visible usa raya larga', () => {
     ...EVENTOS.flatMap((e) => [e.titulo, e.texto, e.archivo.dato, ...e.opciones.map((o) => o.texto)]),
     ...HISTORIAS.flatMap((h) => [h.nombre, h.texto, h.datoCurioso, h.imagen.alt, h.medicion.dato]),
     ...Object.values(AVISOS).flatMap((a) => [a.nombre, a.ok, a.riesgo, a.dato, a.historia.dato]),
+    ...Object.values(DATOS_DESTINO).flat().flatMap((d) => [d.titulo, d.texto.dato, d.imagen?.alt ?? '']),
   ];
   expect(textos.filter((t) => t.includes('—'))).toEqual([]);
+});
+
+test('cada dato curioso tiene fuente de la NASA, un diagrama o una imagen, y no se repite', () => {
+  for (const destino of ['luna', 'marte'] as const) {
+    const datos = datosDeLaMision(destino, idsHistorias);
+    expect(sinRepetidos(datos.map((d) => d.id)), destino).toBe(true);
+    for (const d of datos) {
+      expect(d.texto.fuente, d.id).toMatch(/nasa\.gov/);
+      expect(Boolean(d.diagrama) !== Boolean(d.imagen), d.id).toBe(true);
+    }
+  }
 });
 
 test('cada imagen de historia existe en public/img', () => {

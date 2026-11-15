@@ -270,6 +270,11 @@ export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): Ast
 // https://ntrs.nasa.gov/api/citations/20220013669/downloads/Internal%20Layout%20of%20a%20Lunar%20Surface%20Habitat.pdf
 export const HABITAT = { radioMetal: 2.2, altoMetal: 2.6, radioInflable: 3.25, altoInflable: 5.2, alturaPlataforma: 0.3 };
 
+// APAGADO hasta tener permiso por escrito: la insignia de la NASA no puede usarse sin permiso explícito
+// (https://www.nasa.gov/nasa-brand-center/nasa-logo-use/). Para encenderlo, copiar `RAW/logo nasa pe.png`
+// a `public/img/logo-nasa.png` y poner esto en true. Mientras esté en false, la imagen no se publica.
+const MOSTRAR_LOGO_NASA = false;
+
 export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSoftwareGl: boolean): THREE.Group {
   const grupo = new THREE.Group();
   grupo.name = 'habitat-central';
@@ -373,6 +378,24 @@ export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSo
     ventana.position.set(Math.cos(angulo) * (r + 0.02), yInflable + altoInflable * 0.5, Math.sin(angulo) * (r + 0.02));
     ventana.lookAt(Math.cos(angulo) * 10, yInflable + altoInflable * 0.5, Math.sin(angulo) * 10);
     grupo.add(ventana);
+  }
+
+  // Logo en el frente del inflable, entre las dos correas: un trozo de cilindro para que siga la curva
+  if (MOSTRAR_LOGO_NASA) {
+    const ancho = 1.3;
+    const logo = new THREE.Mesh(
+      new THREE.CylinderGeometry(r + 0.02, r + 0.02, ancho * (460 / 542), 12, 1, true, -ancho / r / 2, ancho / r),
+      new THREE.MeshStandardMaterial({ alphaTest: 0.5, roughness: 0.8 }),
+    );
+    logo.position.y = yInflable + altoInflable * 0.5;
+    logo.visible = false; // sin textura sería un rectángulo blanco
+    new THREE.TextureLoader().load('img/logo-nasa.png', (textura) => {
+      textura.colorSpace = THREE.SRGBColorSpace;
+      (logo.material as THREE.MeshStandardMaterial).map = textura;
+      (logo.material as THREE.MeshStandardMaterial).needsUpdate = true;
+      logo.visible = true;
+    });
+    grupo.add(logo);
   }
 
   // Antena parabólica de comunicaciones en la cima
@@ -654,7 +677,74 @@ export function crearModulo3D(itemId: string, tex: ConjuntoTexturas, isSoftwareG
       break;
     }
 
-    case 'sojourner':
+    case 'sojourner': {
+      // A escala real, según el modelo a tamaño real que la JPL hizo para la Smithsonian: 58 × 43 cm de planta y
+      // 81 cm de alto con la antena (https://www.si.edu/object/mars-pathfinder-mini-rover-full-scale-model:nasm_A20020297000).
+      // Ruedas de 13 cm de diámetro (página de Mars Pathfinder de la JPL). Forma tomada de las vistas del equipo.
+      // El frente (+Z) mira a la base; la antena va delante a un lado y el espectrómetro APXS detrás.
+      const matCaja = new THREE.MeshStandardMaterial({ color: 0xd9962b, roughness: 0.6, metalness: 0.3 });
+      const matRueda = new THREE.MeshStandardMaterial({ color: 0xb8bcc4, roughness: 0.5, metalness: 0.75 });
+      const barra = (a: THREE.Vector3, b: THREE.Vector3, grosor = 0.018) => {
+        const largo = a.distanceTo(b);
+        const m = new THREE.Mesh(new THREE.BoxGeometry(grosor, grosor, largo), matMetal);
+        m.position.copy(a).lerp(b, 0.5);
+        m.lookAt(b);
+        g.add(m);
+      };
+
+      const caja = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.16, 0.42), matCaja);
+      caja.position.y = 0.21;
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.012, 0.58), matSolar);
+      panel.position.set(0, 0.305, 0.03);
+      const marcoPanel = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.008, 0.59), matOscuro);
+      marcoPanel.position.set(0, 0.296, 0.03);
+      const camara = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.01), matOscuro);
+      camara.position.set(0, 0.24, 0.215);
+      const apxs = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.035, 0.06, 12), matMetal);
+      apxs.rotation.x = Math.PI / 2;
+      apxs.position.set(0, 0.2, -0.27);
+      barra(new THREE.Vector3(0, 0.2, -0.21), new THREE.Vector3(0, 0.2, -0.24), 0.02);
+      g.add(caja, marcoPanel, panel, camara, apxs);
+
+      // Antena con el codo que se ve en las vistas de frente
+      const xAntena = 0.19;
+      barra(new THREE.Vector3(xAntena, 0.31, 0.2), new THREE.Vector3(xAntena, 0.4, 0.2), 0.012);
+      barra(new THREE.Vector3(xAntena, 0.4, 0.2), new THREE.Vector3(xAntena - 0.05, 0.47, 0.2), 0.012);
+      barra(new THREE.Vector3(xAntena - 0.05, 0.47, 0.2), new THREE.Vector3(xAntena - 0.05, 0.81, 0.2), 0.008);
+
+      // Suspensión rocker-bogie: en cada lado, un balancín delantero y un bogie con las ruedas central y trasera
+      const radioRueda = 0.065;
+      const ruedaGeo = new THREE.CylinderGeometry(radioRueda, radioRueda, 0.07, 16);
+      ruedaGeo.rotateZ(Math.PI / 2);
+      const tacoGeo = new THREE.BoxGeometry(0.072, 0.012, 0.012);
+      for (const lado of [-1, 1]) {
+        const x = lado * 0.21;
+        const ruedas = [0.22, 0, -0.22].map((z) => new THREE.Vector3(x, radioRueda, z));
+        for (const centro of ruedas) {
+          const rueda = new THREE.Mesh(ruedaGeo, matRueda);
+          rueda.position.copy(centro);
+          g.add(rueda);
+          for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2;
+            const taco = new THREE.Mesh(tacoGeo, matOscuro);
+            taco.position.set(x, radioRueda + Math.sin(a) * radioRueda, centro.z + Math.cos(a) * radioRueda);
+            taco.rotation.x = -a;
+            g.add(taco);
+          }
+        }
+        const xBrazo = lado * 0.165;
+        const pivote = new THREE.Vector3(xBrazo, 0.2, 0.02);
+        const pivoteBogie = new THREE.Vector3(xBrazo, 0.14, -0.11);
+        barra(new THREE.Vector3(xBrazo, radioRueda + 0.05, 0.22), pivote);
+        barra(pivote, pivoteBogie);
+        barra(pivoteBogie, new THREE.Vector3(xBrazo, radioRueda + 0.04, 0));
+        barra(pivoteBogie, new THREE.Vector3(xBrazo, radioRueda + 0.04, -0.22));
+        for (const centro of ruedas) barra(new THREE.Vector3(xBrazo, radioRueda + 0.05, centro.z), centro, 0.014);
+      }
+      g.add(crearSombraContacto(tex.sombraContacto, 0.5));
+      break;
+    }
+
     case 'spirit-opportunity': {
       const cuerpo = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.32, 1.1), matFoil);
       cuerpo.position.y = 0.42;

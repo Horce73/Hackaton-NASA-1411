@@ -235,7 +235,9 @@ function ritmoTrabajo(astronauta: Astronauta, tarea: Tarea): number
 `tareas` de la opción (en `data/eventos.ts`) y una tarea de mantenimiento por cada módulo del diseño (de
 `Item.mantenimiento`, en `data/catalogo.ts`). Cada `Tarea` tiene `id`, `estacion` (`habitat`, `exterior` o
 `item:<índice en itemIds>`), `tipo` (`evento` o `mantenimiento`), `especialidad`, `trabajo` (segundos de un
-no especialista) y `etiqueta`. Una tarea de opción que apunta a un módulo que no está en el diseño se hace en
+no especialista) y `etiqueta`. `trabajo` se multiplica por `cargaDelDia`: `tripulantes / 2` por una carga que sube
+lineal de `CARGA_PRIMER_DIA` a `CARGA_ULTIMO_DIA`. Con los preajustes, el trabajo ideal ocupa el 42–69 % del día 1 y el
+72–119 % del último, así que al final hay que elegir qué dejar sin hacer. Una tarea de opción que apunta a un módulo que no está en el diseño se hace en
 el hábitat. `ritmoTrabajo` vale `RITMO_ESPECIALISTA` si la especialidad coincide y 1 si no. Una tarea con `personas: 2` (todas
 las del exterior) solo avanza con dos tripulantes trabajando a la vez; `ritmoEquipo` da la media de sus ritmos. El reloj y el
 progreso viven en la interfaz y la escena 3D; al terminar el día, el reducer pasa a `siguienteTurno` las
@@ -435,4 +437,6 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3. Objetivo de la fase 6, en victorias con decisiones al azar sobre el diseño sugerido: Luna fácil 70–85 %, Luna difícil 20–35 %, Marte 35–55 %; decidiendo bien, los tres se ganan casi siempre. Las cifras de la NASA no se tocan | Decidido en la fase 6 |
 | RF-10 (API de imágenes) | No se hace: las 8 historias ya tienen su foto de images.nasa.gov en el repo, y los resultados en vivo no pasarían la revisión de textos e imágenes para niños | Decidido tras la fase 6 |
 | Jugabilidad (RF-13 a RF-16) | Control con WASD del astronauta elegido (1–4); día de 90 s con ×2 y sin reloj (WCAG 2.2.1); tarea de evento sin hacer → `opcionSinAtender`; mantenimiento sin hacer → el módulo no rinde ese día; especialidades fijas por nombre (Lucía ingeniería, Marco biología, Aiko geología, Dani medicina) | Decidido el 2026-11-14 |
+| Dificultad del día | El trabajo crece con la tripulación y del primer al último día (`cargaDelDia`), en vez de acortar el día | Decidido el 2026-11-14 |
+| Insignia de la NASA en el hábitat | Lista en `modelos3d.ts` tras `MOSTRAR_LOGO_NASA = false`; la imagen no se publica hasta tener permiso por escrito | Pendiente de permiso |
 | RF-12 (guardado) | Se guarda solo la partida en curso; el inicio ofrece "Continuar partida" y nunca se reanuda sola. Al terminar la misión se borra | Decidido tras la fase 6 |

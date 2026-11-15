@@ -51,7 +51,7 @@ Prioridad: **M** = imprescindible (MVP), **S** = si hay tiempo, **C** = opcional
 | RF-12 | Guardar la última partida en `localStorage`. | — | C |
 | RF-13 | Tripulación en 3D: un astronauta por tripulante; las teclas 1–4 eligen a quién mover y los demás siguen con su tarea. | 13 | S |
 | RF-14 | Especialidades fijas (ingeniería, biología, geología, medicina): el especialista hace su tipo de tarea el doble de rápido. | 13 | S |
-| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. La opción elegida solo hace efecto si se terminan sus tareas; si no, se aplica la opción de riesgo del evento. Las del exterior piden 2 personas a la vez, como una caminata espacial. Día de 90 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
+| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. Cada opción pide 2 o 3 tareas que cuentan lo que significa; solo hace efecto si se terminan todas, y si no, se aplica la opción de riesgo del evento. Las del exterior piden 2 personas a la vez, como una caminata espacial. Día de 90 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
 | RF-16 | Mantenimiento diario de cada módulo: si no se hace, el módulo no rinde ese día. Comprar demasiados módulos sobrecarga a la tripulación. | 13 | S |
 
 ## Requisitos no funcionales
@@ -198,9 +198,10 @@ ajustarlo tras ensayar con cronómetro.
 2. **[0:30] Diseño:** enseñar el presupuesto, la pestaña **Equipo NASA** con Curiosity y la previsión técnica.
    Pulsar **Lanzar misión** (RF-02, RF-07).
 3. **[0:20] Tarjetas:** se abren las de Curiosity y Sojourner con foto, año y fuente (RF-08). Cerrar con **Entendido**.
-4. **[0:30] Día 1, tormenta de polvo:** elegir **Ahorrar energía**. Sale el plan del día: reloj de 90 s y un aviso
-   flotante sobre cada estación. Caminar con W hacia el hábitat y pulsar **E**: Lucía es ingeniera y termina la tarea
-   clave el doble de rápido. Pulsar **2** para cambiar a Marco. **Terminar día**: los módulos sin revisar no rinden
+4. **[0:30] Día 1, tormenta de polvo:** elegir **Ahorrar energía**. Sale el plan del día: reloj de 90 s, dos tareas
+   del plan (apagar sistemas en el hábitat y proteger los cultivos) y el mantenimiento de cada módulo, con un aviso
+   flotante sobre cada estación. Caminar con W hacia el hábitat y pulsar **E**: Lucía es ingeniera y trabaja el doble de
+   rápido. Pulsar **2** y llevar a Marco, biólogo, al invernadero. **Terminar día**: los módulos sin revisar no rinden
    (RF-03, RF-04, RF-13 a RF-16).
 5. **[0:15] Día 2, tormenta solar:** elegir **Seguir trabajando fuera** y **Terminar día** para mostrar el riesgo.
 6. **[0:35] Día 3:** abrir **Salud**: Curiosity avisa de la radiación antes de que sea peligrosa (RF-05).

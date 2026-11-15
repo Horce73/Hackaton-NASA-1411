@@ -110,6 +110,12 @@ Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y s
 - Lista de tareas en el panel, con el mismo progreso, para quien no ve bien el 3D, y reloj del día con el
   tiempo en texto. Botón "Terminar día". Ajuste del reloj: 90 s, ×2 o sin reloj.
 - En el diseño, cada módulo indica que pide mantenimiento diario y el total de tareas al día.
+- El panel del plan muestra primero las tareas de la opción y después el mantenimiento en líneas cortas; el pie con
+  el reloj y "Terminar día" queda fijo, sin desplazarse.
+- Pantalla táctil (se detecta el puntero, no el ancho, así vale en vertical y horizontal): joystick bajo el pulgar
+  izquierdo; fichas de tripulación, "Saltar" y un botón grande "Trabajar" bajo el derecho; cabecera de una fila con
+  el resto en un menú; el panel se pliega al empezar el plan y deja a mano "Terminar día". Arrastrar sobre el 3D gira
+  la cámara sin mover la página.
 
 ### 5.4 Tarjeta de historia (modal)
 Imagen, nombre, **año y lugar**, 2–3 frases, "Dato curioso" y enlace a la fuente. Botón **Entendido**.

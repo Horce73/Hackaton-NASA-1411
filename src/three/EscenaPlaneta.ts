@@ -207,6 +207,8 @@ export class EscenaPlaneta {
   private teclas = new Set<string>();
   private saltoPendiente = false;
   private arrastrando = false;
+  // Dedo o ratón que gira la cámara: en móvil, el otro pulgar está en el joystick y no debe girarla.
+  private punteroCamara: number | null = null;
   private ultimoPunteroX = 0;
   private ultimoPunteroY = 0;
   private entradaTactil: EntradaTactil3D = {
@@ -251,7 +253,7 @@ export class EscenaPlaneta {
   private onKeyUpBound: (e: KeyboardEvent) => void;
   private onPointerDownBound: (e: PointerEvent) => void;
   private onPointerMoveBound: (e: PointerEvent) => void;
-  private onPointerUpBound: () => void;
+  private onPointerUpBound: (e: PointerEvent) => void;
   private onWheelBound: (e: WheelEvent) => void;
   private onContextLostBound: (e: Event) => void;
   private onContextRestoredBound: () => void;
@@ -294,6 +296,8 @@ export class EscenaPlaneta {
     this.renderer.domElement.style.width = '100%';
     this.renderer.domElement.style.height = '100%';
     this.renderer.domElement.setAttribute('aria-label', 'Escena espacial 3D interactiva');
+    // Sin esto, arrastrar en un móvil desplaza o amplía la página en lugar de girar la cámara.
+    this.renderer.domElement.style.touchAction = 'none';
     this.contenedor.appendChild(this.renderer.domElement);
     this.contenedor.appendChild(this.capaPops);
 
@@ -363,8 +367,10 @@ export class EscenaPlaneta {
     this.onKeyUpBound = (e: KeyboardEvent) => this.manejarKeyUp(e);
     this.onPointerDownBound = (e: PointerEvent) => this.manejarPointerDown(e);
     this.onPointerMoveBound = (e: PointerEvent) => this.manejarPointerMove(e);
-    this.onPointerUpBound = () => {
+    this.onPointerUpBound = (e: PointerEvent) => {
+      if (e.pointerId !== this.punteroCamara) return;
       this.arrastrando = false;
+      this.punteroCamara = null;
     };
     this.onWheelBound = (e: WheelEvent) => this.manejarWheel(e);
     this.onContextLostBound = (e: Event) => {
@@ -382,6 +388,7 @@ export class EscenaPlaneta {
     this.renderer.domElement.addEventListener('pointerdown', this.onPointerDownBound);
     window.addEventListener('pointermove', this.onPointerMoveBound);
     window.addEventListener('pointerup', this.onPointerUpBound);
+    window.addEventListener('pointercancel', this.onPointerUpBound);
     this.renderer.domElement.addEventListener('wheel', this.onWheelBound, { passive: true });
     this.renderer.domElement.addEventListener('webglcontextlost', this.onContextLostBound);
     this.renderer.domElement.addEventListener('webglcontextrestored', this.onContextRestoredBound);
@@ -1214,6 +1221,14 @@ export class EscenaPlaneta {
         const rol = raiz.querySelector<HTMLElement>('[data-e]')!;
         rol.textContent = `● ${ESPECIALIDADES[tarea.especialidad].nombre}`;
         rol.style.color = ESPECIALIDADES[tarea.especialidad].color;
+        if (ancho < 640) {
+          // Pantalla pequeña: solo título y barra, para no tapar el juego.
+          raiz.style.minWidth = '0';
+          raiz.style.maxWidth = '130px';
+          raiz.style.padding = '3px 6px';
+          raiz.style.fontSize = '11px';
+          rol.style.display = 'none';
+        }
         this.capaPops.appendChild(raiz);
         // Referencias guardadas: nada de buscar en el DOM en cada fotograma.
         pop = { raiz, barra: raiz.querySelector<HTMLElement>('[data-p]')!, aviso: raiz.querySelector<HTMLElement>('[data-k]')! };
@@ -1312,13 +1327,15 @@ export class EscenaPlaneta {
 
   private manejarPointerDown(e: PointerEvent) {
     if (e.button !== 0 && e.button !== 2) return;
+    if (this.punteroCamara !== null) return;
+    this.punteroCamara = e.pointerId;
     this.arrastrando = true;
     this.ultimoPunteroX = e.clientX;
     this.ultimoPunteroY = e.clientY;
   }
 
   private manejarPointerMove(e: PointerEvent) {
-    if (!this.arrastrando || this.modo === 'pausa') return;
+    if (!this.arrastrando || e.pointerId !== this.punteroCamara || this.modo === 'pausa') return;
     const dx = e.clientX - this.ultimoPunteroX;
     const dy = e.clientY - this.ultimoPunteroY;
     this.ultimoPunteroX = e.clientX;
@@ -1667,6 +1684,7 @@ export class EscenaPlaneta {
     this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDownBound);
     window.removeEventListener('pointermove', this.onPointerMoveBound);
     window.removeEventListener('pointerup', this.onPointerUpBound);
+    window.removeEventListener('pointercancel', this.onPointerUpBound);
     this.renderer.domElement.removeEventListener('wheel', this.onWheelBound);
     this.renderer.domElement.removeEventListener('webglcontextlost', this.onContextLostBound);
     this.renderer.domElement.removeEventListener('webglcontextrestored', this.onContextRestoredBound);

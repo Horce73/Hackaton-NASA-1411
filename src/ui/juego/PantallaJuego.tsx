@@ -1,10 +1,6 @@
-import { useEffect, useRef, useState, type Dispatch } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type PointerEvent as EventoPuntero } from 'react';
 import {
   Apple,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  ArrowUp,
   BookOpen,
   ChevronDown,
   ChevronUp,
@@ -14,6 +10,7 @@ import {
   Hammer,
   HeartPulse,
   HelpCircle,
+  Menu,
   Radio,
   Rocket,
   Sparkles,
@@ -62,6 +59,14 @@ function nombreEstacion(estacion: string, itemIds: string[]): string {
   return CATALOGO_POR_ID[id]?.nombre ?? 'Hábitat';
 }
 
+// Pantalla táctil (móvil o tableta), en cualquier orientación: decide los controles, no el ancho.
+function useEsTactil(): boolean {
+  const [tactil] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches === true,
+  );
+  return tactil;
+}
+
 interface PantallaJuegoProps {
   estado: EstadoJuego;
   telemetria: EstadoTelemetria3D;
@@ -88,6 +93,8 @@ export function PantallaJuego({
 }: PantallaJuegoProps) {
   const { partida, plan } = estado;
   const [panelEventoAbierto, setPanelEventoAbierto] = useState(true);
+  const esTactil = useEsTactil();
+  const [menuAbierto, setMenuAbierto] = useState(false);
   const [mostrarTripulacion, setMostrarTripulacion] = useState(false);
   const [mostrarHistorias, setMostrarHistorias] = useState(false);
   const [mostrarControles, setMostrarControles] = useState(false);
@@ -100,6 +107,10 @@ export function PantallaJuego({
   const relojPausado = estado.tarjetas.length > 0 || mostrarTripulacion || mostrarHistorias;
   const claveDia = plan ? `${partida.turno}-${plan.opcionId}` : null;
   const claveAnterior = useRef<string | null>(null);
+  // En táctil, el panel se pliega al empezar el plan (para ver y moverse) y se abre para decidir el día siguiente.
+  useEffect(() => {
+    if (esTactil) setPanelEventoAbierto(!claveDia);
+  }, [claveDia, esTactil]);
   useEffect(() => {
     if (claveDia && claveDia !== claveAnterior.current) setRestante(SEGUNDOS_RELOJ[ajusteReloj]);
     claveAnterior.current = claveDia;
@@ -231,7 +242,7 @@ export function PantallaJuego({
               {relojPausado && <span className="text-xs font-normal text-[var(--color-text-muted)]">(pausa)</span>}
             </div>
           )}
-          <div className="hidden md:flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono">
+          <div className={`${esTactil ? 'hidden' : 'hidden md:flex'} items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono`}>
             <span>
               {partida.config.destino === 'luna' ? 'Luna' : 'Marte'} ({telemetria.gravedad} m/s²)
             </span>
@@ -260,7 +271,7 @@ export function PantallaJuego({
               }`}
             >
               <Icono className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              <span className="hidden sm:inline text-[var(--color-text-muted)]">{etiqueta}</span>
+              <span className={`${esTactil ? 'hidden' : 'hidden sm:inline'} text-[var(--color-text-muted)]`}>{etiqueta}</span>
               <span className="font-mono tabular-nums font-bold">{valor}</span>
               {delta !== undefined && delta !== 0 && (
                 <span
@@ -284,7 +295,8 @@ export function PantallaJuego({
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        {(!esTactil || menuAbierto) && (
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => {
@@ -373,6 +385,18 @@ export function PantallaJuego({
             </div>
           )}
         </div>
+        )}
+        {esTactil && (
+          <button
+            type="button"
+            onClick={() => setMenuAbierto((v) => !v)}
+            aria-expanded={menuAbierto}
+            aria-label="Más opciones: salud, archivo NASA, sonido, ayuda y abortar"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg border border-[var(--color-border-strong)] bg-[#141b34] text-[var(--color-text)] cursor-pointer"
+          >
+            {menuAbierto ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
+          </button>
+        )}
       </header>
 
       <div className="relative flex-1 pointer-events-none">
@@ -478,7 +502,7 @@ export function PantallaJuego({
           </div>
         )}
 
-        {telemetria.tareaCercana && (
+        {!esTactil && telemetria.tareaCercana && (
           <div className="pointer-events-auto absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
             <button
               type="button"
@@ -495,7 +519,7 @@ export function PantallaJuego({
           </div>
         )}
 
-        {!telemetria.tareaCercana && telemetria.objetivoCercano && (
+        {!esTactil && !telemetria.tareaCercana && telemetria.objetivoCercano && (
           <div className="pointer-events-auto absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
             <button
               type="button"
@@ -518,7 +542,9 @@ export function PantallaJuego({
         )}
       </div>
 
-      <div className="pointer-events-none flex flex-col md:flex-row md:items-end justify-between gap-2">
+      <div
+        className={`pointer-events-none flex flex-col justify-between gap-2 ${esTactil ? '' : 'md:flex-row md:items-end'}`}
+      >
         {evento && (
           <section
             aria-live="polite"
@@ -539,13 +565,24 @@ export function PantallaJuego({
                 </h1>
               </div>
 
+              {plan && !panelEventoAbierto && (
+                <button
+                  type="button"
+                  onClick={() => dispatch({ tipo: 'TERMINAR_DIA' })}
+                  className="min-h-[44px] px-3 rounded-lg bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] text-[var(--color-on-accent)] text-xs font-bold cursor-pointer shrink-0 whitespace-nowrap"
+                >
+                  Terminar día
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setPanelEventoAbierto((v) => !v)}
                 aria-expanded={panelEventoAbierto}
-                className="inline-flex items-center gap-1 min-h-[36px] px-2.5 rounded-lg border border-[var(--color-border)] bg-[#0b1020] text-xs font-semibold text-[var(--color-text)] hover:border-[var(--color-moon)] cursor-pointer shrink-0 whitespace-nowrap"
+                className="inline-flex items-center gap-1 min-h-[44px] px-2.5 rounded-lg border border-[var(--color-border)] bg-[#0b1020] text-xs font-semibold text-[var(--color-text)] hover:border-[var(--color-moon)] cursor-pointer shrink-0 whitespace-nowrap"
               >
-                <span>{panelEventoAbierto ? 'Explorar 3D [H]' : 'Decidir [H]'}</span>
+                <span>
+                  {panelEventoAbierto ? (esTactil ? 'Ocultar' : 'Explorar 3D [H]') : plan ? 'Ver plan' : esTactil ? 'Decidir' : 'Decidir [H]'}
+                </span>
                 {panelEventoAbierto ? (
                   <ChevronDown className="w-4 h-4" aria-hidden="true" />
                 ) : (
@@ -614,72 +651,56 @@ export function PantallaJuego({
           </section>
         )}
 
-        <BarraTripulacion
-          tripulacion={partida.tripulacion.map((a) => ({ nombre: a.nombre, especialidad: a.especialidad }))}
-          seleccionado={telemetria.seleccionado}
-          trabajo={telemetria.trabajoTripulacion}
-          tareas={tareas}
-          progreso={telemetria.progresoTareas}
-          onSeleccionar={onSeleccionarTripulante}
-        />
+        {!esTactil && (
+          <BarraTripulacion
+            tripulacion={partida.tripulacion.map((a) => ({ nombre: a.nombre, especialidad: a.especialidad }))}
+            seleccionado={telemetria.seleccionado}
+            trabajo={telemetria.trabajoTripulacion}
+            tareas={tareas}
+            progreso={telemetria.progresoTareas}
+            onSeleccionar={onSeleccionarTripulante}
+          />
+        )}
 
-        {!panelEventoAbierto && (
-          <div className="pointer-events-auto flex md:hidden items-end justify-between w-full gap-2 shrink-0">
-            <div className="grid grid-cols-3 gap-1 bg-[#0b1020]/90 p-1.5 rounded-xl border border-[var(--color-border)]">
-              <div />
-              <button
-                type="button"
-                aria-label="Avanzar"
-                onPointerDown={() => onCambiarEntradaTactil({ adelante: 1 })}
-                onPointerUp={() => onCambiarEntradaTactil({ adelante: 0 })}
-                onPointerLeave={() => onCambiarEntradaTactil({ adelante: 0 })}
-                className="w-11 h-11 rounded-lg bg-[#1b2444] flex items-center justify-center text-white active:bg-[var(--color-mars)]"
-              >
-                <ArrowUp className="w-5 h-5" />
-              </button>
-              <div />
-              <button
-                type="button"
-                aria-label="Izquierda"
-                onPointerDown={() => onCambiarEntradaTactil({ derecha: -1 })}
-                onPointerUp={() => onCambiarEntradaTactil({ derecha: 0 })}
-                onPointerLeave={() => onCambiarEntradaTactil({ derecha: 0 })}
-                className="w-11 h-11 rounded-lg bg-[#1b2444] flex items-center justify-center text-white active:bg-[var(--color-mars)]"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Retroceder"
-                onPointerDown={() => onCambiarEntradaTactil({ adelante: -1 })}
-                onPointerUp={() => onCambiarEntradaTactil({ adelante: 0 })}
-                onPointerLeave={() => onCambiarEntradaTactil({ adelante: 0 })}
-                className="w-11 h-11 rounded-lg bg-[#1b2444] flex items-center justify-center text-white active:bg-[var(--color-mars)]"
-              >
-                <ArrowDown className="w-5 h-5" />
-              </button>
-              <button
-                type="button"
-                aria-label="Derecha"
-                onPointerDown={() => onCambiarEntradaTactil({ derecha: 1 })}
-                onPointerUp={() => onCambiarEntradaTactil({ derecha: 0 })}
-                onPointerLeave={() => onCambiarEntradaTactil({ derecha: 0 })}
-                className="w-11 h-11 rounded-lg bg-[#1b2444] flex items-center justify-center text-white active:bg-[var(--color-mars)]"
-              >
-                <ArrowRight className="w-5 h-5" />
-              </button>
+        {esTactil && !panelEventoAbierto && (
+          <div className="pointer-events-auto flex items-end justify-between w-full gap-2 shrink-0">
+            <Joystick onCambio={onCambiarEntradaTactil} />
+            <div className="flex flex-col items-end gap-2">
+              <BarraTripulacion
+                compacta
+                tripulacion={partida.tripulacion.map((a) => ({ nombre: a.nombre, especialidad: a.especialidad }))}
+                seleccionado={telemetria.seleccionado}
+                trabajo={telemetria.trabajoTripulacion}
+                tareas={tareas}
+                progreso={telemetria.progresoTareas}
+                onSeleccionar={onSeleccionarTripulante}
+              />
+              <div className="flex items-end gap-2">
+                <button
+                  type="button"
+                  aria-label="Saltar y jetpack (mantener)"
+                  onPointerDown={() => onCambiarEntradaTactil({ saltar: true })}
+                  onPointerUp={() => onCambiarEntradaTactil({ saltar: false })}
+                  onPointerCancel={() => onCambiarEntradaTactil({ saltar: false })}
+                  onPointerLeave={() => onCambiarEntradaTactil({ saltar: false })}
+                  style={{ touchAction: 'none' }}
+                  className="h-14 px-4 rounded-2xl border border-[var(--color-border-strong)] bg-[#141b34] text-[var(--color-text)] font-bold text-sm shadow-xl active:scale-95"
+                >
+                  Saltar
+                </button>
+                <button
+                  type="button"
+                  onClick={onEjecutarAccionCercana}
+                  disabled={!telemetria.tareaCercana && !telemetria.objetivoCercano}
+                  className="h-20 w-24 rounded-2xl bg-[var(--color-mars)] text-[var(--color-on-accent)] font-bold shadow-xl active:scale-95 disabled:opacity-40 flex flex-col items-center justify-center px-1"
+                >
+                  <span className="text-base">{telemetria.tareaCercana ? 'Trabajar' : telemetria.objetivoCercano ? 'Usar' : 'Acción'}</span>
+                  <span className="text-[10px] leading-tight line-clamp-2 text-center">
+                    {telemetria.tareaCercana?.etiqueta ?? telemetria.objetivoCercano?.etiqueta ?? 'Acércate a una tarea'}
+                  </span>
+                </button>
+              </div>
             </div>
-
-            <button
-              type="button"
-              aria-label="Saltar y Jetpack"
-              onPointerDown={() => onCambiarEntradaTactil({ saltar: true })}
-              onPointerUp={() => onCambiarEntradaTactil({ saltar: false })}
-              onPointerLeave={() => onCambiarEntradaTactil({ saltar: false })}
-              className="h-14 px-5 rounded-xl bg-[var(--color-mars)] text-[var(--color-on-accent)] font-bold text-sm shadow-xl active:scale-95"
-            >
-              Saltar
-            </button>
           </div>
         )}
       </div>
@@ -692,7 +713,8 @@ interface MiembroTripulacion {
   especialidad: Especialidad;
 }
 
-// Plan del día (RF-15): tareas con su progreso, reloj ajustable y botón para terminar.
+// Plan del día (RF-15): primero las tareas de la opción elegida, después el mantenimiento en líneas cortas.
+// El pie con el reloj y "Terminar día" queda fijo abajo: no hace falta desplazarse para terminar.
 function PlanDelDia({
   opcionTexto,
   tareas,
@@ -716,58 +738,90 @@ function PlanDelDia({
   onAjusteReloj: (ajuste: AjusteReloj) => void;
   onTerminar: () => void;
 }) {
-  const faltanClave = tareas.some((t) => t.tipo === 'evento' && !hechas.has(t.id));
+  const delPlan = tareas.filter((t) => t.tipo === 'evento');
+  const mantenimiento = tareas.filter((t) => t.tipo === 'mantenimiento');
+  const faltanDelPlan = delPlan.some((t) => !hechas.has(t.id));
+  const pct = (t: Tarea) => (hechas.has(t.id) ? 100 : Math.round((progreso[t.id] ?? 0) * 100));
   return (
     <div className="space-y-2">
       <p className="text-sm text-[var(--color-text)]">
         Plan: <strong>{opcionTexto}</strong>
+        {delPlan.length === 0 && <span className="text-[var(--color-text-muted)]"> · sin tareas extra, pero arriesgado</span>}
       </p>
-      <ul className="space-y-1" aria-label="Tareas del día">
-        {tareas.map((t) => {
-          const hecha = hechas.has(t.id);
-          const pct = hecha ? 100 : Math.round((progreso[t.id] ?? 0) * 100);
-          const quienes = tripulacion.filter((_, i) => trabajo[i] === t.id).map((a) => a.nombre);
-          const especialista = tripulacion.find((a) => a.especialidad === t.especialidad);
-          return (
-            <li
-              key={t.id}
-              className={`rounded-lg border px-2.5 py-1.5 text-xs ${
-                hecha ? 'border-[var(--color-ok)] bg-[#0f241f]' : 'border-[var(--color-border)] bg-[#141b34]'
-              }`}
-            >
-              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                <span className="font-semibold text-[var(--color-text)]">
-                  {hecha ? '✓ ' : ''}
-                  {t.etiqueta}
-                  {t.tipo === 'evento' && <span className="text-[var(--color-warn)]"> · clave</span>}
-                </span>
-                <span className="font-mono tabular-nums text-[var(--color-text-muted)]">{pct}%</span>
-              </div>
-              <div className="text-[var(--color-text-muted)]">
-                {nombreEstacion(t.estacion, itemIds)} · {ESPECIALIDADES[t.especialidad].nombre}
-                {(t.personas ?? 1) > 1 && ` · ${t.personas} personas a la vez`}
-                {especialista ? ` (${especialista.nombre} va el doble de rápido)` : ''}
-                {quienes.length > 0 && ` · Trabajando: ${quienes.join(', ')}`}
-              </div>
-              <div className="mt-1 h-1.5 rounded bg-white/10" aria-hidden="true">
-                <div className="h-full rounded bg-[var(--color-ok)]" style={{ width: `${pct}%` }} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      {faltanClave && (
-        <p className="text-xs text-[var(--color-warn)]">
-          Si una tarea clave queda sin hacer, el plan no funciona y pasa lo peor del evento.
-        </p>
+      {delPlan.length > 0 && (
+        <ul className="space-y-1" aria-label="Tareas del plan">
+          {delPlan.map((t) => {
+            const quienes = tripulacion.filter((_, i) => trabajo[i] === t.id).map((a) => a.nombre);
+            const especialista = tripulacion.find((a) => a.especialidad === t.especialidad);
+            return (
+              <li
+                key={t.id}
+                className={`rounded-lg border px-2.5 py-1.5 text-xs ${
+                  hechas.has(t.id) ? 'border-[var(--color-ok)] bg-[#0f241f]' : 'border-[var(--color-warn)]/60 bg-[#141b34]'
+                }`}
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                  <span className="font-semibold text-[var(--color-text)]">
+                    {hechas.has(t.id) ? '✓ ' : ''}
+                    {t.etiqueta}
+                  </span>
+                  <span className="font-mono tabular-nums text-[var(--color-text-muted)]">{pct(t)}%</span>
+                </div>
+                <div className="text-[var(--color-text-muted)]">
+                  {nombreEstacion(t.estacion, itemIds)} · {ESPECIALIDADES[t.especialidad].nombre}
+                  {(t.personas ?? 1) > 1 && ` · ${t.personas} personas a la vez`}
+                  {especialista ? ` (${especialista.nombre} va el doble de rápido)` : ''}
+                  {quienes.length > 0 && ` · Trabajando: ${quienes.join(', ')}`}
+                </div>
+                <div className="mt-1 h-1.5 rounded bg-white/10" aria-hidden="true">
+                  <div className="h-full rounded bg-[var(--color-ok)]" style={{ width: `${pct(t)}%` }} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      {faltanDelPlan && (
+        <p className="text-xs text-[var(--color-warn)]">Si no terminas las tareas del plan, pasa lo peor del evento.</p>
+      )}
+      {mantenimiento.length > 0 && (
+        <div className="space-y-1">
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)]">
+            Mantenimiento ({mantenimiento.filter((t) => hechas.has(t.id)).length}/{mantenimiento.length}) · un módulo sin
+            revisar no rinde hoy
+          </h2>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1" aria-label="Mantenimiento">
+            {mantenimiento.map((t) => (
+              <li
+                key={t.id}
+                className={`rounded-md border px-2 py-1 text-xs ${
+                  hechas.has(t.id) ? 'border-[var(--color-ok)] bg-[#0f241f]' : 'border-[var(--color-border)] bg-[#141b34]'
+                }`}
+              >
+                <div className="flex justify-between gap-2">
+                  <span className="truncate text-[var(--color-text)]">
+                    {hechas.has(t.id) ? '✓ ' : ''}
+                    {nombreEstacion(t.estacion, itemIds)}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums" style={{ color: ESPECIALIDADES[t.especialidad].color }}>
+                    {ESPECIALIDADES[t.especialidad].nombre.slice(0, 3)} {pct(t)}%
+                  </span>
+                </div>
+                <div className="mt-0.5 h-1 rounded bg-white/10" aria-hidden="true">
+                  <div className="h-full rounded bg-[var(--color-ok)]" style={{ width: `${pct(t)}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="sticky -bottom-3.5 -mx-3.5 -mb-3.5 px-3.5 py-2 bg-[#0b1020] border-t border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2">
         <label className="text-xs text-[var(--color-text-muted)] inline-flex items-center gap-1.5">
           Reloj
           <select
             value={ajusteReloj}
             onChange={(e) => onAjusteReloj(e.target.value as AjusteReloj)}
-            className="min-h-[36px] rounded-lg border border-[var(--color-border)] bg-[#0b1020] px-2 text-xs text-[var(--color-text)]"
+            className="min-h-[40px] rounded-lg border border-[var(--color-border)] bg-[#0b1020] px-2 text-xs text-[var(--color-text)]"
           >
             <option value="normal">{DURACION_DIA} s</option>
             <option value="doble">×2</option>
@@ -777,7 +831,7 @@ function PlanDelDia({
         <button
           type="button"
           onClick={onTerminar}
-          className="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 rounded-xl bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] text-[var(--color-on-accent)] text-sm font-bold cursor-pointer"
+          className="inline-flex items-center gap-1.5 min-h-[44px] px-3.5 rounded-xl bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] text-[var(--color-on-accent)] text-sm font-bold cursor-pointer"
         >
           Terminar día
         </button>
@@ -786,8 +840,61 @@ function PlanDelDia({
   );
 }
 
+// Joystick táctil: un pulgar mueve al astronauta. Solo sigue a su propio dedo, así el otro puede girar la cámara.
+function Joystick({ onCambio }: { onCambio: (entrada: Partial<EntradaTactil3D>) => void }) {
+  const baseRef = useRef<HTMLDivElement | null>(null);
+  const puntero = useRef<number | null>(null);
+  const [mando, setMando] = useState({ x: 0, y: 0 });
+  const mover = (e: EventoPuntero<HTMLDivElement>) => {
+    if (e.pointerId !== puntero.current || !baseRef.current) return;
+    const caja = baseRef.current.getBoundingClientRect();
+    const radio = caja.width / 2;
+    let x = (e.clientX - caja.left - radio) / radio;
+    let y = (e.clientY - caja.top - radio) / radio;
+    const largo = Math.hypot(x, y);
+    if (largo > 1) {
+      x /= largo;
+      y /= largo;
+    }
+    const activo = largo < 0.15 ? 0 : 1; // zona muerta en el centro
+    setMando({ x, y });
+    onCambio({ adelante: -y * activo, derecha: x * activo, sprint: largo > 0.95 });
+  };
+  const soltar = (e: EventoPuntero<HTMLDivElement>) => {
+    if (e.pointerId !== puntero.current) return;
+    puntero.current = null;
+    setMando({ x: 0, y: 0 });
+    onCambio({ adelante: 0, derecha: 0, sprint: false });
+  };
+  return (
+    <div
+      ref={baseRef}
+      role="application"
+      aria-label="Joystick: arrastra para mover al astronauta"
+      onPointerDown={(e) => {
+        if (puntero.current !== null) return;
+        puntero.current = e.pointerId;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        mover(e);
+      }}
+      onPointerMove={mover}
+      onPointerUp={soltar}
+      onPointerCancel={soltar}
+      style={{ touchAction: 'none' }}
+      className="relative w-32 h-32 shrink-0 rounded-full border-2 border-[var(--color-border-strong)] bg-[#0b1020]/70 select-none"
+    >
+      <div
+        className="absolute left-1/2 top-1/2 -ml-7 -mt-7 w-14 h-14 rounded-full bg-[var(--color-moon)]/80 border border-white/40"
+        style={{ transform: `translate(${mando.x * 36}px, ${mando.y * 36}px)` }}
+        aria-hidden="true"
+      />
+    </div>
+  );
+}
+
 // Barra de tripulación (RF-13): elegir astronauta con clic o con las teclas 1–4.
 function BarraTripulacion({
+  compacta = false,
   tripulacion,
   seleccionado,
   trabajo,
@@ -795,6 +902,7 @@ function BarraTripulacion({
   progreso,
   onSeleccionar,
 }: {
+  compacta?: boolean;
   tripulacion: MiembroTripulacion[];
   seleccionado: number;
   trabajo: (string | null)[];
@@ -809,6 +917,27 @@ function BarraTripulacion({
       className="pointer-events-auto flex flex-wrap gap-1.5 md:justify-end"
     >
       {tripulacion.map((a, i) => {
+        if (compacta) {
+          const ocupado = trabajo[i] !== null;
+          return (
+            <button
+              key={a.nombre}
+              type="button"
+              onClick={() => onSeleccionar(i)}
+              aria-pressed={i === seleccionado}
+              aria-label={`${i + 1}: ${a.nombre}, ${ESPECIALIDADES[a.especialidad].nombre}${ocupado ? ', trabajando' : ''}`}
+              style={{ boxShadow: `inset 0 -4px 0 ${ESPECIALIDADES[a.especialidad].color}` }}
+              className={`min-h-[44px] min-w-[52px] rounded-xl border-2 px-2 text-xs font-bold cursor-pointer ${
+                i === seleccionado
+                  ? 'border-[var(--color-warn)] bg-[#1e294f] text-[var(--color-text)]'
+                  : 'border-[var(--color-border)] bg-[#0b1020]/92 text-[var(--color-text-muted)]'
+              }`}
+            >
+              {a.nombre}
+              {ocupado && ' ⚙'}
+            </button>
+          );
+        }
         const tarea = tareas.find((t) => t.id === trabajo[i]);
         const activo = i === seleccionado;
         const esperando = tarea && trabajo.filter((id) => id === tarea.id).length < (tarea.personas ?? 1);

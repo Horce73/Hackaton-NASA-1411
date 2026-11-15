@@ -16,7 +16,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { energiaSolar: 8 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 6 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 12 },
   },
   {
     id: 'reactor',
@@ -25,7 +25,7 @@ export const CATALOGO: Item[] = [
     coste: 22,
     destinos: AMBOS,
     efectos: { energiaProduccion: 20 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 12 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 20 },
   },
   {
     id: 'invernadero',
@@ -34,7 +34,7 @@ export const CATALOGO: Item[] = [
     coste: 15,
     destinos: AMBOS,
     efectos: { alimentoProduccion: 3.6, energiaConsumo: 3 }, // 3,6 kg al día: la comida de 2 tripulantes
-    mantenimiento: { especialidad: 'biologia', trabajo: 12 },
+    mantenimiento: { especialidad: 'biologia', trabajo: 20 },
   },
   {
     id: 'reciclador',
@@ -43,7 +43,7 @@ export const CATALOGO: Item[] = [
     coste: 12,
     destinos: AMBOS,
     efectos: { soporteVital: 2, energiaConsumo: 3 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 10 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 18 },
   },
   {
     id: 'blindaje',
@@ -52,7 +52,7 @@ export const CATALOGO: Item[] = [
     coste: 10,
     destinos: AMBOS,
     efectos: { blindaje: 0.45 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 6 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 10 },
   },
   {
     id: 'zona-descanso',
@@ -61,7 +61,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { saludBonus: { suenoEstres: 2 }, energiaConsumo: 1 },
-    mantenimiento: { especialidad: 'medicina', trabajo: 6 },
+    mantenimiento: { especialidad: 'medicina', trabajo: 10 },
   },
   {
     id: 'gimnasio',
@@ -70,7 +70,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { saludBonus: { musculoHueso: 2 }, energiaConsumo: 1 },
-    mantenimiento: { especialidad: 'medicina', trabajo: 6 },
+    mantenimiento: { especialidad: 'medicina', trabajo: 10 },
   },
   {
     id: 'retrorreflector',

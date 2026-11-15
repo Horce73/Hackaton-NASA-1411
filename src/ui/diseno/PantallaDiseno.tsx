@@ -9,6 +9,7 @@ import {
   Plus,
   Rocket,
   Sparkles,
+  Star,
   XCircle,
 } from 'lucide-react';
 import { AVISOS } from '../../data/avisos';
@@ -18,6 +19,7 @@ import { avisosDiseno, presupuestoRestante, validarDiseno } from '../../engine/d
 import type { Configuracion } from '../../engine/tipos';
 import type { Accion } from '../../state/reducer';
 import { describirEfectos } from '../comun/efectos';
+import { codigoMision, ParcheMision } from '../comun/EmblemaMision';
 
 interface PantallaDisenoProps {
   config: Configuracion;
@@ -43,7 +45,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
   const destinoNombre = config.destino === 'luna' ? 'la Luna' : 'Marte';
 
   return (
-    <main className="relative z-10 min-h-screen pointer-events-none flex flex-col justify-between p-3 sm:p-5 gap-3">
+    <main className="relative z-10 min-h-screen pointer-events-none flex flex-col justify-between p-3 sm:p-5 gap-3 max-sm:pb-20">
       <header className="pointer-events-auto rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/92 px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-xl">
         <div className="flex items-center gap-3">
           <button
@@ -52,14 +54,21 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
             className="inline-flex items-center gap-1.5 min-h-[42px] px-3 rounded-lg border border-[var(--color-border)] bg-[#141b34] text-xs sm:text-sm font-medium text-[var(--color-text)] hover:border-[var(--color-border-strong)] transition-colors whitespace-nowrap shrink-0 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-            <span>Destino</span>
+            <span>Misión</span>
           </button>
+          <ParcheMision destino={config.destino} className="hidden sm:block w-11 h-11" />
           <div>
             <h1 className="text-lg sm:text-2xl font-bold text-[var(--color-text)] leading-tight">
-              Base 3D en {destinoNombre}
+              Tu base en {destinoNombre}
             </h1>
             <p className="text-xs text-[var(--color-text-muted)]">
-              {config.tripulantes} astronautas · {config.turnos} días · Cada módulo aparece en el terreno
+              <span className="block sm:inline font-mono tracking-wider text-[var(--color-warn)]">
+                Plan de misión {codigoMision(config)}
+              </span>
+              <span className="hidden sm:inline"> · </span>
+              <span className="whitespace-nowrap">
+                {config.tripulantes} astronautas · {config.turnos} días
+              </span>
             </p>
           </div>
         </div>
@@ -72,17 +81,17 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
             className="inline-flex items-center gap-1.5 min-h-[42px] px-3 rounded-lg border border-[var(--color-border)] bg-[#141b34] text-xs font-medium text-[var(--color-text)] hover:border-[var(--color-moon)] transition-colors whitespace-nowrap cursor-pointer"
           >
             <Eye className="w-4 h-4 text-[var(--color-moon)]" aria-hidden="true" />
-            <span>{soloVista3D ? 'Mostrar catálogo' : 'Inspeccionar 3D'}</span>
+            <span>{soloVista3D ? 'Ver el catálogo' : 'Ver la base'}</span>
           </button>
 
           <div className="text-right">
-            <div className="text-[11px] text-[var(--color-text-muted)]">Presupuesto</div>
-            <div className="font-mono tabular-nums text-base sm:text-lg font-bold text-[var(--color-text)]">
+            <div className="text-xs text-[var(--color-text-muted)]">Te quedan</div>
+            <div className="tabular-nums text-base sm:text-lg font-bold text-[var(--color-text)]">
               <span className={restante <= 10 ? 'text-[var(--color-warn)]' : 'text-[var(--color-ok)]'}>
                 {restante}
               </span>{' '}
               <span className="text-xs font-normal text-[var(--color-text-muted)]">
-                / {PRESUPUESTO} pts
+                de {PRESUPUESTO} créditos
               </span>
             </div>
           </div>
@@ -91,7 +100,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
             type="button"
             disabled={!validacion.valido}
             onClick={() => dispatch({ tipo: 'CONFIRMAR_DISENO' })}
-            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-on-accent)] font-bold text-sm sm:text-base transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-on-accent)] font-bold text-sm sm:text-base transition-colors whitespace-nowrap shrink-0 cursor-pointer max-sm:fixed max-sm:inset-x-3 max-sm:bottom-3 max-sm:z-30 max-sm:min-h-[52px] max-sm:text-base max-sm:shadow-[0_8px_24px_rgba(0,0,0,0.55)]"
           >
             <Rocket className="w-4 h-4" aria-hidden="true" />
             <span>Lanzar misión</span>
@@ -110,7 +119,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
       )}
 
       {!soloVista3D && (
-        <div className="pointer-events-auto w-full lg:w-[500px] max-h-[calc(100vh-120px)] flex flex-col rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/92 shadow-2xl overflow-hidden">
+        <div className="pointer-events-auto w-full lg:w-[500px] max-h-[calc(100vh-120px)] max-sm:max-h-[calc(100dvh-15rem)] flex flex-col rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/92 shadow-2xl overflow-hidden">
           <div
             className="grid grid-cols-3 gap-1 p-1.5 border-b border-[var(--color-border)] bg-[#141b34]"
             role="tablist"
@@ -123,7 +132,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
               onClick={() => setPestana('modulo')}
               className={`min-h-[40px] px-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 pestana === 'modulo'
-                  ? 'bg-[var(--color-moon)] text-[var(--color-on-accent)]'
+                  ? 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] shadow-[inset_0_-2px_0_var(--color-warn)]'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
               }`}
             >
@@ -136,11 +145,14 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
               onClick={() => setPestana('historico')}
               className={`min-h-[40px] px-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 pestana === 'historico'
-                  ? 'bg-[var(--color-warn)] text-[var(--color-on-accent)]'
+                  ? 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] shadow-[inset_0_-2px_0_var(--color-warn)]'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
               }`}
             >
-              ★ Equipo NASA
+              <span className="inline-flex items-center gap-1">
+                <Star className="h-3.5 w-3.5 text-[var(--color-warn)]" aria-hidden="true" />
+                Equipo NASA
+              </span>
             </button>
             <button
               type="button"
@@ -149,7 +161,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
               onClick={() => setPestana('resumen')}
               className={`min-h-[40px] px-2 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer ${
                 pestana === 'resumen'
-                  ? 'bg-[var(--color-mars)] text-[var(--color-on-accent)]'
+                  ? 'bg-[var(--color-surface-elevated)] text-[var(--color-text)] shadow-[inset_0_-2px_0_var(--color-warn)]'
                   : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
               }`}
             >
@@ -159,7 +171,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
 
           <div className="p-4 overflow-y-auto space-y-3 flex-1">
             {pestana !== 'resumen' ? (
-              <div className="space-y-3">
+              <div className="divide-y divide-[var(--color-border)]">
                 {itemsCompatibles.map((item) => {
                   const cantidad = itemIds.filter((id) => id === item.id).length;
                   const yaIncluidoHistorico = item.tipo === 'historico' && cantidad > 0;
@@ -168,19 +180,19 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
 
                   let motivoBloqueo: string | null = null;
                   if (yaIncluidoHistorico) motivoBloqueo = 'Ya incluido (equipo único)';
-                  else if (faltaPresupuesto) motivoBloqueo = `Faltan ${item.coste - restante} pts`;
+                  else if (faltaPresupuesto) motivoBloqueo = `Te faltan ${item.coste - restante} créditos`;
 
                   return (
-                    <article
-                      key={item.id}
-                      className="rounded-xl border border-[var(--color-border)] bg-[#141b34] p-3.5 space-y-2.5"
-                    >
+                    <article key={item.id} className="py-3.5 first:pt-0 last:pb-0 space-y-2">
                       <div className="flex items-start justify-between gap-2">
-                        <h2 className="font-semibold text-sm sm:text-base text-[var(--color-text)] leading-snug">
-                          {item.tipo === 'historico' ? `★ ${item.nombre}` : item.nombre}
+                        <h2 className="inline-flex items-center gap-1.5 font-semibold text-sm sm:text-base text-[var(--color-text)] leading-snug">
+                          {item.tipo === 'historico' && (
+                            <Star className="h-3.5 w-3.5 shrink-0 text-[var(--color-warn)]" aria-label="Equipo NASA" />
+                          )}
+                          {item.nombre}
                         </h2>
-                        <span className="font-mono tabular-nums text-xs sm:text-sm font-bold text-[var(--color-warn)] whitespace-nowrap shrink-0">
-                          {item.coste} pts
+                        <span className="tabular-nums text-xs sm:text-sm font-bold text-[var(--color-warn)] whitespace-nowrap shrink-0">
+                          {item.coste} créditos
                         </span>
                       </div>
                       <ul className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-relaxed space-y-0.5">
@@ -210,8 +222,8 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
                         </details>
                       )}
                       <div className="flex items-center justify-between gap-2 pt-1">
-                        <span className="text-xs font-mono text-[var(--color-text-muted)]">
-                          {cantidad > 0 ? `Instalados en 3D: ${cantidad}` : 'Sin instalar'}
+                        <span className="text-xs text-[var(--color-text-muted)]">
+                          {cantidad > 0 ? `En tu base: ${cantidad}` : 'No está en tu base'}
                         </span>
                         <div className="flex items-center gap-2">
                           {cantidad > 0 && (
@@ -245,7 +257,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
               <div className="space-y-4">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="text-base font-semibold text-[var(--color-text)]">
-                    Módulos en la superficie ({itemIds.length})
+                    En tu base ({itemIds.length})
                   </h2>
                   <div className="flex items-center gap-2">
                     <button
@@ -275,18 +287,21 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
                     </p>
                   </div>
                 ) : (
-                  <ul className="divide-y divide-[var(--color-border)] rounded-xl border border-[var(--color-border)] bg-[#141b34] px-3">
+                  <ul className="divide-y divide-[var(--color-border)]">
                     {itemIds.map((id, index) => {
                       const item = CATALOGO_POR_ID[id];
                       if (!item) return null;
                       return (
                         <li key={`${id}-${index}`} className="py-2.5 flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-[var(--color-text)] truncate">
-                              {item.tipo === 'historico' ? `★ ${item.nombre}` : item.nombre}
+                            <div className="flex items-center gap-1.5 text-sm font-medium text-[var(--color-text)] truncate">
+                              {item.tipo === 'historico' && (
+                                <Star className="h-3.5 w-3.5 shrink-0 text-[var(--color-warn)]" aria-label="Equipo NASA" />
+                              )}
+                              {item.nombre}
                             </div>
-                            <div className="text-xs font-mono tabular-nums text-[var(--color-text-muted)]">
-                              {item.coste} pts
+                            <div className="text-xs tabular-nums text-[var(--color-text-muted)]">
+                              {item.coste} créditos
                             </div>
                           </div>
                           <button
@@ -351,7 +366,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
                             </a>
                           </p>
                           {!AVISOS[id].verificada && (
-                            <p className="mt-1 text-[11px]">Texto pendiente de revisión por el equipo.</p>
+                            <p className="mt-1 text-xs">Texto pendiente de revisión por el equipo.</p>
                           )}
                         </details>
                       </li>
@@ -363,7 +378,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
           </div>
 
           <div className="border-t border-[var(--color-border)] bg-[#141b34] px-4 py-3 space-y-1.5">
-            <div className="text-xs font-semibold text-[var(--color-text)]">Previsión técnica</div>
+            <div className="text-xs font-semibold text-[var(--color-text)]">Así aguantará tu base</div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
               {avisos.map(({ id, ok }) => (
                 <div key={id} className="flex items-center justify-between gap-1.5">
@@ -378,7 +393,7 @@ export function PantallaDiseno({ config, itemIds, errorDiseno, dispatch }: Panta
                     ) : (
                       <AlertTriangle className="w-3.5 h-3.5" aria-hidden="true" />
                     )}
-                    {ok ? 'OK' : 'Riesgo'}
+                    {ok ? 'Bien' : 'Riesgo'}
                   </span>
                 </div>
               ))}

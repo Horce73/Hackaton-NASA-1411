@@ -31,10 +31,3 @@ export const AMANECER: Record<Destino, PantallaLlegada> = {
     },
   },
 };
-
-// Homenaje del monolito lunar. No es un dato de la NASA: el texto lo dice para no confundirlo con lo real.
-export const HOMENAJE_MONOLITO = {
-  titulo: 'Un bloque negro',
-  texto:
-    'Liso, frío y perfecto, con lados en proporción 1:4:9. No es un hallazgo de la NASA: es un homenaje a «2001: Odisea del espacio» (1968), la película en la que un monolito así aparece enterrado en la Luna.',
-};

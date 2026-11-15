@@ -210,8 +210,7 @@ Rejilla de 8 px. Radios de 12 px. Áreas táctiles de al menos 44 × 44 px. Máx
   todos; **No mostrar más** los apaga y la preferencia se guarda. En el último día, después del dato llega la bitácora.
 - En la salud de la tripulación, la tarjeta de cada astronauta lleva un borde del color de su indicador más bajo.
 - Homenajes a «2001: Odisea del espacio», sin material de la película: el amanecer alineado, la fanfarria de Strauss
-  sintetizada (obra de dominio público), la voz de la compuerta y un monolito 1:4:9 en la Luna que avisa de que no
-  es un hallazgo real.
+  sintetizada (obra de dominio público) y la voz de la compuerta. El monolito lunar se quitó.
 
 ## 11. Responsive
 

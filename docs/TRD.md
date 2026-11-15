@@ -236,7 +236,8 @@ function ritmoTrabajo(astronauta: Astronauta, tarea: Tarea): number
 `Item.mantenimiento`, en `data/catalogo.ts`). Cada `Tarea` tiene `id`, `estacion` (`habitat`, `exterior` o
 `item:<índice en itemIds>`), `tipo` (`evento` o `mantenimiento`), `especialidad`, `trabajo` (segundos de un
 no especialista) y `etiqueta`. Una tarea de opción que apunta a un módulo que no está en el diseño se hace en
-el hábitat. `ritmoTrabajo` vale `RITMO_ESPECIALISTA` si la especialidad coincide y 1 si no. El reloj y el
+el hábitat. `ritmoTrabajo` vale `RITMO_ESPECIALISTA` si la especialidad coincide y 1 si no. Una tarea con `personas: 2` (todas
+las del exterior) solo avanza con dos tripulantes trabajando a la vez; `ritmoEquipo` da la media de sus ritmos. El reloj y el
 progreso viven en la interfaz y la escena 3D; al terminar el día, el reducer pasa a `siguienteTurno` las
 tareas que quedaron `pendientes`. Sin `pendientes` el turno se resuelve como antes, así que las pruebas y el
 balance de la fase 6 siguen valiendo cuando se completa todo.
@@ -369,6 +370,12 @@ La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo us
   tormenta de polvo, fallo de equipo, fuga de agua, día tranquilo y Surveyor 3 como evento educativo).
 - Los nombres de la tripulación (Lucía, Marco, Aiko y un cuarto provisional) están en `parametros.ts`.
 - Imágenes: `public/img/`, formato WebP, máximo ~150 kB cada una, con texto alternativo obligatorio en el dato.
+- Hábitat central de la escena 3D: a escala real del Surface Habitat de referencia de la NASA (parte metálica de
+  4,4 m × 2,6 m con la esclusa; inflable de 6,5 m × 5,2 m con dos plantas), el mismo que el artículo ASCEND 2023
+  del hábitat de Marte da como "casi idéntico". Medidas en `HABITAT` (`three/modelos3d.ts`), con la fuente:
+  https://ntrs.nasa.gov/api/citations/20220013669/downloads/Internal%20Layout%20of%20a%20Lunar%20Surface%20Habitat.pdf.
+  Los planos de referencia están en `RAW/` (render de base lunar de la NASA, de
+  https://www.nasa.gov/general/nextstep-3-b-moon-base-demonstrations/; corte del hábitat del documento ASCEND).
 - Licencia: confirmar las condiciones de uso de los medios de la NASA antes de publicar (supuesto abierto).
 - RF-10 (opcional): no se hace (sección 13). Las fotos de las historias ya salen de images.nasa.gov y van en el repo.
 

@@ -70,6 +70,13 @@ export const PREAJUSTES: Preajuste[] = [
 export const NOMBRES_TRIPULACION = ['Lucía', 'Marco', 'Aiko', 'Dani'];
 // RF-14: especialidad fija de cada tripulante, en el mismo orden que los nombres (TRD 13).
 export const ESPECIALIDADES_TRIPULACION: Especialidad[] = ['ingenieria', 'biologia', 'geologia', 'medicina'];
+// Nombre y color de uniforme de cada especialidad (no es balance). El color nunca va solo: siempre con el nombre.
+export const ESPECIALIDADES: Record<Especialidad, { nombre: string; color: string }> = {
+  ingenieria: { nombre: 'Ingeniería', color: '#f28c28' },
+  biologia: { nombre: 'Biología', color: '#3fbf6f' },
+  geologia: { nombre: 'Geología', color: '#a77bff' },
+  medicina: { nombre: 'Medicina', color: '#3fa0ff' },
+};
 
 // Tareas del día (RF-13 a RF-16)
 // FUENTE NASA (idea, no cifra): en la ISS el mantenimiento es una carga fija de la estación que se reparte

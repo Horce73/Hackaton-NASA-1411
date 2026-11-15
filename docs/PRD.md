@@ -86,7 +86,7 @@ RF-13 a RF-16: tripulación controlable, especialidades, tareas en las estacione
 | RF-09 | **Dado** el fin de la misión (por turnos o aborto), **entonces** se muestra si la misión terminó con éxito o abortada, la puntuación y las historias desbloqueadas. |
 | RF-13 | **Dado** una partida con N tripulantes, **cuando** pulso un número de 1 a N, **entonces** controlo a ese astronauta y los demás se quedan donde están, trabajando si estaban en una tarea. |
 | RF-14 | **Dado** una tarea de su especialidad, **cuando** un especialista trabaja en ella, **entonces** avanza al doble de velocidad, y la interfaz lo indica. |
-| RF-15 | **Dado** una opción elegida, **cuando** termina el día (reloj a 0 o "Terminar día") con alguna de sus tareas sin hacer, **entonces** se aplica la opción de riesgo del evento y la bitácora del día lo explica. Con "sin reloj", el día solo termina con el botón. |
+| RF-15 | **Dado** una tarea del exterior, **cuando** solo una persona trabaja en ella, **entonces** no avanza y se indica que falta otra. **Dado** una opción elegida, **cuando** termina el día (reloj a 0 o "Terminar día") con alguna de sus tareas sin hacer, **entonces** se aplica la opción de riesgo del evento y la bitácora del día lo explica. Con "sin reloj", el día solo termina con el botón. |
 | RF-16 | **Dado** un módulo del diseño, **cuando** termina el día sin su mantenimiento, **entonces** ese módulo no produce ese día; el diseño avisa de cuántas tareas diarias genera. |
 
 ## 7. Métricas de éxito

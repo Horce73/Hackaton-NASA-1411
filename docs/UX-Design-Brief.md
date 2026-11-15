@@ -102,6 +102,9 @@ Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y s
 - Barra de tripulación: número de tecla (1–4), nombre, icono y nombre de la especialidad, y estado
   ("Libre" o "Reparando el reactor 60 %"). El seleccionado se marca con borde y texto, no solo color; en el
   3D lleva un anillo a sus pies.
+- Uniforme por especialidad: acentos y franja del pecho en naranja (ingeniería), verde (biología), violeta (geología)
+  y azul (medicina). El mismo color marca la etiqueta, la barra de tripulación y el rol de cada aviso, siempre junto
+  al nombre del rol. La NASA hace algo parecido: en las caminatas de la ISS un traje lleva franjas rojas y el otro no.
 - Aviso flotante sobre cada estación con tarea: icono, nombre corto, especialidad recomendada y barra de
   progreso. Se resalta cuando el astronauta está al alcance ("E para trabajar").
 - Lista de tareas en el panel, con el mismo progreso, para quien no ve bien el 3D, y reloj del día con el

@@ -3,8 +3,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { sonido } from '../audio/sonido';
 import { CATALOGO_POR_ID } from '../data/catalogo';
 import { EVENTOS_REPARABLES, EVENTO_SURVEYOR } from '../data/eventos';
-import { GRAVEDAD } from '../data/parametros';
-import { ritmoTrabajo } from '../engine/tareas';
+import { ESPECIALIDADES, GRAVEDAD } from '../data/parametros';
+import { ritmoEquipo } from '../engine/tareas';
 import type { Destino, Especialidad, Tarea } from '../engine/tipos';
 import {
   crearEstadoJugadorInicial,
@@ -18,6 +18,7 @@ import { crearConjuntoTexturas, type ConjuntoTexturas } from './texturas';
 import {
   crearAstronauta3D,
   crearBaseCentral3D,
+  HABITAT,
   crearModulo3D,
   crearNodoInteractivo3D,
   type AstronautaRig,
@@ -118,12 +119,6 @@ const ENTRADA_QUIETA: EntradaMovimiento = {
   sprint: false,
 };
 const ALCANCE_TAREA = 3.4; // metros desde la estación
-const NOMBRE_ESPECIALIDAD: Record<Especialidad, string> = {
-  ingenieria: 'Ingeniería',
-  biologia: 'Biología',
-  geologia: 'Geología',
-  medicina: 'Medicina',
-};
 
 function detectarSoftwareWebGL(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
   try {
@@ -189,7 +184,7 @@ export class EscenaPlaneta {
   private progreso = new Map<string, number>();
   private posEstaciones = new Map<string, THREE.Vector3>();
   private capaPops: HTMLDivElement;
-  private pops = new Map<string, HTMLDivElement>();
+  private pops = new Map<string, { raiz: HTMLDivElement; barra: HTMLElement; aviso: HTMLElement }>();
   private anilloSeleccion!: THREE.Mesh;
   private obstaculos: ObstaculoCilindro[] = [];
   private nodos: NodoEscena[] = [];
@@ -665,8 +660,8 @@ export class EscenaPlaneta {
       id: 'habitat-central',
       x: 0,
       z: 0,
-      radio: 4.35,
-      altura: 4.5,
+      radio: HABITAT.radioInflable + 0.15, // no se puede caminar bajo el inflable
+      altura: HABITAT.alturaPlataforma + HABITAT.altoMetal + HABITAT.altoInflable,
     });
 
     // Nodo de entrada al hábitat (para recuperar energía/sueño o abrir panel si está cerca)
@@ -677,13 +672,13 @@ export class EscenaPlaneta {
       subetiqueta: 'Pulsa [E] para revisar sistemas internos',
       x: 0,
       y: yBase,
-      z: 5.7,
+      z: HABITAT.radioInflable + 0.9,
       radio: 2.3,
       completado: false,
     });
 
     // 2. Módulos y equipo histórico del diseño actual
-    this.posEstaciones.set('habitat', new THREE.Vector3(0, yBase, 5.7));
+    this.posEstaciones.set('habitat', new THREE.Vector3(0, yBase, HABITAT.radioInflable + 0.9));
     const ex = 3;
     const ez = 18;
     this.posEstaciones.set('exterior', new THREE.Vector3(ex, groundHeightAt(ex, ez, this.destino), ez));
@@ -975,8 +970,10 @@ export class EscenaPlaneta {
   // ---- Tripulación y tareas del día (RF-13 a RF-15) ----
 
   public setTripulacion(especialidades: Especialidad[]) {
+    const iguales =
+      especialidades.length === this.especialidades.length && especialidades.every((e, i) => e === this.especialidades[i]);
     this.especialidades = [...especialidades];
-    if (especialidades.length !== this.tripulantes.length) this.crearTripulacion(especialidades.length);
+    if (!iguales) this.crearTripulacion(especialidades.length);
   }
 
   public setTareas(tareas: Tarea[], hechas: string[], activo: boolean) {
@@ -987,7 +984,7 @@ export class EscenaPlaneta {
     for (const id of [...this.progreso.keys()]) if (!ids.has(id)) this.progreso.delete(id);
     for (const [id, pop] of this.pops) {
       if (!ids.has(id) || this.tareasHechas.has(id)) {
-        pop.remove();
+        pop.raiz.remove();
         this.pops.delete(id);
       }
     }
@@ -1010,13 +1007,15 @@ export class EscenaPlaneta {
       this.scene.remove(t.rig.root);
       t.etiqueta.remove();
     }
-    this.tripulantes = Array.from({ length: Math.max(1, n) }, () => {
-      const rig = crearAstronauta3D(this.tex);
+    this.tripulantes = Array.from({ length: Math.max(1, n) }, (_, i) => {
+      const especialidad = this.especialidades[i];
+      const rig = crearAstronauta3D(this.tex, especialidad && ESPECIALIDADES[especialidad].color);
       this.scene.add(rig.root);
       const etiqueta = document.createElement('div');
       etiqueta.style.cssText =
         'position:absolute;left:0;top:0;padding:2px 8px;border-radius:999px;font:600 12px/1.4 system-ui,sans-serif;' +
         'white-space:nowrap;background:rgba(11,16,32,.85);color:#e8ecf6;border:1px solid rgba(255,255,255,.25);will-change:transform';
+      if (especialidad) etiqueta.style.boxShadow = `inset 6px 0 0 ${ESPECIALIDADES[especialidad].color}`;
       this.capaPops.appendChild(etiqueta);
       return { rig, fisica: crearEstadoJugadorInicial(this.destino), fasePaso: 0, tareaId: null, etiqueta };
     });
@@ -1141,19 +1140,22 @@ export class EscenaPlaneta {
 
   private avanzarTrabajo(dt: number) {
     if (!this.trabajoActivo) return;
-    this.tripulantes.forEach((t, i) => {
-      if (!t.tareaId) return;
-      const tarea = this.tareas.find((x) => x.id === t.tareaId);
-      // Alejarse de la estación deja la tarea a medias: el progreso se conserva.
-      if (!tarea || this.tareasHechas.has(tarea.id) || this.distanciaAEstacion(t.fisica, tarea) > ALCANCE_TAREA) {
+    // Alejarse de la estación deja la tarea a medias: el progreso se conserva.
+    for (const t of this.tripulantes) {
+      const tarea = t.tareaId ? this.tareas.find((x) => x.id === t.tareaId) : undefined;
+      if (t.tareaId && (!tarea || this.tareasHechas.has(tarea.id) || this.distanciaAEstacion(t.fisica, tarea) > ALCANCE_TAREA)) {
         t.tareaId = null;
-        return;
       }
-      const ritmo = ritmoTrabajo({ especialidad: this.especialidades[i] ?? 'ingenieria' }, tarea);
+    }
+    // Cada tarea avanza con todos los que trabajan en ella a la vez (las de 2 personas no avanzan con 1).
+    for (const tarea of this.tareasPendientes()) {
+      const equipo = this.tripulantes.flatMap((t, i) => (t.tareaId === tarea.id ? [this.especialidades[i] ?? 'ingenieria'] : []));
+      const ritmo = ritmoEquipo(equipo, tarea);
+      if (ritmo === 0) continue;
       const avance = (this.progreso.get(tarea.id) ?? 0) + (dt * ritmo) / tarea.trabajo;
       if (avance < 1) {
         this.progreso.set(tarea.id, avance);
-        return;
+        continue;
       }
       this.progreso.set(tarea.id, 1);
       this.tareasHechas.add(tarea.id);
@@ -1163,7 +1165,7 @@ export class EscenaPlaneta {
       sonido.reparacion();
       this.onTareaCompletada(tarea.id);
       this.emitirTelemetria(true);
-    });
+    }
   }
 
   // Avisos flotantes sobre las estaciones y nombre sobre cada tripulante (UX Brief 5.3).
@@ -1185,7 +1187,7 @@ export class EscenaPlaneta {
 
     // Nombres de la tripulación
     this.tripulantes.forEach((t, i) => {
-      const nombre = `${i + 1} · ${NOMBRE_ESPECIALIDAD[this.especialidades[i] ?? 'ingenieria']}`;
+      const nombre = `${i + 1} · ${ESPECIALIDADES[this.especialidades[i] ?? 'ingenieria'].nombre}`;
       if (t.etiqueta.textContent !== nombre) t.etiqueta.textContent = nombre;
       const esSel = i === this.seleccionado;
       t.etiqueta.style.borderColor = esSel ? '#f5b942' : 'rgba(255,255,255,.25)';
@@ -1200,33 +1202,47 @@ export class EscenaPlaneta {
     for (const tarea of pendientes) {
       let pop = this.pops.get(tarea.id);
       if (!pop) {
-        pop = document.createElement('div');
-        pop.style.cssText =
+        const raiz = document.createElement('div');
+        raiz.style.cssText =
           'position:absolute;left:0;top:0;min-width:120px;max-width:180px;padding:6px 8px;border-radius:10px;' +
           'font:12px/1.3 system-ui,sans-serif;color:#e8ecf6;background:rgba(11,16,32,.9);border:2px solid rgba(255,255,255,.3);will-change:transform';
-        pop.innerHTML =
+        raiz.innerHTML =
           '<div data-t style="font-weight:700"></div><div data-e style="opacity:.85"></div>' +
           '<div style="height:6px;margin-top:4px;border-radius:3px;background:rgba(255,255,255,.18)"><div data-p style="height:100%;border-radius:3px;background:#4cd7a1;width:0"></div></div>' +
           '<div data-k style="margin-top:3px;font-weight:700;color:#f5b942"></div>';
-        pop.querySelector<HTMLElement>('[data-t]')!.textContent = tarea.etiqueta;
-        pop.querySelector<HTMLElement>('[data-e]')!.textContent = NOMBRE_ESPECIALIDAD[tarea.especialidad];
-        this.capaPops.appendChild(pop);
+        raiz.querySelector<HTMLElement>('[data-t]')!.textContent = tarea.etiqueta;
+        const rol = raiz.querySelector<HTMLElement>('[data-e]')!;
+        rol.textContent = `● ${ESPECIALIDADES[tarea.especialidad].nombre}`;
+        rol.style.color = ESPECIALIDADES[tarea.especialidad].color;
+        this.capaPops.appendChild(raiz);
+        // Referencias guardadas: nada de buscar en el DOM en cada fotograma.
+        pop = { raiz, barra: raiz.querySelector<HTMLElement>('[data-p]')!, aviso: raiz.querySelector<HTMLElement>('[data-k]')! };
         this.pops.set(tarea.id, pop);
       }
-      const prog = this.progreso.get(tarea.id) ?? 0;
-      pop.querySelector<HTMLElement>('[data-p]')!.style.width = `${Math.round(prog * 100)}%`;
-      const trabajando = this.tripulantes.some((t) => t.tareaId === tarea.id);
+      const anchoBarra = `${Math.round((this.progreso.get(tarea.id) ?? 0) * 100)}%`;
+      if (pop.barra.style.width !== anchoBarra) pop.barra.style.width = anchoBarra;
+      const enTarea = this.tripulantes.filter((t) => t.tareaId === tarea.id).length;
+      const personas = tarea.personas ?? 1;
+      const trabajando = enTarea >= personas;
       const alAlcance = alcanceSel?.id === tarea.id;
-      const aviso = trabajando ? 'Trabajando…' : alAlcance ? 'E para trabajar' : '';
-      const k = pop.querySelector<HTMLElement>('[data-k]')!;
-      if (k.textContent !== aviso) k.textContent = aviso;
-      pop.style.borderColor = alAlcance ? '#f5b942' : trabajando ? '#4cd7a1' : 'rgba(255,255,255,.3)';
+      const aviso =
+        enTarea > 0 && !trabajando
+          ? `Falta ${personas - enTarea} persona`
+          : trabajando
+            ? 'Trabajando…'
+            : alAlcance
+              ? 'E para trabajar'
+              : personas > 1
+                ? `${personas} personas`
+                : '';
+      if (pop.aviso.textContent !== aviso) pop.aviso.textContent = aviso;
+      pop.raiz.style.borderColor = alAlcance ? '#f5b942' : trabajando ? '#4cd7a1' : 'rgba(255,255,255,.3)';
       const pos = this.posEstaciones.get(tarea.estacion) ?? this.posEstaciones.get('habitat')!;
       // Varias tareas en la misma estación (el hábitat) se apilan.
       const pila = pendientes.filter((x) => x.estacion === tarea.estacion).indexOf(tarea);
       const flotar = this.movimientoReducido ? 0 : Math.sin(ahoraSec * 2 + pila) * 0.08;
       this.tmpVecB.set(pos.x, pos.y + 3.4 + pila * 1.3 + flotar, pos.z);
-      proyectar(this.tmpVecB, pop);
+      proyectar(this.tmpVecB, pop.raiz);
     }
   }
 

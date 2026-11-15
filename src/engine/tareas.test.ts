@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { EVENTOS } from '../data/eventos';
 import { RITMO_ESPECIALISTA } from '../data/parametros';
-import { ritmoTrabajo, tareasDelDia } from './tareas';
+import { ritmoEquipo, ritmoTrabajo, tareasDelDia } from './tareas';
 import { iniciarMision, siguienteTurno } from './turno';
 import type { Configuracion, Estado } from './tipos';
 
@@ -56,4 +56,13 @@ test('un módulo sin mantenimiento no rinde ese día (RF-16)', () => {
   const sinReactor = siguienteTurno(estado, 'descansar', mantReactor);
   expect(sinReactor.recursos.energia).toBeLessThan(bien.recursos.energia);
   expect(sinReactor.ultimoDelta?.modulosParados).toBe(1);
+});
+
+test('una tarea de dos personas no avanza con una sola y un especialista la acelera (RF-15)', () => {
+  const muestras = { especialidad: 'geologia' as const, personas: 2 };
+  expect(ritmoEquipo(['geologia'], muestras)).toBe(0);
+  expect(ritmoEquipo(['ingenieria', 'biologia'], muestras)).toBe(1);
+  expect(ritmoEquipo(['geologia', 'biologia'], muestras)).toBe((RITMO_ESPECIALISTA + 1) / 2);
+  // Una tarea de una persona suma a quien ayude.
+  expect(ritmoEquipo(['ingenieria', 'biologia'], { especialidad: 'ingenieria' })).toBe(RITMO_ESPECIALISTA + 1);
 });

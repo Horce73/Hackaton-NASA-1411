@@ -151,6 +151,8 @@ test('las tareas de las opciones apuntan a estaciones que existen y la opción d
       const valida = ['habitat', 'exterior'].includes(tarea.estacion) || CATALOGO_POR_ID[tarea.estacion]?.tipo === 'modulo';
       expect(valida, `${evento.id}: ${tarea.estacion}`).toBe(true);
       expect(tarea.trabajo).toBeGreaterThan(0);
+      // Las del exterior van en pareja, como una caminata espacial; ninguna pide más de 2 (cabe en Luna fácil).
+      expect(tarea.personas ?? 1, `${evento.id}: ${tarea.etiqueta}`).toBe(tarea.estacion === 'exterior' ? 2 : 1);
     }
   }
 });

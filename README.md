@@ -51,7 +51,7 @@ Prioridad: **M** = imprescindible (MVP), **S** = si hay tiempo, **C** = opcional
 | RF-12 | Guardar la última partida en `localStorage`. | — | C |
 | RF-13 | Tripulación en 3D: un astronauta por tripulante; las teclas 1–4 eligen a quién mover y los demás siguen con su tarea. | 13 | S |
 | RF-14 | Especialidades fijas (ingeniería, biología, geología, medicina): el especialista hace su tipo de tarea el doble de rápido. | 13 | S |
-| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. La opción elegida solo hace efecto si se terminan sus tareas; si no, se aplica la opción de riesgo del evento. Día de 90 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
+| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. La opción elegida solo hace efecto si se terminan sus tareas; si no, se aplica la opción de riesgo del evento. Las del exterior piden 2 personas a la vez, como una caminata espacial. Día de 90 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
 | RF-16 | Mantenimiento diario de cada módulo: si no se hace, el módulo no rinde ese día. Comprar demasiados módulos sobrecarga a la tripulación. | 13 | S |
 
 ## Requisitos no funcionales

@@ -68,6 +68,7 @@ export interface TareaOpcion {
   especialidad: Especialidad;
   trabajo: number; // segundos de un no especialista
   etiqueta: string;
+  personas?: number; // tripulantes que deben trabajar a la vez; por defecto 1
 }
 
 // Tarea concreta de un día (TRD 6.1). `estacion`: 'habitat', 'exterior' o 'item:<índice en itemIds>'.

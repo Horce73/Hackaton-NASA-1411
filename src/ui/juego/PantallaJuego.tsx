@@ -27,7 +27,7 @@ import {
 import { sonido } from '../../audio/sonido';
 import { CATALOGO_POR_ID } from '../../data/catalogo';
 import { HISTORIAS_POR_ID } from '../../data/historias';
-import { DURACION_DIA } from '../../data/parametros';
+import { DURACION_DIA, ESPECIALIDADES } from '../../data/parametros';
 import { semaforo } from '../../engine/salud';
 import { recursoQueFalta } from '../../engine/turno';
 import type { Especialidad, Recursos, Tarea } from '../../engine/tipos';
@@ -44,13 +44,6 @@ const NOMBRE_RECURSO: Record<keyof Recursos, string> = {
   alimento: 'comida',
   oxigeno: 'aire',
   agua: 'agua',
-};
-
-const NOMBRE_ESPECIALIDAD: Record<Especialidad, string> = {
-  ingenieria: 'Ingeniería',
-  biologia: 'Biología',
-  geologia: 'Geología',
-  medicina: 'Medicina',
 };
 
 // Reloj del día (RF-15, UX Brief 10): ajustable porque WCAG 2.2.1 pide poder alargar o quitar un límite de tiempo.
@@ -751,7 +744,8 @@ function PlanDelDia({
                 <span className="font-mono tabular-nums text-[var(--color-text-muted)]">{pct}%</span>
               </div>
               <div className="text-[var(--color-text-muted)]">
-                {nombreEstacion(t.estacion, itemIds)} · {NOMBRE_ESPECIALIDAD[t.especialidad]}
+                {nombreEstacion(t.estacion, itemIds)} · {ESPECIALIDADES[t.especialidad].nombre}
+                {(t.personas ?? 1) > 1 && ` · ${t.personas} personas a la vez`}
                 {especialista ? ` (${especialista.nombre} va el doble de rápido)` : ''}
                 {quienes.length > 0 && ` · Trabajando: ${quienes.join(', ')}`}
               </div>
@@ -817,13 +811,15 @@ function BarraTripulacion({
       {tripulacion.map((a, i) => {
         const tarea = tareas.find((t) => t.id === trabajo[i]);
         const activo = i === seleccionado;
+        const esperando = tarea && trabajo.filter((id) => id === tarea.id).length < (tarea.personas ?? 1);
         return (
           <button
             key={a.nombre}
             type="button"
             onClick={() => onSeleccionar(i)}
             aria-pressed={activo}
-            className={`text-left min-h-[44px] rounded-xl border-2 px-2.5 py-1.5 text-xs cursor-pointer transition-colors ${
+            style={{ boxShadow: `inset 6px 0 0 ${ESPECIALIDADES[a.especialidad].color}` }}
+            className={`text-left min-h-[44px] rounded-xl border-2 pl-3.5 pr-2.5 py-1.5 text-xs cursor-pointer transition-colors ${
               activo
                 ? 'border-[var(--color-warn)] bg-[#1e294f]'
                 : 'border-[var(--color-border)] bg-[#0b1020]/92 hover:border-[var(--color-border-strong)]'
@@ -835,8 +831,12 @@ function BarraTripulacion({
             </span>
             <span className="block text-[var(--color-text-muted)]">
               <Hammer className="inline w-3 h-3 mr-1" aria-hidden="true" />
-              {NOMBRE_ESPECIALIDAD[a.especialidad]} ·{' '}
-              {tarea ? `${tarea.etiqueta} ${Math.round((progreso[tarea.id] ?? 0) * 100)}%` : 'Libre'}
+              {ESPECIALIDADES[a.especialidad].nombre} ·{' '}
+              {!tarea
+                ? 'Libre'
+                : esperando
+                  ? `${tarea.etiqueta}: espera a otra persona`
+                  : `${tarea.etiqueta} ${Math.round((progreso[tarea.id] ?? 0) * 100)}%`}
             </span>
           </button>
         );

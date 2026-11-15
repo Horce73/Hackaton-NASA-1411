@@ -207,14 +207,14 @@ test('la tripulación sale al decidir o al explorar, y vuelve a entrar al termin
   expect(explorando).toMatchObject({ tripulacionFuera: true });
   expect(reducer(explorando, { tipo: 'SALIR_TRIPULACION' })).toBe(explorando);
 
-  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !recursoQueFalta(lanzada.partida, o.id))!;
+  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !o.descanso && !recursoQueFalta(lanzada.partida, o.id))!;
   expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id })).toMatchObject({ tripulacionFuera: true });
   expect(jugarDia(lanzada, opcion.id)).toMatchObject({ tripulacionFuera: false });
 });
 
 test('al terminar el día sale el resumen y luego un dato curioso, que no se repite (RF-08)', () => {
   const lanzada = lanzar(['reciclador', 'panel-solar']);
-  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !recursoQueFalta(lanzada.partida, o.id))!;
+  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !o.descanso && !recursoQueFalta(lanzada.partida, o.id))!;
   const conResumen = jugarDia(lanzada, opcion.id, false) as EstadoJuego;
   expect(conResumen.resumen?.dia).toBe(1);
   expect(conResumen.resumen?.tareas.length).toBeGreaterThan(0);
@@ -227,12 +227,23 @@ test('al terminar el día sale el resumen y luego un dato curioso, que no se rep
   expect(conDato).toMatchObject({ resumen: null, dato: 'olympus', datosVistos: ['olympus'] });
   const sinDato = reducer(conDato, { tipo: 'CERRAR_DATO' }) as EstadoJuego;
   expect(sinDato).toMatchObject({ fase: 'juego', dato: null });
-  const opcion2 = sinDato.partida.eventoActual!.opciones.find((o) => !recursoQueFalta(sinDato.partida, o.id))!;
+  const opcion2 = sinDato.partida.eventoActual!.opciones.find((o) => !o.descanso && !recursoQueFalta(sinDato.partida, o.id))!;
   const segundo = reducer(jugarDia(sinDato, opcion2.id), { tipo: 'CERRAR_RESUMEN', conDato: true });
   expect(segundo).toMatchObject({ dato: 'fobos' });
 
   // Desactivados, el resumen lleva directo al día siguiente.
   expect(reducer(conResumen, { tipo: 'CERRAR_RESUMEN', conDato: false })).toMatchObject({ resumen: null, dato: null });
+});
+
+test('descansar pasa el día al momento: la tripulación no sale y sale el resumen', () => {
+  const lanzada = lanzar(['reciclador']);
+  const tranquilo: EstadoJuego = {
+    ...lanzada,
+    partida: { ...lanzada.partida, eventoActual: EVENTOS.find((e) => e.id === 'dia-tranquilo')! },
+  };
+  const tras = reducer(tranquilo, { tipo: 'ELEGIR_OPCION', opcionId: 'descansar' });
+  expect(tras).toMatchObject({ fase: 'juego', plan: null, tripulacionFuera: false, partida: { turno: 2 } });
+  expect(tras.fase === 'juego' && tras.resumen).toEqual({ dia: 1, tareas: [] });
 });
 
 test('al terminar la misión, la bitácora llega después del resumen y del dato', () => {
@@ -322,11 +333,12 @@ test('ABORTAR_MISION cierra la partida como abortada', () => {
 
 test('ELEGIR_OPCION abre el plan del día sin avanzar el turno (RF-15)', () => {
   const lanzada = lanzar(['reciclador', 'panel-solar']);
-  const opcionId = lanzada.partida.eventoActual!.opciones[0].id;
+  const { opciones } = lanzada.partida.eventoActual!;
+  const opcionId = opciones.find((o) => !o.descanso)!.id;
   const conPlan = reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId });
   expect(conPlan).toMatchObject({ partida: { turno: 1 }, plan: { opcionId, hechas: [] } });
   // Con un plan en marcha no se puede cambiar de opción.
-  const otra = lanzada.partida.eventoActual!.opciones[1].id;
+  const otra = opciones.find((o) => o.id !== opcionId)!.id;
   expect(reducer(conPlan, { tipo: 'ELEGIR_OPCION', opcionId: otra })).toBe(conPlan);
 
   const [primera] = tareasDelDia(lanzada.partida, opcionId);
@@ -389,7 +401,7 @@ test('cuaderno: los eventos de conocimiento general se ven desde el primer día 
   expect(conocimientoDelDia({ ...lanzada, partida: { ...lanzada.partida, eventoActual: fallo } }).conocido).toBe(false);
 
   const evento = lanzada.partida.eventoActual!;
-  const opcion = evento.opciones.find((o) => !recursoQueFalta(lanzada.partida, o.id))!;
+  const opcion = evento.opciones.find((o) => !o.descanso && !recursoQueFalta(lanzada.partida, o.id))!;
   const manana = jugarDia(lanzada, opcion.id);
   if (manana.fase !== 'juego') throw new Error('esperaba seguir en juego');
   expect(manana.eventosConocidos).toContain(evento.id);

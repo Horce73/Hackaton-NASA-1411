@@ -13,9 +13,11 @@ export function cargaDelDia(estado: Pick<Estado, 'config' | 'turno'>): number {
 
 // Lo que hay que hacer hoy tras elegir `opcionId`: las tareas de la opción, el muestreo (opcional) y la revisión
 // de los módulos a los que les toca hoy. Cada módulo se revisa cada `cadaDias`, desfasado por su índice.
+// Un día de descanso no pide nada: la tripulación no sale y el día pasa al momento.
 export function tareasDelDia(estado: Estado, opcionId: string): Tarea[] {
   const { itemIds } = estado.diseno;
   const opcion = estado.eventoActual?.opciones.find((o) => o.id === opcionId);
+  if (opcion?.descanso) return [];
   const carga = cargaDelDia(estado);
 
   const deOpcion: Tarea[] = (opcion?.tareas ?? []).map((t, i) => {

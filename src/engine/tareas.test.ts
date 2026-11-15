@@ -68,11 +68,20 @@ test('una tarea de evento sin hacer aplica la opción de riesgo; sin pendientes,
 
 test('un módulo sin mantenimiento no rinde ese día (RF-16)', () => {
   const estado = conEvento(['reactor', 'reciclador'], 'dia-tranquilo');
-  const mantReactor = tareasDelDia(estado, 'descansar').filter((t) => t.estacion === 'item:0');
-  const bien = siguienteTurno(estado, 'descansar');
-  const sinReactor = siguienteTurno(estado, 'descansar', mantReactor);
+  const mantReactor = tareasDelDia(estado, 'ejercicio').filter((t) => t.estacion === 'item:0');
+  const bien = siguienteTurno(estado, 'ejercicio');
+  const sinReactor = siguienteTurno(estado, 'ejercicio', mantReactor);
   expect(sinReactor.recursos.energia).toBeLessThan(bien.recursos.energia);
   expect(sinReactor.ultimoDelta?.modulosParados).toBe(1);
+});
+
+test('descansar pasa el día sin tareas: sin mantenimiento que falte ni muestreo', () => {
+  const estado = conEvento(['reactor', 'reciclador'], 'dia-tranquilo');
+  expect(tareasDelDia(estado, 'descansar')).toEqual([]);
+  const descanso = siguienteTurno(estado, 'descansar');
+  expect(descanso.ultimoDelta?.modulosParados ?? 0).toBe(0);
+  expect(descanso.ciencia).toBe(estado.ciencia);
+  expect(descanso.turno).toBe(estado.turno + 1);
 });
 
 test('una tarea de dos personas no avanza con una sola y un especialista la acelera (RF-15)', () => {

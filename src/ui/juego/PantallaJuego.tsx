@@ -1,4 +1,4 @@
-import { useEffect, useState, type Dispatch } from 'react';
+import { useEffect, useRef, useState, type Dispatch } from 'react';
 import {
   Apple,
   ArrowDown,
@@ -11,11 +11,13 @@ import {
   Droplets,
   Flag,
   FlaskConical,
+  Hammer,
   HeartPulse,
   HelpCircle,
   Radio,
   Rocket,
   Sparkles,
+  Timer,
   Volume2,
   VolumeX,
   Wind,
@@ -23,10 +25,12 @@ import {
   Zap,
 } from 'lucide-react';
 import { sonido } from '../../audio/sonido';
+import { CATALOGO_POR_ID } from '../../data/catalogo';
 import { HISTORIAS_POR_ID } from '../../data/historias';
+import { DURACION_DIA, ESPECIALIDADES } from '../../data/parametros';
 import { semaforo } from '../../engine/salud';
 import { recursoQueFalta } from '../../engine/turno';
-import type { Recursos } from '../../engine/tipos';
+import type { Especialidad, Recursos, Tarea } from '../../engine/tipos';
 import type { Accion, EstadoApp } from '../../state/reducer';
 import type { EntradaTactil3D, EstadoTelemetria3D } from '../../three/EscenaPlaneta';
 import { describirConsecuencia } from '../comun/efectos';
@@ -42,6 +46,22 @@ const NOMBRE_RECURSO: Record<keyof Recursos, string> = {
   agua: 'agua',
 };
 
+// Reloj del día (RF-15, UX Brief 10): ajustable porque WCAG 2.2.1 pide poder alargar o quitar un límite de tiempo.
+type AjusteReloj = 'normal' | 'doble' | 'sin';
+const SEGUNDOS_RELOJ: Record<AjusteReloj, number> = { normal: DURACION_DIA, doble: DURACION_DIA * 2, sin: Infinity };
+
+function formatoReloj(segundos: number): string {
+  const s = Math.max(0, Math.ceil(segundos));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+function nombreEstacion(estacion: string, itemIds: string[]): string {
+  if (estacion === 'habitat') return 'Hábitat';
+  if (estacion === 'exterior') return 'Exterior';
+  const id = itemIds[Number(estacion.slice('item:'.length))];
+  return CATALOGO_POR_ID[id]?.nombre ?? 'Hábitat';
+}
+
 interface PantallaJuegoProps {
   estado: EstadoJuego;
   telemetria: EstadoTelemetria3D;
@@ -49,6 +69,8 @@ interface PantallaJuegoProps {
   onCerrarSaludExterno: () => void;
   onEjecutarAccionCercana: () => void;
   onCambiarEntradaTactil: (entrada: Partial<EntradaTactil3D>) => void;
+  onSeleccionarTripulante: (indice: number) => void;
+  tareas: Tarea[]; // tareas del día del plan en curso (RF-15)
   dispatch: Dispatch<Accion>;
 }
 
@@ -60,15 +82,50 @@ export function PantallaJuego({
   onCerrarSaludExterno,
   onEjecutarAccionCercana,
   onCambiarEntradaTactil,
+  onSeleccionarTripulante,
+  tareas,
   dispatch,
 }: PantallaJuegoProps) {
-  const { partida } = estado;
+  const { partida, plan } = estado;
   const [panelEventoAbierto, setPanelEventoAbierto] = useState(true);
   const [mostrarTripulacion, setMostrarTripulacion] = useState(false);
   const [mostrarHistorias, setMostrarHistorias] = useState(false);
   const [mostrarControles, setMostrarControles] = useState(false);
   const [confirmarAborto, setConfirmarAborto] = useState(false);
   const [silenciado, setSilenciado] = useState(sonido.silenciado);
+  const [ajusteReloj, setAjusteReloj] = useState<AjusteReloj>('normal');
+  const [restante, setRestante] = useState(SEGUNDOS_RELOJ.normal);
+
+  // El reloj arranca con cada plan nuevo y se para con una tarjeta o un panel abierto.
+  const relojPausado = estado.tarjetas.length > 0 || mostrarTripulacion || mostrarHistorias;
+  const claveDia = plan ? `${partida.turno}-${plan.opcionId}` : null;
+  const claveAnterior = useRef<string | null>(null);
+  useEffect(() => {
+    if (claveDia && claveDia !== claveAnterior.current) setRestante(SEGUNDOS_RELOJ[ajusteReloj]);
+    claveAnterior.current = claveDia;
+  }, [claveDia, ajusteReloj]);
+  useEffect(() => {
+    if (!claveDia || relojPausado || ajusteReloj === 'sin') return;
+    const id = window.setInterval(() => setRestante((r) => r - 0.25), 250);
+    return () => clearInterval(id);
+  }, [claveDia, relojPausado, ajusteReloj]);
+  useEffect(() => {
+    if (!claveDia || ajusteReloj === 'sin' || restante > 0) return;
+    setRestante(SEGUNDOS_RELOJ[ajusteReloj]); // listo para el día siguiente
+    dispatch({ tipo: 'TERMINAR_DIA' });
+  }, [restante, claveDia, ajusteReloj, dispatch]);
+
+  const cambiarAjusteReloj = (ajuste: AjusteReloj) => {
+    // Cambiar el ajuste a media jornada conserva lo gastado: ×2 suma el tiempo que falta.
+    setRestante((r) => {
+      if (ajuste === 'sin') return r;
+      if (ajusteReloj === 'sin') return SEGUNDOS_RELOJ[ajuste];
+      return Math.max(10, r + SEGUNDOS_RELOJ[ajuste] - SEGUNDOS_RELOJ[ajusteReloj]);
+    });
+    setAjusteReloj(ajuste);
+  };
+  const hechas = new Set(plan?.hechas ?? []);
+  const tareasHechasCount = tareas.filter((t) => hechas.has(t.id)).length;
 
   useEffect(() => {
     if (mostrarSaludExterno) {
@@ -163,6 +220,17 @@ export function PantallaJuego({
           <div className="font-mono tabular-nums text-sm sm:text-base font-bold text-[var(--color-text)] whitespace-nowrap">
             Día {partida.turno} / {partida.config.turnos}
           </div>
+          {plan && (
+            <div
+              className={`inline-flex items-center gap-1 font-mono tabular-nums text-sm font-bold ${
+                ajusteReloj !== 'sin' && restante <= 15 ? 'text-[var(--color-danger)]' : 'text-[var(--color-warn)]'
+              }`}
+            >
+              <Timer className="w-4 h-4" aria-hidden="true" />
+              <span>{ajusteReloj === 'sin' ? 'Sin reloj' : formatoReloj(restante)}</span>
+              {relojPausado && <span className="text-xs font-normal text-[var(--color-text-muted)]">(pausa)</span>}
+            </div>
+          )}
           <div className="hidden md:flex items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono">
             <span>
               {partida.config.destino === 'luna' ? 'Luna' : 'Marte'} ({telemetria.gravedad} m/s²)
@@ -395,7 +463,10 @@ export function PantallaJuego({
                 <strong className="text-[var(--color-text)]">Espacio (mantener):</strong> Salto + Jetpack
               </li>
               <li>
-                <strong className="text-[var(--color-text)]">E:</strong> Extraer hielo, reparar o inspeccionar NASA
+                <strong className="text-[var(--color-text)]">1–4:</strong> Elegir astronauta
+              </li>
+              <li>
+                <strong className="text-[var(--color-text)]">E:</strong> Trabajar en una tarea, extraer hielo, reparar o inspeccionar NASA
               </li>
               <li>
                 <strong className="text-[var(--color-text)]">Arrastrar ratón / Rueda:</strong> Rotar y acercar cámara
@@ -407,7 +478,24 @@ export function PantallaJuego({
           </div>
         )}
 
-        {telemetria.objetivoCercano && (
+        {telemetria.tareaCercana && (
+          <div className="pointer-events-auto absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
+            <button
+              type="button"
+              onClick={onEjecutarAccionCercana}
+              className="rounded-xl border border-[var(--color-warn)] bg-[#0b1020]/95 px-4 py-2.5 shadow-2xl flex items-center gap-3 hover:bg-[#1b2444] transition-colors cursor-pointer"
+            >
+              <span className="font-mono font-bold text-sm px-2 py-0.5 rounded bg-[var(--color-warn)] text-[var(--color-on-accent)]">
+                E
+              </span>
+              <span className="text-left text-sm font-bold text-[var(--color-text)]">
+                Trabajar: {telemetria.tareaCercana.etiqueta}
+              </span>
+            </button>
+          </div>
+        )}
+
+        {!telemetria.tareaCercana && telemetria.objetivoCercano && (
           <div className="pointer-events-auto absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
             <button
               type="button"
@@ -440,7 +528,8 @@ export function PantallaJuego({
             <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-[#141b34] border-b border-[var(--color-border)]">
               <div className="min-w-0">
                 <div className="text-[11px] font-mono text-[var(--color-warn)] truncate">
-                  Parte diario · Día {partida.turno} · {telemetria.nodosRestantes} tareas 3D
+                  Parte diario · Día {partida.turno} ·{' '}
+                  {plan ? `${tareasHechasCount}/${tareas.length} tareas` : `${telemetria.nodosRestantes} extras 3D`}
                 </div>
                 <h1
                   id="titulo-evento-actual"
@@ -467,10 +556,33 @@ export function PantallaJuego({
 
             {panelEventoAbierto && (
               <div className="p-3.5 space-y-2.5 max-h-[42vh] overflow-y-auto">
+                {partida.ultimoDelta && (partida.ultimoDelta.sinAtender || partida.ultimoDelta.modulosParados) && (
+                  <p className="text-xs text-[var(--color-warn)] leading-snug">
+                    Ayer:{' '}
+                    {partida.ultimoDelta.sinAtender ? `${partida.ultimoDelta.opcionTexto}. ` : ''}
+                    {partida.ultimoDelta.modulosParados
+                      ? `${partida.ultimoDelta.modulosParados} módulo(s) sin mantenimiento no rindieron.`
+                      : ''}
+                  </p>
+                )}
                 <p className="text-xs sm:text-sm text-[var(--color-text-muted)] leading-snug">
                   {evento.texto}
                 </p>
 
+                {plan ? (
+                  <PlanDelDia
+                    opcionTexto={evento.opciones.find((o) => o.id === plan.opcionId)?.texto ?? ''}
+                    tareas={tareas}
+                    hechas={hechas}
+                    progreso={telemetria.progresoTareas}
+                    trabajo={telemetria.trabajoTripulacion}
+                    tripulacion={partida.tripulacion.map((a) => ({ nombre: a.nombre, especialidad: a.especialidad }))}
+                    itemIds={partida.diseno.itemIds}
+                    ajusteReloj={ajusteReloj}
+                    onAjusteReloj={cambiarAjusteReloj}
+                    onTerminar={() => dispatch({ tipo: 'TERMINAR_DIA' })}
+                  />
+                ) : (
                 <ul className="space-y-1.5">
                   {evento.opciones.map((op) => {
                     const falta = recursoQueFalta(partida, op.id);
@@ -496,10 +608,20 @@ export function PantallaJuego({
                     );
                   })}
                 </ul>
+                )}
               </div>
             )}
           </section>
         )}
+
+        <BarraTripulacion
+          tripulacion={partida.tripulacion.map((a) => ({ nombre: a.nombre, especialidad: a.especialidad }))}
+          seleccionado={telemetria.seleccionado}
+          trabajo={telemetria.trabajoTripulacion}
+          tareas={tareas}
+          progreso={telemetria.progresoTareas}
+          onSeleccionar={onSeleccionarTripulante}
+        />
 
         {!panelEventoAbierto && (
           <div className="pointer-events-auto flex md:hidden items-end justify-between w-full gap-2 shrink-0">
@@ -562,5 +684,163 @@ export function PantallaJuego({
         )}
       </div>
     </main>
+  );
+}
+
+interface MiembroTripulacion {
+  nombre: string;
+  especialidad: Especialidad;
+}
+
+// Plan del día (RF-15): tareas con su progreso, reloj ajustable y botón para terminar.
+function PlanDelDia({
+  opcionTexto,
+  tareas,
+  hechas,
+  progreso,
+  trabajo,
+  tripulacion,
+  itemIds,
+  ajusteReloj,
+  onAjusteReloj,
+  onTerminar,
+}: {
+  opcionTexto: string;
+  tareas: Tarea[];
+  hechas: Set<string>;
+  progreso: Record<string, number>;
+  trabajo: (string | null)[];
+  tripulacion: MiembroTripulacion[];
+  itemIds: string[];
+  ajusteReloj: AjusteReloj;
+  onAjusteReloj: (ajuste: AjusteReloj) => void;
+  onTerminar: () => void;
+}) {
+  const faltanClave = tareas.some((t) => t.tipo === 'evento' && !hechas.has(t.id));
+  return (
+    <div className="space-y-2">
+      <p className="text-sm text-[var(--color-text)]">
+        Plan: <strong>{opcionTexto}</strong>
+      </p>
+      <ul className="space-y-1" aria-label="Tareas del día">
+        {tareas.map((t) => {
+          const hecha = hechas.has(t.id);
+          const pct = hecha ? 100 : Math.round((progreso[t.id] ?? 0) * 100);
+          const quienes = tripulacion.filter((_, i) => trabajo[i] === t.id).map((a) => a.nombre);
+          const especialista = tripulacion.find((a) => a.especialidad === t.especialidad);
+          return (
+            <li
+              key={t.id}
+              className={`rounded-lg border px-2.5 py-1.5 text-xs ${
+                hecha ? 'border-[var(--color-ok)] bg-[#0f241f]' : 'border-[var(--color-border)] bg-[#141b34]'
+              }`}
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                <span className="font-semibold text-[var(--color-text)]">
+                  {hecha ? '✓ ' : ''}
+                  {t.etiqueta}
+                  {t.tipo === 'evento' && <span className="text-[var(--color-warn)]"> · clave</span>}
+                </span>
+                <span className="font-mono tabular-nums text-[var(--color-text-muted)]">{pct}%</span>
+              </div>
+              <div className="text-[var(--color-text-muted)]">
+                {nombreEstacion(t.estacion, itemIds)} · {ESPECIALIDADES[t.especialidad].nombre}
+                {(t.personas ?? 1) > 1 && ` · ${t.personas} personas a la vez`}
+                {especialista ? ` (${especialista.nombre} va el doble de rápido)` : ''}
+                {quienes.length > 0 && ` · Trabajando: ${quienes.join(', ')}`}
+              </div>
+              <div className="mt-1 h-1.5 rounded bg-white/10" aria-hidden="true">
+                <div className="h-full rounded bg-[var(--color-ok)]" style={{ width: `${pct}%` }} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {faltanClave && (
+        <p className="text-xs text-[var(--color-warn)]">
+          Si una tarea clave queda sin hacer, el plan no funciona y pasa lo peor del evento.
+        </p>
+      )}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <label className="text-xs text-[var(--color-text-muted)] inline-flex items-center gap-1.5">
+          Reloj
+          <select
+            value={ajusteReloj}
+            onChange={(e) => onAjusteReloj(e.target.value as AjusteReloj)}
+            className="min-h-[36px] rounded-lg border border-[var(--color-border)] bg-[#0b1020] px-2 text-xs text-[var(--color-text)]"
+          >
+            <option value="normal">{DURACION_DIA} s</option>
+            <option value="doble">×2</option>
+            <option value="sin">Sin reloj</option>
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={onTerminar}
+          className="inline-flex items-center gap-1.5 min-h-[40px] px-3.5 rounded-xl bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] text-[var(--color-on-accent)] text-sm font-bold cursor-pointer"
+        >
+          Terminar día
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Barra de tripulación (RF-13): elegir astronauta con clic o con las teclas 1–4.
+function BarraTripulacion({
+  tripulacion,
+  seleccionado,
+  trabajo,
+  tareas,
+  progreso,
+  onSeleccionar,
+}: {
+  tripulacion: MiembroTripulacion[];
+  seleccionado: number;
+  trabajo: (string | null)[];
+  tareas: Tarea[];
+  progreso: Record<string, number>;
+  onSeleccionar: (indice: number) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="Tripulación: elige a quién mover"
+      className="pointer-events-auto flex flex-wrap gap-1.5 md:justify-end"
+    >
+      {tripulacion.map((a, i) => {
+        const tarea = tareas.find((t) => t.id === trabajo[i]);
+        const activo = i === seleccionado;
+        const esperando = tarea && trabajo.filter((id) => id === tarea.id).length < (tarea.personas ?? 1);
+        return (
+          <button
+            key={a.nombre}
+            type="button"
+            onClick={() => onSeleccionar(i)}
+            aria-pressed={activo}
+            style={{ boxShadow: `inset 6px 0 0 ${ESPECIALIDADES[a.especialidad].color}` }}
+            className={`text-left min-h-[44px] rounded-xl border-2 pl-3.5 pr-2.5 py-1.5 text-xs cursor-pointer transition-colors ${
+              activo
+                ? 'border-[var(--color-warn)] bg-[#1e294f]'
+                : 'border-[var(--color-border)] bg-[#0b1020]/92 hover:border-[var(--color-border-strong)]'
+            }`}
+          >
+            <span className="block font-bold text-[var(--color-text)]">
+              <span className="font-mono">{i + 1}</span> · {a.nombre}
+              {activo && <span className="text-[var(--color-warn)]"> (tú)</span>}
+            </span>
+            <span className="block text-[var(--color-text-muted)]">
+              <Hammer className="inline w-3 h-3 mr-1" aria-hidden="true" />
+              {ESPECIALIDADES[a.especialidad].nombre} ·{' '}
+              {!tarea
+                ? 'Libre'
+                : esperando
+                  ? `${tarea.etiqueta}: espera a otra persona`
+                  : `${tarea.etiqueta} ${Math.round((progreso[tarea.id] ?? 0) * 100)}%`}
+            </span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

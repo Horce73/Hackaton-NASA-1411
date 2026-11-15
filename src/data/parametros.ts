@@ -4,7 +4,7 @@
 //   contrastado todavía. Unidades reales: kg, litros y mSv por persona y día.
 // - PROVISIONAL: balance de juego, sin base real. La energía se mide en puntos abstractos.
 
-import type { Destino, Preajuste } from '../engine/tipos';
+import type { Destino, Especialidad, Preajuste } from '../engine/tipos';
 
 // Diseño de misión (RF-01, RF-02)
 export const PRESUPUESTO = 100; // PROVISIONAL (el PRD fija 100 puntos)
@@ -68,6 +68,23 @@ export const PREAJUSTES: Preajuste[] = [
 
 // El cuarto nombre es PROVISIONAL: el UX Brief solo da los tres primeros.
 export const NOMBRES_TRIPULACION = ['Lucía', 'Marco', 'Aiko', 'Dani'];
+// RF-14: especialidad fija de cada tripulante, en el mismo orden que los nombres (TRD 13).
+export const ESPECIALIDADES_TRIPULACION: Especialidad[] = ['ingenieria', 'biologia', 'geologia', 'medicina'];
+// Nombre y color de uniforme de cada especialidad (no es balance). El color nunca va solo: siempre con el nombre.
+export const ESPECIALIDADES: Record<Especialidad, { nombre: string; color: string }> = {
+  ingenieria: { nombre: 'Ingeniería', color: '#f28c28' },
+  biologia: { nombre: 'Biología', color: '#3fbf6f' },
+  geologia: { nombre: 'Geología', color: '#a77bff' },
+  medicina: { nombre: 'Medicina', color: '#3fa0ff' },
+};
+
+// Tareas del día (RF-13 a RF-16)
+// FUENTE NASA (idea, no cifra): en la ISS el mantenimiento es una carga fija de la estación que se reparte
+// entre quienes estén. Unas 600 h al año de mantenimiento interno: 4 h por semana y persona con 3
+// tripulantes, 12 h si queda uno solo. https://oig.nasa.gov/wp-content/uploads/2024/02/IG-20-005.pdf
+// Por eso cada módulo pide su tarea diaria y comprar de más sobrecarga a la tripulación.
+export const DURACION_DIA = 90; // PROVISIONAL, segundos de reloj por día
+export const RITMO_ESPECIALISTA = 2; // PROVISIONAL, el especialista trabaja el doble de rápido
 
 // Energía
 export const CAPACIDAD_ENERGIA = 100; // PROVISIONAL

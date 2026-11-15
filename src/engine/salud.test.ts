@@ -13,6 +13,7 @@ import type { Astronauta } from './tipos';
 const sana: Astronauta = {
   id: 'astronauta-1',
   nombre: 'Lucía',
+  especialidad: 'ingenieria',
   salud: { radiacion: 100, nutricion: 80, suenoEstres: 80, musculoHueso: 80 },
   dosis: 0,
 };

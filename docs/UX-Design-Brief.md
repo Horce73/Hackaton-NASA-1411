@@ -98,6 +98,19 @@ Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y s
 - Lateral: tripulación con 4 indicadores cada uno (radiación, nutrición, sueño, huesos).
 - En móvil: el lateral pasa a una pestaña inferior o a una hoja deslizable.
 
+**Fase de jugabilidad (RF-13 a RF-16).** Elegir una opción abre el plan del día:
+- Barra de tripulación: número de tecla (1–4), nombre, icono y nombre de la especialidad, y estado
+  ("Libre" o "Reparando el reactor 60 %"). El seleccionado se marca con borde y texto, no solo color; en el
+  3D lleva un anillo a sus pies.
+- Uniforme por especialidad: acentos y franja del pecho en naranja (ingeniería), verde (biología), violeta (geología)
+  y azul (medicina). El mismo color marca la etiqueta, la barra de tripulación y el rol de cada aviso, siempre junto
+  al nombre del rol. La NASA hace algo parecido: en las caminatas de la ISS un traje lleva franjas rojas y el otro no.
+- Aviso flotante sobre cada estación con tarea: icono, nombre corto, especialidad recomendada y barra de
+  progreso. Se resalta cuando el astronauta está al alcance ("E para trabajar").
+- Lista de tareas en el panel, con el mismo progreso, para quien no ve bien el 3D, y reloj del día con el
+  tiempo en texto. Botón "Terminar día". Ajuste del reloj: 90 s, ×2 o sin reloj.
+- En el diseño, cada módulo indica que pide mantenimiento diario y el total de tareas al día.
+
 ### 5.4 Tarjeta de historia (modal)
 Imagen, nombre, **año y lugar**, 2–3 frases, "Dato curioso" y enlace a la fuente. Botón **Entendido**.
 Foco atrapado dentro del modal y cierre con Esc.
@@ -171,6 +184,7 @@ Rejilla de 8 px. Radios de 12 px. Áreas táctiles de al menos 44 × 44 px. Máx
 - Imágenes con texto alternativo; gráficas con resumen en texto.
 - Texto escalable hasta 200 % sin pérdida de funciones.
 - Sin parpadeos ni sonido automático.
+- El reloj del día se puede alargar (×2) o quitar (WCAG 2.2.1), y se para con una tarjeta o un panel abierto.
 
 ## 11. Responsive
 

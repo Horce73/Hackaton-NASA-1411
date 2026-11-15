@@ -92,7 +92,8 @@ function crearMaterialesBase(tex: ConjuntoTexturas) {
   return { matMetal, matOscuro, matAcento, matFoil, matSolar };
 }
 
-export function crearAstronauta3D(tex: ConjuntoTexturas): AstronautaRig {
+// `colorRol` tiñe los acentos y la franja del pecho según la especialidad (RF-14).
+export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): AstronautaRig {
   const root = new THREE.Group();
   const cuerpo = new THREE.Group();
   root.add(cuerpo);
@@ -105,7 +106,8 @@ export function crearAstronauta3D(tex: ConjuntoTexturas): AstronautaRig {
     metalness: 0.06,
   });
   const matAcento = new THREE.MeshStandardMaterial({
-    map: tex.acentoAlbedo,
+    map: colorRol ? null : tex.acentoAlbedo,
+    color: colorRol ?? 0xffffff,
     normalMap: tex.acentoNormal,
     normalScale: new THREE.Vector2(0.8, 0.8),
     roughness: 0.42,
@@ -164,6 +166,13 @@ export function crearAstronauta3D(tex: ConjuntoTexturas): AstronautaRig {
   const cinturon = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 0.36), matAcento);
   cinturon.position.y = 0.74;
   cuerpo.add(cinturon);
+
+  // Franja del color de la especialidad, visible de frente y de espaldas
+  if (colorRol) {
+    const franja = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.07, 0.36), matAcento);
+    franja.position.y = 1.26;
+    cuerpo.add(franja);
+  }
 
   // Mochila PLSS con paneles de foil térmico y toberas
   const mochila = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.54, 0.24), matTraje);
@@ -255,11 +264,18 @@ export function crearAstronauta3D(tex: ConjuntoTexturas): AstronautaRig {
   return { root, cuerpo, brazoIzq, brazoDer, piernaIzq, piernaDer, llamaIzq, llamaDer, sombra };
 }
 
+// Hábitat central a escala real del Surface Habitat de referencia de la NASA (el de Marte es casi idéntico):
+// parte metálica de 4,4 m de diámetro y 2,6 m de alto con la esclusa, y encima la inflable de 6,5 m de
+// diámetro y 5,2 m de alto con las dos plantas habitables.
+// https://ntrs.nasa.gov/api/citations/20220013669/downloads/Internal%20Layout%20of%20a%20Lunar%20Surface%20Habitat.pdf
+export const HABITAT = { radioMetal: 2.2, altoMetal: 2.6, radioInflable: 3.25, altoInflable: 5.2, alturaPlataforma: 0.3 };
+
 export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSoftwareGl: boolean): THREE.Group {
   const grupo = new THREE.Group();
   grupo.name = 'habitat-central';
 
   const { matMetal, matOscuro, matAcento, matFoil } = crearMaterialesBase(tex);
+  const { radioMetal, altoMetal, radioInflable, altoInflable, alturaPlataforma } = HABITAT;
 
   const matPlataforma = new THREE.MeshStandardMaterial({
     map: tex.rocaAlbedo,
@@ -269,16 +285,14 @@ export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSo
     roughness: 0.78,
     metalness: 0.25,
   });
-  const matCristal = new THREE.MeshPhysicalMaterial({
-    color: destino === 'luna' ? 0xc2e6ff : 0xffe4c7,
-    roughness: 0.06,
-    metalness: 0.12,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.05,
-    transparent: true,
-    opacity: isSoftwareGl ? 0.34 : 0.38,
-    depthWrite: false,
-    envMapIntensity: 1.4,
+  // Capa exterior de tela técnica del inflable (la textura del traje es del mismo tipo de tejido).
+  const matInflable = new THREE.MeshStandardMaterial({
+    map: tex.trajeAlbedo,
+    normalMap: tex.trajeNormal,
+    normalScale: new THREE.Vector2(0.6, 0.6),
+    color: destino === 'luna' ? 0xf2f2ee : 0xf4ece4,
+    roughness: 0.88,
+    metalness: 0.02,
   });
   const matEsclusa = new THREE.MeshStandardMaterial({
     map: tex.esclusaAlbedo,
@@ -290,94 +304,86 @@ export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSo
     roughness: 0.45,
     metalness: 0.65,
   });
+  const matVentana = new THREE.MeshStandardMaterial({
+    color: 0xffe2a8,
+    emissive: 0xffc46b,
+    emissiveIntensity: isSoftwareGl ? 0.8 : 1.2,
+    roughness: 0.3,
+  });
 
-  // Plataforma octagonal con textura sinterizada + anillo metálico
-  const plataforma = new THREE.Mesh(new THREE.CylinderGeometry(4.45, 4.9, 0.42, 8), matPlataforma);
-  plataforma.position.y = 0.21;
+  // Plataforma de apoyo
+  const plataforma = new THREE.Mesh(new THREE.CylinderGeometry(radioMetal + 0.9, radioMetal + 1.2, alturaPlataforma, 8), matPlataforma);
+  plataforma.position.y = alturaPlataforma / 2;
   grupo.add(plataforma);
 
-  const anilloBase = new THREE.Mesh(new THREE.TorusGeometry(4.05, 0.14, 8, 24), matMetal);
-  anilloBase.rotation.x = Math.PI / 2;
-  anilloBase.position.y = 0.44;
-  grupo.add(anilloBase);
+  // Parte metálica: descenso, logística y esclusa
+  const yMetal = alturaPlataforma;
+  const metal = new THREE.Mesh(new THREE.CylinderGeometry(radioMetal, radioMetal, altoMetal, 24), matMetal);
+  metal.position.y = yMetal + altoMetal / 2;
+  grupo.add(metal);
+  const banda = new THREE.Mesh(new THREE.CylinderGeometry(radioMetal + 0.04, radioMetal + 0.04, 0.22, 24), matAcento);
+  banda.position.y = yMetal + altoMetal - 0.3;
+  grupo.add(banda);
 
-  // Suelo técnico interior + laboratorio hidropónico central
-  const pisoInterior = new THREE.Mesh(
-    new THREE.CylinderGeometry(3.85, 3.85, 0.12, 16),
-    matOscuro,
-  );
-  pisoInterior.position.y = 0.46;
-  grupo.add(pisoInterior);
+  // Patas de aterrizaje
+  for (let k = 0; k < 4; k++) {
+    const angulo = Math.PI / 4 + (k * Math.PI) / 2;
+    const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 2.2, 8), matOscuro);
+    pata.position.set(Math.cos(angulo) * (radioMetal + 0.55), yMetal + 0.95, Math.sin(angulo) * (radioMetal + 0.55));
+    pata.lookAt(Math.cos(angulo) * radioMetal * 0.6, yMetal + 2.2, Math.sin(angulo) * radioMetal * 0.6);
+    pata.rotateX(Math.PI / 2);
+    grupo.add(pata);
+  }
 
-  const columnaLuz = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.65, 0.85, 2.5, 14),
-    new THREE.MeshStandardMaterial({
-      map: tex.cultivoAlbedo,
-      normalMap: tex.cultivoNormal,
-      color: 0x62ebaf,
-      emissive: 0x229c6e,
-      emissiveIntensity: 0.75,
-      roughness: 0.45,
-    }),
-  );
-  columnaLuz.position.y = 1.75;
-  grupo.add(columnaLuz);
-
-  // Anillo estructural superior del núcleo
-  const anilloCore = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 0.24, 16), matMetal);
-  anilloCore.position.y = 3.05;
-  grupo.add(anilloCore);
-
-  // Domo geodésico transparente + costillas metálicas
-  const domoCristal = new THREE.Mesh(
-    new THREE.SphereGeometry(3.9, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.52),
-    matCristal,
-  );
-  domoCristal.position.y = 0.42;
-  domoCristal.renderOrder = 4;
-  grupo.add(domoCristal);
-
-  const domoCostillas = new THREE.Mesh(
-    new THREE.SphereGeometry(3.94, 12, 7, 0, Math.PI * 2, 0, Math.PI * 0.52),
-    new THREE.MeshStandardMaterial({
-      color: 0xd9e4f5,
-      wireframe: true,
-      roughness: 0.25,
-      metalness: 0.85,
-    }),
-  );
-  domoCostillas.position.y = 0.42;
-  grupo.add(domoCostillas);
-
-  // Esclusa presurizada texturizada (con remaches y compuerta hermética iluminada)
-  const tunel = new THREE.Mesh(new THREE.BoxGeometry(2.2, 2.25, 2.25), matMetal);
-  tunel.position.set(0, 1.34, 4.1);
-  grupo.add(tunel);
-
-  const bandaEsclusa = new THREE.Mesh(new THREE.BoxGeometry(2.28, 0.32, 0.5), matAcento);
-  bandaEsclusa.position.set(0, 2.15, 4.95);
-  grupo.add(bandaEsclusa);
-
-  const puerta = new THREE.Mesh(new THREE.BoxGeometry(1.48, 1.85, 0.14), matEsclusa);
-  puerta.position.set(0, 1.18, 5.22);
+  // Esclusa en la parte metálica, mirando a +Z (por donde llega la tripulación)
+  const marco = new THREE.Mesh(new THREE.BoxGeometry(1.7, 2.15, 0.5), matMetal);
+  marco.position.set(0, yMetal + 1.1, radioMetal - 0.05);
+  grupo.add(marco);
+  const puerta = new THREE.Mesh(new THREE.BoxGeometry(1.3, 1.85, 0.12), matEsclusa);
+  puerta.position.set(0, yMetal + 1.05, radioMetal + 0.24);
   grupo.add(puerta);
 
-  // Antena parabólica de comunicaciones en la cima con hub de Kapton
-  const mastil = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.4, 10), matMetal);
-  mastil.position.y = 4.9;
+  // Parte inflable: cilindro de bordes redondeados (perfil girado), como en el corte de la NASA
+  const yInflable = yMetal + altoMetal;
+  const r = radioInflable;
+  const curva = 1.4; // radio de los hombros redondeados
+  const perfil: THREE.Vector2[] = [new THREE.Vector2(0, 0), new THREE.Vector2(radioMetal, 0)];
+  for (let k = 0; k <= 6; k++) {
+    const a = -Math.PI / 2 + (k / 6) * (Math.PI / 2);
+    perfil.push(new THREE.Vector2(r - curva + Math.cos(a) * curva, curva + Math.sin(a) * curva));
+  }
+  for (let k = 0; k <= 6; k++) {
+    const a = (k / 6) * (Math.PI / 2);
+    perfil.push(new THREE.Vector2(r - curva + Math.cos(a) * curva, altoInflable - curva + Math.sin(a) * curva));
+  }
+  perfil.push(new THREE.Vector2(0, altoInflable));
+  const inflable = new THREE.Mesh(new THREE.LatheGeometry(perfil, 32), matInflable);
+  inflable.position.y = yInflable;
+  grupo.add(inflable);
+
+  // Correas de refuerzo y ventanas iluminadas
+  for (const h of [0.35, 0.65]) {
+    const correa = new THREE.Mesh(new THREE.TorusGeometry(r + 0.01, 0.05, 6, 40), matFoil);
+    correa.rotation.x = Math.PI / 2;
+    correa.position.y = yInflable + altoInflable * h;
+    grupo.add(correa);
+  }
+  for (const angulo of [Math.PI / 2 - 0.5, Math.PI / 2 + 0.5, -Math.PI / 2]) {
+    const ventana = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.08), matVentana);
+    ventana.position.set(Math.cos(angulo) * (r + 0.02), yInflable + altoInflable * 0.5, Math.sin(angulo) * (r + 0.02));
+    ventana.lookAt(Math.cos(angulo) * 10, yInflable + altoInflable * 0.5, Math.sin(angulo) * 10);
+    grupo.add(ventana);
+  }
+
+  // Antena parabólica de comunicaciones en la cima
+  const yCima = yInflable + altoInflable;
+  const mastil = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.2, 10), matMetal);
+  mastil.position.y = yCima + 0.6;
   grupo.add(mastil);
-
-  const hubAntena = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.32, 0.35, 10), matFoil);
-  hubAntena.position.y = 4.35;
-  grupo.add(hubAntena);
-
   const antenaGrupo = new THREE.Group();
   antenaGrupo.name = 'antena-rotatoria';
-  antenaGrupo.position.y = 5.6;
-  const plato = new THREE.Mesh(
-    new THREE.SphereGeometry(0.88, 18, 12, 0, Math.PI * 2, 0, 0.85),
-    matMetal,
-  );
+  antenaGrupo.position.y = yCima + 1.3;
+  const plato = new THREE.Mesh(new THREE.SphereGeometry(0.88, 18, 12, 0, Math.PI * 2, 0, 0.85), matMetal);
   plato.rotation.x = Math.PI * 0.65;
   const receptor = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.55, 8), matFoil);
   receptor.position.set(0, 0.25, 0.45);
@@ -385,11 +391,10 @@ export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSo
   antenaGrupo.add(plato, receptor);
   grupo.add(antenaGrupo);
 
-  const sombra = crearSombraContacto(tex.sombraContacto, 5.7);
+  const sombra = crearSombraContacto(tex.sombraContacto, r + 1.2);
   grupo.add(sombra);
 
   habilitarSombras(grupo);
-  domoCristal.castShadow = false;
   return grupo;
 }
 

@@ -1,6 +1,8 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { sonido } from '../audio/sonido';
 import { GRAVEDAD } from '../data/parametros';
+import { tareasDelDia } from '../engine/tareas';
+import type { Especialidad, Tarea } from '../engine/tipos';
 import type { EstadoTelemetria3D, EventoAccion3D, ModoCamara3D } from '../three/EscenaPlaneta';
 import type { Vista3DRef } from '../three/Vista3D';
 import { PantallaBitacora } from './bitacora/PantallaBitacora';
@@ -12,6 +14,10 @@ import { PantallaJuego } from './juego/PantallaJuego';
 
 // Three.js se descarga aparte (TRD RNF-05): la interfaz responde enseguida y el fondo 3D aparece al llegar.
 const Vista3D = lazy(() => import('../three/Vista3D').then((m) => ({ default: m.Vista3D })));
+
+const SIN_ESPECIALIDADES: Especialidad[] = ['ingenieria'];
+const SIN_TAREAS: Tarea[] = [];
+const SIN_HECHAS: string[] = [];
 
 const MAPA_ESTADO_BODY = {
   inicio: 'title',
@@ -39,7 +45,26 @@ export function App() {
     gravedad: GRAVEDAD[config.destino],
     nodosRestantes: 2,
     softwareGl: false,
+    seleccionado: 0,
+    trabajoTripulacion: [],
+    progresoTareas: {},
+    tareaCercana: null,
   });
+
+  // Tripulación y tareas del día para la escena (RF-13 a RF-15). Memorizadas: la escena las compara por referencia.
+  const partidaJuego = estado.fase === 'juego' ? estado.partida : null;
+  const plan = estado.fase === 'juego' ? estado.plan : null;
+  const especialidades = useMemo<Especialidad[]>(
+    () => (partidaJuego ? partidaJuego.tripulacion.map((a) => a.especialidad) : SIN_ESPECIALIDADES),
+    [partidaJuego],
+  );
+  const tareas = useMemo<Tarea[]>(
+    () => (partidaJuego && plan ? tareasDelDia(partidaJuego, plan.opcionId) : SIN_TAREAS),
+    [partidaJuego, plan],
+  );
+  const tareasHechas = plan?.hechas ?? SIN_HECHAS;
+  const trabajoActivo = plan !== null && estado.fase === 'juego' && estado.tarjetas.length === 0;
+
 
   useEffect(() => {
     document.body.dataset.state = MAPA_ESTADO_BODY[estado.fase];
@@ -85,6 +110,8 @@ export function App() {
   }, []);
 
   const cerrarSaludExterno = useCallback(() => setMostrarSaludExterno(false), []);
+  const completarTarea = useCallback((tareaId: string) => dispatch({ tipo: 'COMPLETAR_TAREA', tareaId }), [dispatch]);
+  const seleccionarTripulante = useCallback((indice: number) => vista3dRef.current?.seleccionar(indice), []);
 
   return (
     <div className="relative min-h-screen bg-[var(--color-bg)] text-[var(--color-text)] overflow-x-hidden">
@@ -97,8 +124,13 @@ export function App() {
           modo={modo3d}
           eventoActualId={estado.fase === 'juego' ? (estado.partida.eventoActual?.id ?? null) : null}
           turno={estado.fase === 'juego' ? estado.partida.turno : 0}
+          especialidades={especialidades}
+          tareas={tareas}
+          tareasHechas={tareasHechas}
+          trabajoActivo={trabajoActivo}
           onTelemetria={setTelemetria}
           onAccionCompletada={manejarAccion3D}
+          onTareaCompletada={completarTarea}
         />
       </Suspense>
 
@@ -121,6 +153,8 @@ export function App() {
           onCerrarSaludExterno={cerrarSaludExterno}
           onEjecutarAccionCercana={ejecutarAccionCercana}
           onCambiarEntradaTactil={manejarEntradaTactil}
+          onSeleccionarTripulante={seleccionarTripulante}
+          tareas={tareas}
           dispatch={dispatch}
         />
       )}

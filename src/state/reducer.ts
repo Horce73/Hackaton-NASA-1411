@@ -7,6 +7,7 @@ import { describirRecompensa } from '../data/recompensas';
 import type { TareaExploracion } from '../data/recompensas';
 import { validarDiseno } from '../engine/diseno';
 import { completarTareaExploracion } from '../engine/exploracion';
+import { tareasDelDia } from '../engine/tareas';
 import { iniciarMision, recursoQueFalta, siguienteTurno } from '../engine/turno';
 import type { Configuracion, Destino, Estado } from '../engine/tipos';
 
@@ -19,6 +20,7 @@ export type EstadoApp =
       tarjetas: string[]; // historias por mostrar, en orden (RF-08)
       avisoCampo: string | null; // aviso breve de una acción 3D
       nodos3dCompletados: string[];
+      plan: { opcionId: string; hechas: string[] } | null; // plan del día tras elegir opción (RF-15)
     }
   | { fase: 'bitacora'; partida: Estado };
 
@@ -36,6 +38,8 @@ export type Accion =
   | { tipo: 'LIMPIAR_DISENO' }
   | { tipo: 'CONFIRMAR_DISENO' }
   | { tipo: 'ELEGIR_OPCION'; opcionId: string }
+  | { tipo: 'COMPLETAR_TAREA'; tareaId: string }
+  | { tipo: 'TERMINAR_DIA' }
   | { tipo: 'COMPLETAR_TAREA_3D'; tarea: TareaExploracion; nodoId: string; historiaId?: string }
   | { tipo: 'LIMPIAR_AVISO_CAMPO' }
   | { tipo: 'ABRIR_HISTORIA'; historiaId: string }
@@ -81,6 +85,31 @@ type EstadoEditable = Extract<EstadoApp, { fase: 'inicio' | 'diseno' }>;
 function conConfig(estado: EstadoEditable, config: Configuracion): EstadoEditable {
   if (estado.fase === 'inicio') return { ...estado, config };
   return { ...estado, config, errorDiseno: null };
+}
+
+type EstadoJuego = Extract<EstadoApp, { fase: 'juego' }>;
+
+function juegoNuevo(partida: Estado): EstadoJuego {
+  return {
+    fase: 'juego',
+    partida,
+    tarjetas: [...partida.historiasDesbloqueadas],
+    avisoCampo: null,
+    nodos3dCompletados: [],
+    plan: null,
+  };
+}
+
+// Resuelve el día con las tareas que quedaron sin hacer y encola las historias nuevas.
+function resolverDia(estado: EstadoJuego, opcionId: string, hechas: string[]): EstadoApp {
+  const { partida, tarjetas } = estado;
+  const pendientes = tareasDelDia(partida, opcionId).filter((t) => !hechas.includes(t.id));
+  const yaDesbloqueadas = new Set(partida.historiasDesbloqueadas);
+  const siguiente = siguienteTurno(partida, opcionId, pendientes);
+  const nuevas = siguiente.historiasDesbloqueadas.filter((id) => !yaDesbloqueadas.has(id));
+  const cola = [...tarjetas, ...nuevas];
+  if (siguiente.resultado && cola.length === 0) return { fase: 'bitacora', partida: siguiente };
+  return { ...estado, partida: siguiente, tarjetas: cola, avisoCampo: null, plan: null };
 }
 
 function sinAviso(partida: EstadoApp): EstadoApp {
@@ -186,38 +215,33 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
           errorDiseno: validacion.errores[0] ?? 'Revisa tu diseño antes de lanzar.',
         };
       }
-      const partida = iniciarMision(estado.config, estado.itemIds);
-      return {
-        fase: 'juego',
-        partida,
-        tarjetas: [...partida.historiasDesbloqueadas],
-        avisoCampo: null,
-        nodos3dCompletados: [],
-      };
+      return juegoNuevo(iniciarMision(estado.config, estado.itemIds));
     }
 
     case 'ELEGIR_OPCION': {
       if (estado.fase !== 'juego') return estado;
       // Mientras hay una historia abierta, el día está en pausa (RF-08).
-      if (estado.tarjetas.length > 0) return estado;
-      const { partida, tarjetas } = estado;
+      if (estado.tarjetas.length > 0 || estado.plan) return estado;
+      const { partida } = estado;
       // Una opción inexistente o bloqueada no se resuelve: el motor, por contrato, lanza.
       const existe = partida.eventoActual?.opciones.some((o) => o.id === accion.opcionId);
       if (!existe || recursoQueFalta(partida, accion.opcionId)) return estado;
-      const yaDesbloqueadas = new Set(partida.historiasDesbloqueadas);
-      const siguiente = siguienteTurno(partida, accion.opcionId);
-      const nuevas = siguiente.historiasDesbloqueadas.filter((id) => !yaDesbloqueadas.has(id));
-      const cola = [...tarjetas, ...nuevas];
-      if (siguiente.resultado && cola.length === 0) {
-        return { fase: 'bitacora', partida: siguiente };
-      }
-      return {
-        fase: 'juego',
-        partida: siguiente,
-        tarjetas: cola,
-        avisoCampo: null,
-        nodos3dCompletados: estado.nodos3dCompletados,
-      };
+      // Sin nada que hacer (sin módulos ni tareas), el día se resuelve en el acto.
+      if (tareasDelDia(partida, accion.opcionId).length === 0) return resolverDia(estado, accion.opcionId, []);
+      return { ...estado, plan: { opcionId: accion.opcionId, hechas: [] } };
+    }
+
+    case 'COMPLETAR_TAREA': {
+      if (estado.fase !== 'juego' || !estado.plan) return estado;
+      const { plan } = estado;
+      const existe = tareasDelDia(estado.partida, plan.opcionId).some((t) => t.id === accion.tareaId);
+      if (!existe || plan.hechas.includes(accion.tareaId)) return estado;
+      return { ...estado, plan: { ...plan, hechas: [...plan.hechas, accion.tareaId] } };
+    }
+
+    case 'TERMINAR_DIA': {
+      if (estado.fase !== 'juego' || !estado.plan || estado.tarjetas.length > 0) return estado;
+      return resolverDia(estado, estado.plan.opcionId, estado.plan.hechas);
     }
 
     case 'COMPLETAR_TAREA_3D': {
@@ -267,14 +291,7 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
     case 'REPETIR': {
       if (estado.fase !== 'bitacora') return estado;
       const { partida } = estado;
-      const nueva = iniciarMision(partida.config, partida.diseno.itemIds);
-      return {
-        fase: 'juego',
-        partida: nueva,
-        tarjetas: [...nueva.historiasDesbloqueadas],
-        avisoCampo: null,
-        nodos3dCompletados: [],
-      };
+      return juegoNuevo(iniciarMision(partida.config, partida.diseno.itemIds));
     }
 
     case 'REINICIAR': {

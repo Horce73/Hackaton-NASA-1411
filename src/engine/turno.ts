@@ -7,10 +7,12 @@ import {
   CONSUMO_ENERGIA_POR_TRIPULANTE,
   CONSUMO_OXIGENO,
   DOSIS_BASE,
+  ESPECIALIDADES_TRIPULACION,
   NOMBRES_TRIPULACION,
 } from '../data/parametros';
 import { itemsDe, reservasIniciales, validarDiseno } from './diseno';
 import { siguiente } from './prng';
+import { modulosParados } from './tareas';
 import { actualizarSalud, limitar } from './salud';
 import type {
   Astronauta,
@@ -23,6 +25,7 @@ import type {
   Indicador,
   Opcion,
   Recursos,
+  Tarea,
 } from './tipos';
 
 type EfectoNumerico = Exclude<keyof Efectos, 'saludBonus' | 'alertaRadiacion'>;
@@ -64,6 +67,7 @@ export function iniciarMision(config: Configuracion, itemIds: string[]): Estado 
     (nombre, i) => ({
       id: `astronauta-${i + 1}`,
       nombre,
+      especialidad: ESPECIALIDADES_TRIPULACION[i],
       salud: { radiacion: 100, nutricion: 100, suenoEstres: 100, musculoHueso: 100 },
       dosis: 0,
     }),
@@ -108,7 +112,8 @@ export function recursoQueFalta(estado: Estado, opcionId: string): keyof Recurso
 }
 
 // Resuelve un turno en el orden del TRD 6.2. Pura: no modifica `estado`.
-export function siguienteTurno(estado: Estado, opcionId: string): Estado {
+// `pendientes`: tareas del día sin terminar (RF-15, RF-16); vacío resuelve el turno como si se hicieran todas.
+export function siguienteTurno(estado: Estado, opcionId: string, pendientes: Tarea[] = []): Estado {
   if (estado.resultado) return estado;
   const evento = estado.eventoActual;
   if (!evento) throw new Error('No hay evento que resolver.');
@@ -119,12 +124,16 @@ export function siguienteTurno(estado: Estado, opcionId: string): Estado {
 
   const { config } = estado;
   const tripulantes = config.tripulantes;
-  const items = itemsDe(estado.diseno.itemIds);
+  // 0. Tareas pendientes: módulos sin mantenimiento no cuentan; tarea del evento sin hacer, opción de riesgo.
+  const parados = modulosParados(pendientes);
+  const items = itemsDe(estado.diseno.itemIds.filter((_, i) => !parados.has(i)));
+  const sinAtender = pendientes.some((t) => t.tipo === 'evento');
+  const opcionRiesgo = evento.opciones.find((o) => o.id === evento.opcionSinAtender);
   const total = (campo: EfectoNumerico) =>
     items.reduce((suma, item) => suma + (item.efectos[campo] ?? 0), 0);
   const bonus = (indicador: Indicador) =>
     items.reduce((suma, item) => suma + (item.efectos.saludBonus?.[indicador] ?? 0), 0);
-  const efectos = opcion.efectos;
+  const efectos = sinAtender ? (opcionRiesgo?.efectos ?? {}) : opcion.efectos;
   const recursosPrevios = estado.recursos;
   const dosisMediaPrevia =
     estado.tripulacion.reduce((suma, a) => suma + a.dosis, 0) / estado.tripulacion.length;
@@ -214,7 +223,11 @@ export function siguienteTurno(estado: Estado, opcionId: string): Estado {
     agua: agua - recursosPrevios.agua,
     dosisMedia: dosisMediaFinal - dosisMediaPrevia,
     ciencia: ciencia - estado.ciencia,
-    opcionTexto: opcion.texto,
+    opcionTexto: sinAtender
+      ? `${opcion.texto}: sin terminar, ${opcionRiesgo ? `se aplicó «${opcionRiesgo.texto}»` : 'no tuvo efecto'}`
+      : opcion.texto,
+    ...(sinAtender && { sinAtender }),
+    ...(parados.size > 0 && { modulosParados: parados.size }),
   };
   const base = {
     fase: estado.fase,

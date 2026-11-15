@@ -33,11 +33,7 @@ export const EVENTOS: Evento[] = [
         texto: 'Refugiarse en la base',
         // PROVISIONAL: dentro, la tormenta multiplica la dosis del día y el blindaje la reduce.
         efectos: { multiplicadorRadiacion: 40, salud: { suenoEstres: -4 } },
-        tareas: [
-          { estacion: 'habitat', especialidad: 'medicina', trabajo: 10, etiqueta: 'Preparar el refugio' },
-          { estacion: 'blindaje', especialidad: 'ingenieria', trabajo: 12, etiqueta: 'Reforzar el blindaje' },
-          { estacion: 'habitat', especialidad: 'geologia', trabajo: 8, etiqueta: 'Medir la radiación' },
-        ],
+        dentro: true,
       },
       {
         id: 'seguir-fuera',
@@ -151,7 +147,7 @@ export const EVENTOS: Evento[] = [
         id: 'descansar',
         texto: 'Descansar',
         efectos: { salud: { suenoEstres: 10 } },
-        descanso: true,
+        dentro: true,
       },
       {
         id: 'ejercicio',
@@ -290,6 +286,7 @@ export const EVENTOS: Evento[] = [
         id: 'esperar',
         texto: 'Esperar instrucciones',
         efectos: { salud: { suenoEstres: -18 }, recursos: { energia: -6 } },
+        dentro: true,
       },
     ],
   },
@@ -320,6 +317,7 @@ export const EVENTOS: Evento[] = [
         id: 'quedarse-dentro',
         texto: 'Quedarse dentro',
         efectos: { salud: { suenoEstres: -4 } },
+        dentro: true,
       },
     ],
   },

@@ -21,6 +21,9 @@ import {
   HABITAT,
   crearModulo3D,
   crearNodoInteractivo3D,
+  crearTunel3D,
+  MODULO_PRESURIZADO,
+  MODULOS_PRESURIZADOS,
   type AstronautaRig,
 } from './modelos3d';
 
@@ -712,26 +715,64 @@ export class EscenaPlaneta {
 
     modulos.forEach(({ id, indice }, idx) => {
       const total = Math.max(1, modulos.length);
-      // Evitar el frente directo (+Z donde aparece el jugador)
+      // Evitar el frente directo (+Z donde aparece el jugador). Los presurizados van cerca y unidos por un túnel;
+      // el reactor, más lejos (la NASA lo pondría a 1 km); el resto, en el anillo exterior.
+      const presurizado = MODULOS_PRESURIZADOS.has(id);
       const angulo = Math.PI * 0.72 + (idx / total) * Math.PI * 1.56;
-      const dist = 10.2 + (idx % 2) * 1.8;
+      const dist = presurizado ? 7.6 : id === 'reactor' ? 17 : 11 + (idx % 2) * 1.6;
       const mx = Math.cos(angulo) * dist;
       const mz = Math.sin(angulo) * dist;
       const my = groundHeightAt(mx, mz, this.destino);
 
-      const modelo = crearModulo3D(id, this.tex, this.isSoftwareGl);
+      const modelo = crearModulo3D(id, this.tex, this.isSoftwareGl, this.destino);
       modelo.position.set(mx, my, mz);
-      modelo.rotation.y = Math.atan2(-mx, -mz);
+      const giro = Math.atan2(-mx, -mz); // +Z del modelo mira al hábitat
+      modelo.rotation.y = giro;
       this.grupoBase.add(modelo);
       this.posEstaciones.set(`item:${indice}`, new THREE.Vector3(mx, my, mz));
+      // El panel vertical (VSAT) mira al Sol de la escena, que no se mueve.
+      const seguidor = modelo.getObjectByName('seguidor-solar');
+      if (seguidor) seguidor.rotation.y = Math.atan2(this.luzSol.position.x, this.luzSol.position.z) - giro;
 
-      this.obstaculos.push({
-        id: `mod-${id}-${idx}`,
-        x: mx,
-        z: mz,
-        radio: 1.55,
-        altura: 2.1,
+      // Los módulos alargados (presurizados e invernadero, con el eje en X) llevan dos obstáculos a lo largo.
+      const alargado = presurizado || id === 'invernadero';
+      const ejeX = Math.cos(giro);
+      const ejeZ = -Math.sin(giro);
+      const piezas = alargado ? [-1.3, 1.3] : [0];
+      piezas.forEach((desplazamiento, k) => {
+        this.obstaculos.push({
+          id: `mod-${id}-${idx}-${k}`,
+          x: mx + ejeX * desplazamiento,
+          z: mz + ejeZ * desplazamiento,
+          radio: alargado ? 1.25 : id === 'panel-solar' && this.destino === 'luna' ? 0.9 : 1.55,
+          altura: alargado ? 2.7 : 2.1,
+        });
       });
+
+      if (presurizado) {
+        // Túnel desde la pared del hábitat (bajo el inflable) hasta la escotilla del módulo.
+        const { radio, altoEje, radioTunel } = MODULO_PRESURIZADO;
+        const desde = new THREE.Vector3(
+          Math.cos(angulo) * HABITAT.radioMetal,
+          yBase + HABITAT.alturaPlataforma + altoEje,
+          Math.sin(angulo) * HABITAT.radioMetal,
+        );
+        const hasta = new THREE.Vector3(Math.cos(angulo) * (dist - radio), my + altoEje, Math.sin(angulo) * (dist - radio));
+        const tunel = crearTunel3D(desde.distanceTo(hasta), this.tex);
+        tunel.position.copy(desde);
+        tunel.lookAt(hasta);
+        this.grupoBase.add(tunel);
+        // Fuera del inflable, el túnel no se puede atravesar.
+        for (let r = HABITAT.radioInflable + 0.3; r < dist - radio; r += 0.9) {
+          this.obstaculos.push({
+            id: `tunel-${id}-${r.toFixed(1)}`,
+            x: Math.cos(angulo) * r,
+            z: Math.sin(angulo) * r,
+            radio: radioTunel + 0.05,
+            altura: altoEje + radioTunel,
+          });
+        }
+      }
     });
 
     historicos.forEach((id, idx) => {
@@ -819,8 +860,9 @@ export class EscenaPlaneta {
       const sy = groundHeightAt(sx, sz, this.destino);
       const sonda = crearModulo3D('surveyor-3', this.tex, this.isSoftwareGl);
       sonda.position.set(sx, sy, sz);
-      this.posHistorias.set(EVENTO_SURVEYOR, { centro: new THREE.Vector3(sx, sy, sz), tamano: 2 });
+      this.posHistorias.set(EVENTO_SURVEYOR, { centro: new THREE.Vector3(sx, sy, sz), tamano: 4.2 }); // 3 m de alto: plano entero
       this.grupoBase.add(sonda);
+      this.obstaculos.push({ id: 'surveyor-3', x: sx, z: sz, radio: 0.9, altura: 3 });
 
       const baliza = crearNodoInteractivo3D('historia');
       baliza.position.set(sx, sy, sz);

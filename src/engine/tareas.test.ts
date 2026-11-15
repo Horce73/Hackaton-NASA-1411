@@ -75,7 +75,7 @@ test('un módulo sin mantenimiento no rinde ese día (RF-16)', () => {
   expect(sinReactor.ultimoDelta?.modulosParados).toBe(1);
 });
 
-test('descansar pasa el día sin tareas: sin mantenimiento que falte ni muestreo', () => {
+test('quedarse dentro (descansar) pasa el día sin tareas: sin mantenimiento que falte ni muestreo', () => {
   const estado = conEvento(['reactor', 'reciclador'], 'dia-tranquilo');
   expect(tareasDelDia(estado, 'descansar')).toEqual([]);
   const descanso = siguienteTurno(estado, 'descansar');

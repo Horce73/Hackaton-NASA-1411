@@ -113,6 +113,12 @@ test('ningún texto visible usa raya larga', () => {
   expect(textos.filter((t) => t.includes('—'))).toEqual([]);
 });
 
+test('las opciones de quedarse dentro no piden tareas: la tripulación no sale', () => {
+  const dentro = EVENTOS.flatMap((e) => e.opciones).filter((o) => o.dentro);
+  expect(dentro.map((o) => o.id).sort()).toEqual(['descansar', 'esperar', 'quedarse-dentro', 'refugiarse']);
+  expect(dentro.filter((o) => (o.tareas ?? []).length > 0)).toEqual([]);
+});
+
 test('cada dato curioso tiene fuente de la NASA, un diagrama o una imagen, y no se repite', () => {
   for (const destino of ['luna', 'marte'] as const) {
     const datos = datosDeLaMision(destino, idsHistorias);

@@ -48,7 +48,15 @@ function jugarDia(estado: EstadoJuego, opcionId: string, hacerTareas = true): Es
 function jugarHastaElFinal(estado: EstadoApp): EstadoApp {
   let actual = estado;
   // Tope defensivo: una partida nunca debería superar los turnos más las tarjetas.
-  for (let pasos = 0; pasos < 100 && actual.fase === 'juego'; pasos++) {
+  for (let pasos = 0; pasos < 200 && actual.fase === 'juego'; pasos++) {
+    if (actual.resumen) {
+      actual = reducer(actual, { tipo: 'CERRAR_RESUMEN', conDato: true });
+      continue;
+    }
+    if (actual.dato) {
+      actual = reducer(actual, { tipo: 'CERRAR_DATO' });
+      continue;
+    }
     if (actual.tarjetas.length > 0) {
       actual = reducer(actual, { tipo: 'CERRAR_TARJETA' });
       continue;
@@ -173,21 +181,75 @@ test('REPETIR vuelve a lanzar la misma misión con la misma semilla', () => {
   expect(reducer(lanzada, { tipo: 'REPETIR' })).toBe(lanzada);
 });
 
-test('al lanzar se muestran las tarjetas del equipo histórico, una a una (RF-08)', () => {
+test('al lanzar, la llegada muestra el equipo histórico y la tripulación espera dentro (RF-08)', () => {
   const lanzada = lanzar(['curiosity', 'sojourner']);
-  expect(lanzada).toMatchObject({ fase: 'juego', tarjetas: ['curiosity', 'sojourner'] });
+  expect(lanzada).toMatchObject({ fase: 'juego', llegada: true, tarjetas: [], tripulacionFuera: false });
+  expect(lanzada.partida.historiasDesbloqueadas).toEqual(['curiosity', 'sojourner']);
+  const llegada = reducer(lanzada, { tipo: 'TERMINAR_LLEGADA' });
+  expect(llegada).toMatchObject({ llegada: false });
+  expect(reducer(llegada, { tipo: 'TERMINAR_LLEGADA' })).toBe(llegada);
 
+  // Con una tarjeta abierta no se puede jugar el turno; se cierran una a una.
+  const conTarjetas = reducer(reducer(llegada, { tipo: 'ABRIR_HISTORIA', historiaId: 'curiosity' }), {
+    tipo: 'ABRIR_HISTORIA',
+    historiaId: 'sojourner',
+  });
   const opcionId = lanzada.partida.eventoActual!.opciones[0].id;
-  // Con una tarjeta abierta no se puede jugar el turno.
-  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId })).toBe(lanzada);
-
-  const sinTarjetas = reducer(reducer(lanzada, { tipo: 'CERRAR_TARJETA' }), { tipo: 'CERRAR_TARJETA' });
+  expect(reducer(conTarjetas, { tipo: 'ELEGIR_OPCION', opcionId })).toBe(conTarjetas);
+  const sinTarjetas = reducer(reducer(conTarjetas, { tipo: 'CERRAR_TARJETA' }), { tipo: 'CERRAR_TARJETA' });
   expect(sinTarjetas).toMatchObject({ fase: 'juego', tarjetas: [] });
   expect(reducer(sinTarjetas, { tipo: 'CERRAR_TARJETA' })).toBe(sinTarjetas);
 });
 
+test('la tripulación sale al decidir o al explorar, y vuelve a entrar al terminar el día', () => {
+  const lanzada = lanzar(['reciclador']);
+  const explorando = reducer(lanzada, { tipo: 'SALIR_TRIPULACION' });
+  expect(explorando).toMatchObject({ tripulacionFuera: true });
+  expect(reducer(explorando, { tipo: 'SALIR_TRIPULACION' })).toBe(explorando);
+
+  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !recursoQueFalta(lanzada.partida, o.id))!;
+  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id })).toMatchObject({ tripulacionFuera: true });
+  expect(jugarDia(lanzada, opcion.id)).toMatchObject({ tripulacionFuera: false });
+});
+
+test('al terminar el día sale el resumen y luego un dato curioso, que no se repite (RF-08)', () => {
+  const lanzada = lanzar(['reciclador', 'panel-solar']);
+  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !recursoQueFalta(lanzada.partida, o.id))!;
+  const conResumen = jugarDia(lanzada, opcion.id, false) as EstadoJuego;
+  expect(conResumen.resumen?.dia).toBe(1);
+  expect(conResumen.resumen?.tareas.length).toBeGreaterThan(0);
+  expect(conResumen.resumen?.tareas.every((t) => !t.hecha)).toBe(true);
+  // Con el resumen abierto no se puede decidir el día siguiente.
+  const otra = conResumen.partida.eventoActual!.opciones[0].id;
+  expect(reducer(conResumen, { tipo: 'ELEGIR_OPCION', opcionId: otra })).toBe(conResumen);
+
+  const conDato = reducer(conResumen, { tipo: 'CERRAR_RESUMEN', conDato: true }) as EstadoJuego;
+  expect(conDato).toMatchObject({ resumen: null, dato: 'olympus', datosVistos: ['olympus'] });
+  const sinDato = reducer(conDato, { tipo: 'CERRAR_DATO' }) as EstadoJuego;
+  expect(sinDato).toMatchObject({ fase: 'juego', dato: null });
+  const opcion2 = sinDato.partida.eventoActual!.opciones.find((o) => !recursoQueFalta(sinDato.partida, o.id))!;
+  const segundo = reducer(jugarDia(sinDato, opcion2.id), { tipo: 'CERRAR_RESUMEN', conDato: true });
+  expect(segundo).toMatchObject({ dato: 'fobos' });
+
+  // Desactivados, el resumen lleva directo al día siguiente.
+  expect(reducer(conResumen, { tipo: 'CERRAR_RESUMEN', conDato: false })).toMatchObject({ resumen: null, dato: null });
+});
+
+test('al terminar la misión, la bitácora llega después del resumen y del dato', () => {
+  const lanzada = lanzar(['reciclador']);
+  const terminada: EstadoJuego = {
+    ...lanzada,
+    partida: { ...lanzada.partida, resultado: 'exito' },
+    resumen: { dia: 10, tareas: [] },
+  };
+  const conDato = reducer(terminada, { tipo: 'CERRAR_RESUMEN', conDato: true });
+  expect(conDato).toMatchObject({ fase: 'juego' });
+  expect(reducer(conDato, { tipo: 'CERRAR_DATO' })).toMatchObject({ fase: 'bitacora' });
+  expect(reducer(terminada, { tipo: 'CERRAR_RESUMEN', conDato: false })).toMatchObject({ fase: 'bitacora' });
+});
+
 test('al cerrar la última tarjeta de una misión terminada se pasa a la bitácora', () => {
-  const lanzada = lanzar(['curiosity']);
+  const lanzada = reducer(lanzar(['curiosity']), { tipo: 'ABRIR_HISTORIA', historiaId: 'curiosity' }) as EstadoJuego;
   const terminada: EstadoJuego = {
     ...lanzada,
     partida: { ...lanzada.partida, resultado: 'exito' },
@@ -211,19 +273,15 @@ test('completar una tarea de exploración 3D da la recompensa, avisa y no se rep
   const lanzada = lanzar(['panel-solar', 'reciclador']);
   const antes = lanzada.partida;
 
-  const conHielo = reducer(lanzada, { tipo: 'COMPLETAR_TAREA_3D', tarea: 'hielo', nodoId: 'hielo-1' });
-  expect(conHielo).toMatchObject({ fase: 'juego', nodos3dCompletados: ['hielo-1'] });
-  if (conHielo.fase !== 'juego') throw new Error('esperaba la fase de juego');
+  const reparada = reducer(lanzada, { tipo: 'COMPLETAR_TAREA_3D', tarea: 'averia', nodoId: 'averia-1' });
+  expect(reparada).toMatchObject({ fase: 'juego', nodos3dCompletados: ['averia-1'] });
+  if (reparada.fase !== 'juego') throw new Error('esperaba la fase de juego');
 
-  expect(conHielo.partida.recursos.agua).toBe(antes.recursos.agua + 6);
-  expect(conHielo.partida.recursos.oxigeno).toBe(antes.recursos.oxigeno + 4);
-  expect(conHielo.partida.ciencia).toBe(antes.ciencia + 4);
-  expect(conHielo.avisoCampo).toContain('+6');
+  expect(reparada.partida.ciencia).toBe(antes.ciencia + 4);
+  expect(reparada.avisoCampo).toContain('+4');
 
   // El mismo nodo no se cobra dos veces.
-  expect(
-    reducer(conHielo, { tipo: 'COMPLETAR_TAREA_3D', tarea: 'hielo', nodoId: 'hielo-1' }),
-  ).toBe(conHielo);
+  expect(reducer(reparada, { tipo: 'COMPLETAR_TAREA_3D', tarea: 'averia', nodoId: 'averia-1' })).toBe(reparada);
 });
 
 test('inspeccionar un equipo NASA abre su primer plano y suma ciencia', () => {

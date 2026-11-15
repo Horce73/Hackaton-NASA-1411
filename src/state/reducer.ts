@@ -2,6 +2,7 @@
 // La partida simulada vive en engine/; acá se guarda solo la intención de la interfaz.
 
 import { CATALOGO, CATALOGO_POR_ID } from '../data/catalogo';
+import { datosDeLaMision, siguienteDato } from '../data/datosCuriosos';
 import { PREAJUSTES, PRESUPUESTO, TURNOS_MAX, TURNOS_MIN } from '../data/parametros';
 import { describirRecompensa } from '../data/recompensas';
 import type { TareaExploracion } from '../data/recompensas';
@@ -9,7 +10,13 @@ import { validarDiseno } from '../engine/diseno';
 import { completarTareaExploracion } from '../engine/exploracion';
 import { tareasDelDia } from '../engine/tareas';
 import { iniciarMision, recursoQueFalta, siguienteTurno } from '../engine/turno';
-import type { Configuracion, Destino, Estado } from '../engine/tipos';
+import type { Configuracion, Destino, Estado, Tarea } from '../engine/tipos';
+
+// Resumen del día que acaba de terminar: lo que se hizo y lo que quedó (los recursos están en `ultimoDelta`).
+export interface ResumenDia {
+  dia: number;
+  tareas: { etiqueta: string; tipo: Tarea['tipo']; hecha: boolean }[];
+}
 
 export type EstadoApp =
   | { fase: 'inicio'; config: Configuracion; itemIds: string[] }
@@ -26,6 +33,15 @@ export type EstadoApp =
       notas: string[];
       closeUp: string | null;
       eventosConocidos: string[];
+      // Llegada: pantallas de carga al lanzar, con el equipo histórico elegido (sustituyen a sus tarjetas, RF-08).
+      llegada: boolean;
+      // Cada día la tripulación empieza dentro del hábitat y sale por la compuerta al decidir o al explorar.
+      tripulacionFuera: boolean;
+      // Al terminar el día: la tripulación entra, sale el resumen y, si están activados, un dato curioso.
+      // Con la misión terminada, la bitácora llega después de los dos.
+      resumen: ResumenDia | null;
+      dato: string | null;
+      datosVistos: string[];
     }
   | { fase: 'bitacora'; partida: Estado };
 
@@ -46,6 +62,10 @@ export type Accion =
   | { tipo: 'COMPLETAR_TAREA'; tareaId: string }
   | { tipo: 'TERMINAR_DIA' }
   | { tipo: 'CERRAR_CLOSEUP' }
+  | { tipo: 'TERMINAR_LLEGADA' }
+  | { tipo: 'SALIR_TRIPULACION' }
+  | { tipo: 'CERRAR_RESUMEN'; conDato: boolean }
+  | { tipo: 'CERRAR_DATO' }
   | { tipo: 'COMPLETAR_TAREA_3D'; tarea: TareaExploracion; nodoId: string; historiaId?: string }
   | { tipo: 'LIMPIAR_AVISO_CAMPO' }
   | { tipo: 'ABRIR_HISTORIA'; historiaId: string }
@@ -99,25 +119,34 @@ function juegoNuevo(partida: Estado): EstadoJuego {
   return {
     fase: 'juego',
     partida,
-    tarjetas: [...partida.historiasDesbloqueadas],
+    tarjetas: [],
     avisoCampo: null,
     nodos3dCompletados: [],
     plan: null,
     notas: [],
     closeUp: null,
     eventosConocidos: [],
+    llegada: true,
+    tripulacionFuera: false,
+    resumen: null,
+    dato: null,
+    datosVistos: [],
   };
 }
 
 // Resuelve el día con las tareas que quedaron sin hacer y encola las historias nuevas.
 function resolverDia(estado: EstadoJuego, opcionId: string, hechas: string[]): EstadoApp {
   const { partida, tarjetas } = estado;
-  const pendientes = tareasDelDia(partida, opcionId).filter((t) => !hechas.includes(t.id));
+  const delDia = tareasDelDia(partida, opcionId);
+  const pendientes = delDia.filter((t) => !hechas.includes(t.id));
   const yaDesbloqueadas = new Set(partida.historiasDesbloqueadas);
   const siguiente = siguienteTurno(partida, opcionId, pendientes);
   const nuevas = siguiente.historiasDesbloqueadas.filter((id) => !yaDesbloqueadas.has(id));
   const cola = [...tarjetas, ...nuevas];
-  if (siguiente.resultado && cola.length === 0) return { fase: 'bitacora', partida: siguiente };
+  const resumen: ResumenDia = {
+    dia: partida.turno,
+    tareas: delDia.map((t) => ({ etiqueta: t.etiqueta, tipo: t.tipo, hecha: hechas.includes(t.id) })),
+  };
   const vivido = partida.eventoActual?.id;
   return {
     ...estado,
@@ -125,6 +154,8 @@ function resolverDia(estado: EstadoJuego, opcionId: string, hechas: string[]): E
     tarjetas: cola,
     avisoCampo: null,
     plan: null,
+    tripulacionFuera: false,
+    resumen,
     eventosConocidos:
       vivido && !estado.eventosConocidos.includes(vivido) ? [...estado.eventosConocidos, vivido] : estado.eventosConocidos,
   };
@@ -144,6 +175,13 @@ export function conocimientoDelDia(estado: EstadoJuego): { conocido: boolean; mi
     estado.eventosConocidos.includes(eventoActual.id) ||
     misiones.some((id) => estado.notas.includes(id));
   return { conocido, misiones };
+}
+
+// Con la misión terminada y nada más por mostrar, se pasa a la bitácora.
+function terminarSiAcabo(estado: EstadoJuego): EstadoApp {
+  const { partida } = estado;
+  const pendiente = estado.resumen || estado.dato || estado.tarjetas.length > 0;
+  return partida.resultado && !pendiente ? { fase: 'bitacora', partida } : estado;
 }
 
 function sinAviso(partida: EstadoApp): EstadoApp {
@@ -255,14 +293,14 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
     case 'ELEGIR_OPCION': {
       if (estado.fase !== 'juego') return estado;
       // Mientras hay una historia abierta, el día está en pausa (RF-08).
-      if (estado.tarjetas.length > 0 || estado.plan) return estado;
+      if (estado.tarjetas.length > 0 || estado.plan || estado.resumen || estado.dato) return estado;
       const { partida } = estado;
       // Una opción inexistente o bloqueada no se resuelve: el motor, por contrato, lanza.
       const existe = partida.eventoActual?.opciones.some((o) => o.id === accion.opcionId);
       if (!existe || recursoQueFalta(partida, accion.opcionId)) return estado;
       // Sin nada que hacer (sin módulos ni tareas), el día se resuelve en el acto.
       if (tareasDelDia(partida, accion.opcionId).length === 0) return resolverDia(estado, accion.opcionId, []);
-      return { ...estado, plan: { opcionId: accion.opcionId, hechas: [] } };
+      return { ...estado, plan: { opcionId: accion.opcionId, hechas: [] }, tripulacionFuera: true };
     }
 
     case 'COMPLETAR_TAREA': {
@@ -277,6 +315,29 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
       if (estado.fase !== 'juego' || !estado.plan || estado.tarjetas.length > 0) return estado;
       return resolverDia(estado, estado.plan.opcionId, estado.plan.hechas);
     }
+
+    case 'CERRAR_RESUMEN': {
+      if (estado.fase !== 'juego' || !estado.resumen) return estado;
+      const sinResumen = { ...estado, resumen: null };
+      const { config, historiasDesbloqueadas } = estado.partida;
+      const siguiente = accion.conDato
+        ? siguienteDato(datosDeLaMision(config.destino, historiasDesbloqueadas), estado.datosVistos)
+        : null;
+      if (siguiente) return { ...sinResumen, dato: siguiente.id, datosVistos: siguiente.vistos };
+      return terminarSiAcabo(sinResumen);
+    }
+
+    case 'CERRAR_DATO':
+      if (estado.fase !== 'juego' || !estado.dato) return estado;
+      return terminarSiAcabo({ ...estado, dato: null });
+
+    case 'TERMINAR_LLEGADA':
+      if (estado.fase !== 'juego' || !estado.llegada) return estado;
+      return { ...estado, llegada: false };
+
+    case 'SALIR_TRIPULACION':
+      if (estado.fase !== 'juego' || estado.tripulacionFuera || estado.resumen || estado.dato) return estado;
+      return { ...estado, tripulacionFuera: true };
 
     case 'CERRAR_CLOSEUP':
       if (estado.fase !== 'juego' || !estado.closeUp) return estado;
@@ -314,10 +375,7 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
     case 'CERRAR_TARJETA': {
       if (estado.fase !== 'juego' || estado.tarjetas.length === 0) return estado;
       const [, ...resto] = estado.tarjetas;
-      if (resto.length === 0 && estado.partida.resultado) {
-        return { fase: 'bitacora', partida: estado.partida };
-      }
-      return { ...estado, tarjetas: resto };
+      return terminarSiAcabo({ ...estado, tarjetas: resto });
     }
 
     case 'ABORTAR_MISION': {

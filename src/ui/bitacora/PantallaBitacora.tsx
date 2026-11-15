@@ -1,12 +1,56 @@
 import { useState, type Dispatch } from 'react';
 import { Award, CheckCircle2, RotateCcw, ShieldAlert } from 'lucide-react';
+import { AVISOS } from '../../data/avisos';
 import { HISTORIAS_POR_ID } from '../../data/historias';
+import { DOSIS_BASE, LIMITE_DOSIS } from '../../data/parametros';
 import { desglosePuntuacion } from '../../engine/puntuacion';
-import type { Estado } from '../../engine/tipos';
+import type { AvisoId, Estado, Indicador } from '../../engine/tipos';
 import type { Accion } from '../../state/reducer';
 import { ImagenSegura } from '../comun/EmblemaMision';
 import { Sparkline } from '../comun/Sparkline';
 import { TarjetaHistoria } from '../comun/TarjetaHistoria';
+
+// De qué aviso sale la explicación de cada causa de fin de misión.
+const AVISO_DE_INDICADOR: Record<Indicador, AvisoId> = {
+  radiacion: 'radiacion',
+  nutricion: 'alimento',
+  suenoEstres: 'suenoEstres',
+  musculoHueso: 'musculoHueso',
+};
+
+// Por qué terminó la misión, con un caso real (petición del equipo: aprender también del fracaso).
+function CausaFin({ partida }: { partida: Estado }) {
+  if (!partida.causaFin) return null;
+  const aviso = AVISOS[AVISO_DE_INDICADOR[partida.causaFin]];
+  const dosisMaxima = Math.max(...partida.tripulacion.map((a) => a.dosis));
+  return (
+    <section
+      aria-labelledby="titulo-causa-fin"
+      className="rounded-xl border border-[var(--color-warn)]/60 bg-[var(--color-surface)] p-5 sm:p-6 space-y-2"
+    >
+      <h2 id="titulo-causa-fin" className="text-xl font-bold text-[var(--color-text)]">
+        Por qué pasó: {aviso.nombre.toLowerCase()}
+      </h2>
+      <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{aviso.dato}</p>
+      <p className="text-sm text-[var(--color-text)] leading-relaxed">
+        {aviso.historia.dato}{' '}
+        <a href={aviso.historia.fuente} target="_blank" rel="noreferrer" className="underline text-[var(--color-text-muted)]">
+          Fuente NASA
+        </a>
+      </p>
+      {partida.causaFin === 'radiacion' && (
+        <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
+          Tu tripulación llegó a {Math.round(dosisMaxima)} mSv. La NASA limita a {LIMITE_DOSIS} mSv la dosis de una
+          tormenta solar. En la superficie se reciben unos {DOSIS_BASE[partida.config.destino].toLocaleString('es')} mSv
+          al día: lo que de verdad pone en peligro es salir durante una tormenta.
+        </p>
+      )}
+      <p className="text-sm text-[var(--color-text-muted)]">
+        Mira en el diseño el «¿Por qué hace falta?» de cada módulo para la próxima misión.
+      </p>
+    </section>
+  );
+}
 
 interface PantallaBitacoraProps {
   partida: Estado;
@@ -83,6 +127,8 @@ export function PantallaBitacora({ partida, dispatch }: PantallaBitacoraProps) {
 
           <Sparkline historial={partida.historial} />
         </section>
+
+        <CausaFin partida={partida} />
 
         <section aria-labelledby="titulo-historias-bitacora" className="space-y-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">

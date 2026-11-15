@@ -27,7 +27,13 @@ import { CIENCIA_MUESTREO, DURACION_DIA, ESPECIALIDADES } from '../../data/param
 import { semaforo } from '../../engine/salud';
 import { recursoQueFalta } from '../../engine/turno';
 import type { Archivo, Especialidad, Historia, Recursos, Tarea } from '../../engine/tipos';
+import { datosDeLaMision } from '../../data/datosCuriosos';
+import { HOMENAJE_MONOLITO } from '../../data/llegada';
 import { conocimientoDelDia, type Accion, type EstadoApp } from '../../state/reducer';
+import { LeyendaNegra } from '../comun/LeyendaNegra';
+import { PantallaDato } from './PantallaDato';
+import { ResumenDia } from './ResumenDia';
+import { SecuenciaLlegada } from './SecuenciaLlegada';
 import type { EntradaTactil3D, EstadoTelemetria3D } from '../../three/EscenaPlaneta';
 import { describirConsecuencia, describirRiesgo } from '../comun/efectos';
 import { porcentajeDosis } from '../comun/formato';
@@ -45,6 +51,31 @@ const NOMBRE_RECURSO: Record<keyof Recursos, string> = {
 // Reloj del día (RF-15, UX Brief 10): ajustable porque WCAG 2.2.1 pide poder alargar o quitar un límite de tiempo.
 type AjusteReloj = 'normal' | 'doble' | 'sin';
 const SEGUNDOS_RELOJ: Record<AjusteReloj, number> = { normal: DURACION_DIA, doble: DURACION_DIA * 2, sin: Infinity };
+
+// Lo que tarda la tripulación en entrar por la compuerta (EscenaPlaneta) antes de mostrar el resumen.
+const ESPERA_ENTRADA_MS = 3200;
+const CLAVE_DATOS = 'mision-legado:datos-curiosos';
+
+function movimientoReducido(): boolean {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+}
+
+// Preferencia de los datos curiosos: activados salvo que el jugador los apague. Falla en silencio sin almacenamiento.
+function leerDatosActivos(): boolean {
+  try {
+    return localStorage.getItem(CLAVE_DATOS) !== 'no';
+  } catch {
+    return true;
+  }
+}
+
+function guardarDatosActivos(activos: boolean): void {
+  try {
+    localStorage.setItem(CLAVE_DATOS, activos ? 'si' : 'no');
+  } catch {
+    // sin permiso: la preferencia dura lo que la sesión
+  }
+}
 
 function formatoReloj(segundos: number): string {
   const s = Math.max(0, Math.ceil(segundos));
@@ -75,6 +106,8 @@ interface PantallaJuegoProps {
   onCambiarEntradaTactil: (entrada: Partial<EntradaTactil3D>) => void;
   onSeleccionarTripulante: (indice: number) => void;
   tareas: Tarea[]; // tareas del día del plan en curso (RF-15)
+  homenaje: boolean; // primer plano del monolito lunar
+  onCerrarHomenaje: () => void;
   dispatch: Dispatch<Accion>;
 }
 
@@ -88,6 +121,8 @@ export function PantallaJuego({
   onCambiarEntradaTactil,
   onSeleccionarTripulante,
   tareas,
+  homenaje,
+  onCerrarHomenaje,
   dispatch,
 }: PantallaJuegoProps) {
   const { partida, plan } = estado;
@@ -103,13 +138,48 @@ export function PantallaJuego({
   const [restante, setRestante] = useState(SEGUNDOS_RELOJ.normal);
 
   // El reloj arranca con cada plan nuevo y se para con una tarjeta o un panel abierto.
-  const relojPausado = estado.tarjetas.length > 0 || estado.closeUp !== null || mostrarTripulacion || mostrarHistorias;
+  const primerPlano = estado.closeUp !== null || homenaje;
+  // Fin del día: la tripulación entra (unos 3 s), luego el resumen y, si están activados, un dato curioso.
+  const cierreDia = estado.resumen !== null || estado.dato !== null;
+  const [resumenListo, setResumenListo] = useState(false);
+  useEffect(() => {
+    setResumenListo(false);
+    if (!estado.resumen) return;
+    const t = window.setTimeout(() => setResumenListo(true), movimientoReducido() ? 0 : ESPERA_ENTRADA_MS);
+    return () => window.clearTimeout(t);
+  }, [estado.resumen]);
+  const [datosActivos, setDatosActivos] = useState(leerDatosActivos);
+  const cambiarDatosActivos = (activos: boolean) => {
+    setDatosActivos(activos);
+    guardarDatosActivos(activos);
+  };
+  const datoActual = estado.dato
+    ? datosDeLaMision(partida.config.destino, partida.historiasDesbloqueadas).find((d) => d.id === estado.dato)
+    : undefined;
+  const relojPausado =
+    estado.tarjetas.length > 0 || primerPlano || estado.llegada || mostrarTripulacion || mostrarHistorias;
   const claveDia = plan ? `${partida.turno}-${plan.opcionId}` : null;
   const claveAnterior = useRef<string | null>(null);
   // En táctil, el panel se pliega al empezar el plan (para ver y moverse) y se abre para decidir el día siguiente.
   useEffect(() => {
     if (esTactil) setPanelEventoAbierto(!claveDia);
+    else if (!claveDia) setPanelEventoAbierto(true); // cada día empieza decidiendo, con la tripulación dentro
   }, [claveDia, esTactil]);
+  // Plegar el panel para explorar saca a la tripulación por la compuerta, aunque aún no se haya decidido.
+  useEffect(() => {
+    if (!panelEventoAbierto && !estado.tripulacionFuera && !estado.llegada) dispatch({ tipo: 'SALIR_TRIPULACION' });
+  }, [panelEventoAbierto, estado.tripulacionFuera, estado.llegada, dispatch]);
+  // Guiño a HAL 9000: el ordenador de la base anuncia la salida por la compuerta.
+  const [vozCompuerta, setVozCompuerta] = useState<string | null>(null);
+  const fueraAntes = useRef(estado.tripulacionFuera);
+  useEffect(() => {
+    const salen = estado.tripulacionFuera && !fueraAntes.current;
+    fueraAntes.current = estado.tripulacionFuera;
+    if (!salen) return;
+    setVozCompuerta(`Abriendo la compuerta, ${partida.tripulacion[0]?.nombre ?? 'equipo'}.`);
+    const t = window.setTimeout(() => setVozCompuerta(null), 3500);
+    return () => window.clearTimeout(t);
+  }, [estado.tripulacionFuera, partida.tripulacion]);
   useEffect(() => {
     if (claveDia && claveDia !== claveAnterior.current) setRestante(SEGUNDOS_RELOJ[ajusteReloj]);
     claveAnterior.current = claveDia;
@@ -226,7 +296,7 @@ export function PantallaJuego({
 
   return (
     <main className="relative z-10 h-screen w-screen overflow-hidden pointer-events-none flex flex-col justify-between p-2.5 sm:p-4">
-      <header className="pointer-events-auto rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 px-3 py-2 flex flex-wrap items-center justify-between gap-2 shadow-xl">
+      <header className={`${estado.llegada || estado.dato ? 'invisible' : ''} pointer-events-auto rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 px-3 py-2 flex flex-wrap items-center justify-between gap-2 shadow-xl`}>
         <div className="flex items-center gap-3">
           <div className="font-mono tabular-nums text-sm sm:text-base font-bold text-[var(--color-text)] whitespace-nowrap">
             Día {partida.turno} / {partida.config.turnos}
@@ -395,7 +465,18 @@ export function PantallaJuego({
       </header>
 
       {/* Durante el primer plano solo quedan la cabecera y el diálogo (RF-17). */}
-      <div className={`relative flex-1 pointer-events-none ${estado.closeUp ? 'invisible' : ''}`}>
+      <div className={`relative flex-1 pointer-events-none ${primerPlano || estado.llegada || cierreDia ? 'invisible' : ''}`}>
+        {vozCompuerta && (
+          <p
+            role="status"
+            className="absolute top-2 left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/85 px-4 py-2 text-sm text-white shadow-xl"
+          >
+            <span aria-hidden="true" className="h-3 w-3 rounded-full bg-red-600 shadow-[0_0_10px_3px_rgba(220,38,38,0.7)]" />
+            <span>
+              <span className="text-white/60">Ordenador de la base:</span> «{vozCompuerta}»
+            </span>
+          </p>
+        )}
         {estado.avisoCampo && (
           <div
             role="status"
@@ -491,7 +572,7 @@ export function PantallaJuego({
                 <strong className="text-[var(--color-text)]">1–4:</strong> Elegir astronauta
               </li>
               <li>
-                <strong className="text-[var(--color-text)]">E:</strong> Trabajar en una tarea, extraer hielo, reparar o inspeccionar NASA
+                <strong className="text-[var(--color-text)]">E:</strong> Trabajar en una tarea, reparar o inspeccionar NASA
               </li>
               <li>
                 <strong className="text-[var(--color-text)]">Arrastrar ratón / Rueda:</strong> Rotar y acercar cámara
@@ -544,7 +625,7 @@ export function PantallaJuego({
       </div>
 
       <div
-        className={`pointer-events-none flex flex-col justify-between gap-2 ${esTactil ? '' : 'md:flex-row md:items-end'} ${estado.closeUp ? 'invisible' : ''}`}
+        className={`pointer-events-none flex flex-col justify-between gap-2 ${esTactil ? '' : 'md:flex-row md:items-end'} ${primerPlano || estado.llegada || cierreDia ? 'invisible' : ''}`}
       >
         {evento && (
           <section
@@ -713,6 +794,39 @@ export function PantallaJuego({
           </div>
         )}
       </div>
+      {estado.llegada && (
+        <SecuenciaLlegada destino={partida.config.destino} onTerminar={() => dispatch({ tipo: 'TERMINAR_LLEGADA' })} />
+      )}
+      {estado.resumen && resumenListo && (
+        <ResumenDia
+          resumen={estado.resumen}
+          delta={partida.ultimoDelta}
+          terminada={partida.resultado !== undefined}
+          datosActivos={datosActivos}
+          onDatosActivos={cambiarDatosActivos}
+          onContinuar={() => dispatch({ tipo: 'CERRAR_RESUMEN', conDato: datosActivos })}
+        />
+      )}
+      {datoActual && (
+        <PantallaDato
+          key={datoActual.id}
+          dato={datoActual}
+          continuar={partida.resultado ? 'Ver la bitácora' : 'Siguiente día'}
+          onContinuar={() => dispatch({ tipo: 'CERRAR_DATO' })}
+          onDesactivar={() => {
+            cambiarDatosActivos(false);
+            dispatch({ tipo: 'CERRAR_DATO' });
+          }}
+        />
+      )}
+      {homenaje && !estado.closeUp && (
+        <LeyendaNegra
+          titulo={HOMENAJE_MONOLITO.titulo}
+          texto={HOMENAJE_MONOLITO.texto}
+          principal="Volver"
+          onPrincipal={onCerrarHomenaje}
+        />
+      )}
       {estado.closeUp && HISTORIAS_POR_ID[estado.closeUp] && (
         <DialogoCloseUp
           key={estado.closeUp}
@@ -765,61 +879,15 @@ function ArchivoNasa({
 }
 
 // Primer plano (RF-17): la cámara se acerca al equipo y un diálogo negro abajo cuenta lo que midió su misión.
-// El texto se escribe poco a poco salvo con movimiento reducido; el lector de pantalla recibe el texto entero.
 function DialogoCloseUp({ historia, onCerrar }: { historia: Historia; onCerrar: () => void }) {
-  const texto = historia.medicion.dato;
-  const reducido = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
-  const [letras, setLetras] = useState(reducido ? texto.length : 0);
-  const completo = letras >= texto.length;
-
-  useEffect(() => {
-    if (completo) return;
-    const t = window.setTimeout(() => setLetras((n) => n + 2), 24);
-    return () => window.clearTimeout(t);
-  }, [letras, completo]);
-
-  useEffect(() => {
-    const alPulsar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCerrar();
-    };
-    window.addEventListener('keydown', alPulsar);
-    return () => window.removeEventListener('keydown', alPulsar);
-  }, [onCerrar]);
-
   return (
-    <div
-      role="dialog"
-      aria-labelledby="titulo-closeup"
-      className="pointer-events-auto fixed inset-x-0 bottom-0 z-40 bg-black/92 border-t border-white/15 px-4 py-4 sm:px-8 sm:py-5"
-    >
-      <div className="mx-auto max-w-3xl space-y-2">
-        <h2 id="titulo-closeup" className="text-xs font-semibold tracking-wide text-[var(--color-warn)]">
-          {historia.anio} · {historia.nombre} · Lo que se midió
-        </h2>
-        <p className="sr-only">{texto}</p>
-        <p aria-hidden="true" className="min-h-[3.5em] text-sm sm:text-base leading-relaxed text-white">
-          {texto.slice(0, letras)}
-        </p>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <a
-            href={historia.medicion.fuente}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs underline text-white/70"
-          >
-            Fuente NASA
-          </a>
-          <button
-            type="button"
-            autoFocus
-            onClick={() => (completo ? onCerrar() : setLetras(texto.length))}
-            className="min-h-[44px] rounded-lg bg-[var(--color-mars)] px-4 font-semibold text-[var(--color-on-accent)] cursor-pointer"
-          >
-            {completo ? 'Anotar en el cuaderno' : 'Ver todo'}
-          </button>
-        </div>
-      </div>
-    </div>
+    <LeyendaNegra
+      titulo={`${historia.anio} · ${historia.nombre} · Lo que se midió`}
+      texto={historia.medicion.dato}
+      fuente={historia.medicion.fuente}
+      principal="Anotar en el cuaderno"
+      onPrincipal={onCerrar}
+    />
   );
 }
 

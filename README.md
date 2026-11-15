@@ -44,13 +44,13 @@ Prioridad: **M** = imprescindible (MVP), **S** = si hay tiempo, **C** = opcional
 | RF-06 | Gráfica de tendencia de salud y recursos a lo largo de los turnos. | 5 | S |
 | RF-07 | Catálogo con equipo histórico real (ver tabla abajo) que da una ventaja de juego. | 1, 13 | M |
 | RF-08 | Tarjeta de historia al desbloquear un equipo: 2–3 frases, año, lugar y una imagen. Texto apto para 8–14 años. | 1 | M |
-| RF-09 | Final de partida: misión con éxito o abortada, puntuación y bitácora con las historias desbloqueadas. | 1, 3, 13 | M |
+| RF-09 | Final de partida: misión con éxito o abortada, puntuación y bitácora con las historias desbloqueadas. Si se aborta por salud, la bitácora explica la causa con un caso real de la NASA. | 1, 3, 13 | M |
 | RF-10 | Fotos desde la API de imágenes de la NASA, con imágenes estáticas de respaldo. | 1 | C |
 | RF-11 | Efectos de sonido con Web Audio. | — | C |
 | RF-12 | Guardar la última partida en `localStorage`. | — | C |
 | RF-13 | Tripulación en 3D: un astronauta por tripulante; las teclas 1–4 eligen a quién mover y los demás siguen con su tarea. | 13 | S |
 | RF-14 | Especialidades fijas (ingeniería, biología, geología, medicina): el especialista hace su tipo de tarea el doble de rápido. | 13 | S |
-| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. Cada opción pide 2 o 3 tareas que cuentan lo que significa; solo hace efecto si se terminan todas, y si no, se aplica la opción de riesgo del evento. Las del exterior piden 2 personas a la vez, como una caminata espacial. Cada día hay un muestreo geológico opcional que da ciencia. Día de 60 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
+| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. Cada opción pide 2 o 3 tareas que cuentan lo que significa; solo hace efecto si se terminan todas, y si no, se aplica la opción de riesgo del evento. Las del exterior piden 2 personas a la vez, como una caminata espacial. Cada día hay un muestreo geológico opcional que da ciencia. Día de 60 s, ajustable a ×2 o sin reloj. Al terminar, la tripulación entra y sale el resumen del día. | 3, 13 | S |
 | RF-16 | Mantenimiento de cada módulo cada pocos días (los cultivos, a diario): si no se hace el día que toca, el módulo no rinde ese día. Comprar demasiados módulos sobrecarga a la tripulación. | 13 | S |
 | RF-17 | Cuaderno de misión: cada equipo histórico guarda lo que midió su misión (dato y fuente). Al inspeccionarlo en 3D, la cámara se acerca y un diálogo negro lo cuenta; queda anotado. Un evento que explica una misión sin anotar muestra qué cambia cada opción, sin cifras, y con qué misión se midió; con la nota (o si es conocimiento general, o ya se vivió) se ven las cifras. | 1, 13 | S |
 
@@ -198,14 +198,17 @@ ajustarlo tras ensayar con cronómetro.
 1. **[0:15] Inicio:** pulsar el preajuste **Marte** y **Empezar** (RF-01).
 2. **[0:30] Diseño:** enseñar el presupuesto, la pestaña **Equipo NASA** con Curiosity y la previsión técnica.
    Pulsar **Lanzar misión** (RF-02, RF-07).
-3. **[0:20] Tarjetas:** se abren las de Curiosity y Sojourner con foto, año y fuente (RF-08). Cerrar con **Entendido**.
+3. **[0:15] Llegada:** amanecer con el Sol alineado sobre la antena, la fanfarria y cuánto dura un sol en Marte.
+   **Empezar la misión**. La tripulación espera dentro.
 4. **[0:30] Día 1, tormenta de polvo:** las opciones dicen qué cambian, sin cifras: esto se midió con Spirit y
-   Opportunity, que no trajimos (RF-17). Elegir **Ahorrar energía**. Sale el plan del día: reloj de
+   Opportunity, que no trajimos (RF-17). Elegir **Ahorrar energía**: se abre la compuerta («Abriendo la compuerta,
+   Lucía») y la tripulación sale uno a uno. Sale el plan del día: reloj de
    60 s, dos tareas del plan (apagar sistemas en el hábitat y proteger los cultivos), el muestreo geológico opcional y
    los módulos a los que les toca revisión, con un aviso
    flotante sobre cada estación. Caminar con W hacia el hábitat y pulsar **E**: Lucía es ingeniera y trabaja el doble de
-   rápido. Pulsar **2** y llevar a Marco, biólogo, al invernadero. **Terminar día**: los módulos sin revisar no rinden
-   (RF-03, RF-04, RF-13 a RF-17).
+   rápido. Pulsar **2** y llevar a Marco, biólogo, al invernadero. **Terminar día**: la tripulación vuelve a entrar por
+   la compuerta y sale el resumen del día; los módulos sin revisar no rinden. **Continuar** abre un dato curioso
+   (Olympus Mons junto al Everest) y **Siguiente día** (RF-03, RF-04, RF-08, RF-13 a RF-17).
 5. **[0:30] Día 2, tormenta solar:** el panel dice que esto se midió con Curiosity. Caminar hasta Curiosity (a la
    izquierda, detrás de la base) y pulsar **E**: la cámara se acerca y el diálogo cuenta lo que midió su instrumento RAD.
    **Anotar en el cuaderno**: ahora las opciones tienen cifras. Elegir **Seguir trabajando fuera** y **Terminar día**
@@ -230,7 +233,7 @@ ajustarlo tras ensayar con cronómetro.
 | RF-03, RF-04, RF-09 | Hecho: partida jugable de principio a fin (fase 3); consumos y radiación con cifras de la NASA, sin verificar |
 | RF-05 | Hecho: panel de salud con icono, número, barra y texto, y alertas agrupadas; Curiosity avisa antes de la radiación |
 | RF-06 | Hecho: tendencia de salud media y recursos en el juego (desplegable) y en la bitácora |
-| RF-08 | Hecho: tarjeta de historia (modal en partida y en bitácora) con imágenes WebP y textos; textos verificados por el equipo el 2026-11-14 |
+| RF-08 | Hecho: tarjeta de historia (modal en partida y en bitácora) con imágenes WebP y textos; textos verificados por el equipo el 2026-11-14. Los equipos elegidos salen también como datos curiosos tras el resumen del día, junto a los diagramas del destino (textos nuevos con `verificada: false`) |
 | RNF-04 | Hecho: el motor no importa React (hay prueba) |
 | RF-11 | Hecho en el PR #2: efectos de sonido sintetizados con Web Audio (`src/audio/`) |
 | RNF-01, RNF-02 | Hecho: sitio estático; datos, fuentes e imágenes van en el repo |

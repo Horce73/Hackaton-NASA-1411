@@ -45,9 +45,9 @@ export function describirConsecuencia(efectos: EfectosTurno): string {
     if (cambio) partes.push(`${conSigno(cambio)} ${NOMBRE_SALUD[id]}`);
   }
   if (efectos.ciencia) partes.push(`${conSigno(efectos.ciencia)} ciencia`);
-  if (efectos.dosis) partes.push('más radiación por salir');
-  if ((efectos.multiplicadorRadiacion ?? 1) > 2) partes.push('mucha más radiación');
-  else if ((efectos.multiplicadorRadiacion ?? 1) > 1) partes.push('algo más de radiación');
+  // La dosis de salir no la frena el blindaje; la de dentro sí, por eso no se da en mSv.
+  if (efectos.dosis) partes.push(`+${numero(efectos.dosis)} mSv de radiación fuera`);
+  if ((efectos.multiplicadorRadiacion ?? 1) > 1) partes.push('más radiación dentro (el blindaje la frena)');
   return partes.length ? partes.join(', ') : 'Sin cambios extra';
 }
 
@@ -64,8 +64,8 @@ export function describirRiesgo(efectos: EfectosTurno): string {
     if (cambio) partes.push(`${sentido(cambio)} ${NOMBRE_SALUD[id]}`);
   }
   if (efectos.ciencia) partes.push(`${sentido(efectos.ciencia)} ciencia`);
-  if (efectos.dosis) partes.push('más radiación por salir');
-  if ((efectos.multiplicadorRadiacion ?? 1) > 2) partes.push('mucha más radiación');
-  else if ((efectos.multiplicadorRadiacion ?? 1) > 1) partes.push('algo más de radiación');
+  if ((efectos.dosis ?? 0) >= 50) partes.push('mucha radiación fuera');
+  else if (efectos.dosis) partes.push('algo de radiación por salir');
+  if ((efectos.multiplicadorRadiacion ?? 1) > 1) partes.push('más radiación dentro');
   return partes.length ? `Afecta a: ${partes.join(', ')}` : 'Sin cambios extra';
 }

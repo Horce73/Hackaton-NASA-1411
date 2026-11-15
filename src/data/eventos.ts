@@ -31,7 +31,8 @@ export const EVENTOS: Evento[] = [
       {
         id: 'refugiarse',
         texto: 'Refugiarse en la base',
-        efectos: { multiplicadorRadiacion: 1.5, salud: { suenoEstres: -4 } },
+        // PROVISIONAL: dentro, la tormenta multiplica la dosis del día y el blindaje la reduce.
+        efectos: { multiplicadorRadiacion: 40, salud: { suenoEstres: -4 } },
         tareas: [
           { estacion: 'habitat', especialidad: 'medicina', trabajo: 10, etiqueta: 'Preparar el refugio' },
           { estacion: 'blindaje', especialidad: 'ingenieria', trabajo: 12, etiqueta: 'Reforzar el blindaje' },
@@ -41,7 +42,10 @@ export const EVENTOS: Evento[] = [
       {
         id: 'seguir-fuera',
         texto: 'Seguir trabajando fuera',
-        efectos: { multiplicadorRadiacion: 16, ciencia: 5 },
+        // PROVISIONAL: fuera no protege el blindaje. 130 mSv es algo más de la mitad del límite de 250 mSv por tormenta
+        // de la NASA: una tormenta deja la radiación en ámbar y dos lo superan. La de agosto de 1972 habría sido
+        // peligrosa para una tripulación en la Luna (ver avisos.ts).
+        efectos: { dosis: 130, ciencia: 5 },
       },
     ],
   },

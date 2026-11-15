@@ -27,8 +27,6 @@ export interface ConjuntoTexturas {
   esclusaEmissive: THREE.CanvasTexture;
   cultivoAlbedo: THREE.CanvasTexture;
   cultivoNormal: THREE.CanvasTexture;
-  hieloAlbedo: THREE.CanvasTexture;
-  hieloNormal: THREE.CanvasTexture;
   tierraAlbedo: THREE.CanvasTexture;
   tierraRoughness: THREE.CanvasTexture;
   fobosAlbedo: THREE.CanvasTexture;
@@ -737,38 +735,6 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
   const cultivoNormal = registrar(generarNormalDesdeAltura(cCulH, 2.4, maxAnisotropy, 2, 1));
 
   // =========================================================================
-  // 10. HIELO CRISTALINO SUBTERRÁNEO (256x256 Albedo + Normal)
-  // =========================================================================
-  const [cHieA, ctxHA] = crearCanvas(256, 256);
-  const [cHieH, ctxHH] = crearCanvas(256, 256);
-  ctxHA.fillStyle = '#7bdfff';
-  ctxHA.fillRect(0, 0, 256, 256);
-  ctxHH.fillStyle = '#808080';
-  ctxHH.fillRect(0, 0, 256, 256);
-
-  for (let i = 0; i < 90; i++) {
-    const x1 = rand() * 256;
-    const y1 = rand() * 256;
-    const x2 = x1 + (rand() - 0.5) * 90;
-    const y2 = y1 + (rand() - 0.5) * 90;
-    ctxHA.strokeStyle = rand() > 0.5 ? 'rgba(235,252,255,0.65)' : 'rgba(28,118,168,0.45)';
-    ctxHA.lineWidth = 1.5 + rand() * 2;
-    ctxHA.beginPath();
-    ctxHA.moveTo(x1, y1);
-    ctxHA.lineTo(x2, y2);
-    ctxHA.stroke();
-
-    ctxHH.strokeStyle = rand() > 0.5 ? 'rgba(240,240,240,0.65)' : 'rgba(25,25,25,0.65)';
-    ctxHH.lineWidth = 2;
-    ctxHH.beginPath();
-    ctxHH.moveTo(x1, y1);
-    ctxHH.lineTo(x2, y2);
-    ctxHH.stroke();
-  }
-  const hieloAlbedo = registrar(configurarTextura(cHieA, true, maxAnisotropy, 1, 1));
-  const hieloNormal = registrar(generarNormalDesdeAltura(cHieH, 2.5, maxAnisotropy, 1, 1));
-
-  // =========================================================================
   // 11. PLANETA TIERRA EN EL CIELO LUNAR + FOBOS EN MARTE (512x256 / 256x128)
   // =========================================================================
   const [cEarA, ctxEarA] = crearCanvas(512, 256);
@@ -879,8 +845,6 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
     esclusaEmissive,
     cultivoAlbedo,
     cultivoNormal,
-    hieloAlbedo,
-    hieloNormal,
     tierraAlbedo,
     tierraRoughness,
     fobosAlbedo,

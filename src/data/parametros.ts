@@ -27,6 +27,7 @@ export const PREAJUSTES: Preajuste[] = [
       'invernadero',
       'gimnasio',
       'zona-descanso',
+      'blindaje',
       'retrorreflector',
     ],
   },
@@ -122,15 +123,18 @@ export const RESERVA_AGUA = 0.6; // PROVISIONAL
 // 0.5 mSv per day" (OCHMO-TB-020). Es un análisis genérico de superficie, no una medida en la Luna.
 // https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-020-radiation-protection.pdf
 export const DOSIS_BASE: Record<Destino, number> = { luna: 0.5, marte: 0.67 };
-// PROVISIONAL (juego): dosis en mSv con la que el indicador llega a 0. El límite real de la NASA es de
-// 600 mSv en toda la carrera (OCHMO-TB-020); con él la radiación no se notaría en 10-20 días.
-export const LIMITE_DOSIS = 12;
+// FUENTE NASA: "Short-term radiation exposure to solar particle events is limited to an effective dose of 250 mSv
+// per event to minimize acute effects" (Radiation Protection Technical Brief, OCHMO).
+// https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf
+// El juego lo usa como la dosis de toda la misión con la que el indicador llega a 0 (simplificación). Con cifras
+// reales, la dosis diaria apenas se nota en 10-20 días: lo peligroso es salir durante una tormenta solar.
+export const LIMITE_DOSIS = 250;
 export const BLINDAJE_MAX = 0.9; // PROVISIONAL: el blindaje nunca anula toda la dosis
 
 // Salud (TRD 6.3)
-// Balance (TRD 13), medido el 2026-11-15 con misiones más cortas (300 partidas por preajuste, diseño sugerido y todas
-// las tareas hechas): eligiendo al azar se gana el 46 % en Luna fácil, el 39 % en Luna difícil y el 69 % en Marte;
-// decidiendo bien, el 100 %. Sin las notas del cuaderno el jugador no ve las cifras y se acerca al azar.
+// Balance (TRD 13), medido el 2026-11-15 con radiación realista y misiones cortas (300 partidas por preajuste, diseño
+// sugerido y todas las tareas hechas): eligiendo al azar se gana el 84 % en Luna fácil, el 59 % en Luna difícil y el
+// 69 % en Marte; decidiendo bien, el 100 %. Sin las notas del cuaderno el jugador no ve las cifras y se acerca al azar.
 export const UMBRAL_VERDE = 70; // TRD 6.3
 export const UMBRAL_AMBAR = 40; // TRD 6.3 y criterio RF-05 del PRD
 export const PERDIDA_NUTRICION = 15; // PROVISIONAL: por turno sin nada de alimento

@@ -4,7 +4,7 @@
 import type { Recursos } from '../engine/tipos';
 import { EVENTO_SURVEYOR } from './eventos';
 
-export type TareaExploracion = 'hielo' | 'averia' | 'historia';
+export type TareaExploracion = 'averia' | 'historia';
 
 export interface Recompensa {
   recursos: Partial<Recursos>;
@@ -13,7 +13,6 @@ export interface Recompensa {
 }
 
 export const RECOMPENSAS: Record<TareaExploracion, Recompensa> = {
-  hielo: { recursos: { agua: 6, oxigeno: 4 }, ciencia: 4, etiqueta: 'Hielo analizado' },
   averia: { recursos: { energia: 6 }, ciencia: 4, etiqueta: 'Calibración exterior completada' },
   historia: { recursos: {}, ciencia: 3, etiqueta: 'Inspección de campo NASA' },
 };

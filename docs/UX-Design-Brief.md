@@ -113,6 +113,9 @@ Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y s
 - Primer plano (RF-17): al inspeccionar un equipo histórico, la cámara se acerca, el HUD de abajo se oculta y un
   diálogo negro en la parte inferior escribe lo que midió la misión, con su fuente y el botón "Anotar en el cuaderno".
 - En el diseño, cada módulo indica que pide mantenimiento diario y el total de tareas al día.
+- Cada módulo tiene un desplegable «¿Por qué hace falta?» con el dato de la NASA y un caso real (por ejemplo, el
+  blindaje: el Explorer 1 en 1958 y la tormenta solar de 1972). Si la misión se aborta por salud, la bitácora
+  muestra «Por qué pasó» con el mismo caso y, si fue la radiación, la dosis recibida frente al límite de la NASA.
 - El panel del plan muestra primero las tareas de la opción y después el mantenimiento en líneas cortas; el pie con
   el reloj y "Terminar día" queda fijo, sin desplazarse.
 - Pantalla táctil (se detecta el puntero, no el ancho, así vale en vertical y horizontal): joystick bajo el pulgar
@@ -194,6 +197,21 @@ Rejilla de 8 px. Radios de 12 px. Áreas táctiles de al menos 44 × 44 px. Máx
 - Texto escalable hasta 200 % sin pérdida de funciones.
 - Sin parpadeos ni sonido automático.
 - El reloj del día se puede alargar (×2) o quitar (WCAG 2.2.1), y se para con una tarjeta o un panel abierto.
+- Llegada: al lanzar, una sola pantalla de carga con leyenda negra abajo (texto que se escribe solo, fuente y
+  **Empezar la misión**): el amanecer en 3D con el título y cuánto dura el día en el destino.
+- Cada día la tripulación empieza dentro del hábitat y la cámara mira la compuerta. Al elegir la opción o al explorar,
+  la compuerta se abre, el ordenador de la base lo anuncia y salen uno a uno. Al terminar el día, corte a la compuerta:
+  vuelven caminando en fila y entran uno a uno (unos 3 s; sin animación con movimiento reducido).
+- Después sale el **resumen del día**: tareas hechas y sin hacer, cambio de recursos, ciencia, radiación y módulos sin
+  mantenimiento, con la casilla **Mostrar datos curiosos**.
+- **Datos curiosos**: tras cada resumen, uno a pantalla completa con un diagrama propio (cráteres de la cara visible,
+  rotación sincrónica, la coincidencia de 400 de los eclipses, temperaturas lunares, Olympus Mons, Fobos) o una imagen
+  (base lunar, hábitat, equipos históricos elegidos, RF-08), con fuente y leyenda negra. No se repiten hasta verlos
+  todos; **No mostrar más** los apaga y la preferencia se guarda. En el último día, después del dato llega la bitácora.
+- En la salud de la tripulación, la tarjeta de cada astronauta lleva un borde del color de su indicador más bajo.
+- Homenajes a «2001: Odisea del espacio», sin material de la película: el amanecer alineado, la fanfarria de Strauss
+  sintetizada (obra de dominio público), la voz de la compuerta y un monolito 1:4:9 en la Luna que avisa de que no
+  es un hallazgo real.
 
 ## 11. Responsive
 

@@ -7,6 +7,7 @@ import type { Configuracion } from '../engine/tipos';
 import { AVISOS } from './avisos';
 import { CATALOGO, CATALOGO_POR_ID } from './catalogo';
 import { EVENTOS, EVENTOS_REPARABLES, EVENTO_SURVEYOR } from './eventos';
+import { DATOS_DESTINO, datosDeLaMision } from './datosCuriosos';
 import { HISTORIAS } from './historias';
 import { NOMBRES_TRIPULACION, PREAJUSTES } from './parametros';
 
@@ -67,6 +68,14 @@ test('cada misión histórica tiene su medición con fuente y las notas de los e
   for (const evento of EVENTOS) for (const id of evento.notaDe ?? []) expect(ids, evento.id).toContain(id);
 });
 
+test('cada aviso cuenta su porqué con un caso real y cada módulo tiene su tema', () => {
+  for (const [id, aviso] of Object.entries(AVISOS)) {
+    expect(aviso.historia.dato.length, id).toBeGreaterThan(20);
+    expect(aviso.historia.fuente, id).toMatch(/^https:\/\/([a-z]+\.)*nasa\.gov\//);
+  }
+  for (const item of CATALOGO.filter((i) => i.tipo === 'modulo')) expect(Object.keys(AVISOS), item.id).toContain(item.tema);
+});
+
 test('cada evento tiene un dato del archivo NASA con su fuente', () => {
   for (const evento of EVENTOS) {
     expect(evento.archivo.dato.length, evento.id).toBeGreaterThan(20);
@@ -98,9 +107,21 @@ test('ningún texto visible usa raya larga', () => {
     ...CATALOGO.map((i) => i.nombre),
     ...EVENTOS.flatMap((e) => [e.titulo, e.texto, e.archivo.dato, ...e.opciones.map((o) => o.texto)]),
     ...HISTORIAS.flatMap((h) => [h.nombre, h.texto, h.datoCurioso, h.imagen.alt, h.medicion.dato]),
-    ...Object.values(AVISOS).flatMap((a) => [a.nombre, a.ok, a.riesgo, a.dato]),
+    ...Object.values(AVISOS).flatMap((a) => [a.nombre, a.ok, a.riesgo, a.dato, a.historia.dato]),
+    ...Object.values(DATOS_DESTINO).flat().flatMap((d) => [d.titulo, d.texto.dato, d.imagen?.alt ?? '']),
   ];
   expect(textos.filter((t) => t.includes('—'))).toEqual([]);
+});
+
+test('cada dato curioso tiene fuente de la NASA, un diagrama o una imagen, y no se repite', () => {
+  for (const destino of ['luna', 'marte'] as const) {
+    const datos = datosDeLaMision(destino, idsHistorias);
+    expect(sinRepetidos(datos.map((d) => d.id)), destino).toBe(true);
+    for (const d of datos) {
+      expect(d.texto.fuente, d.id).toMatch(/nasa\.gov/);
+      expect(Boolean(d.diagrama) !== Boolean(d.imagen), d.id).toBe(true);
+    }
+  }
 });
 
 test('cada imagen de historia existe en public/img', () => {

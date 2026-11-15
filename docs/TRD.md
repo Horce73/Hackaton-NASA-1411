@@ -327,9 +327,10 @@ Semáforo: **verde ≥ 70**, **ámbar 40–69**, **rojo < 40**. El factor de pé
 verificar todavía por el equipo: oxígeno 1,08 kg por persona y día, agua potable 2,5 L, comida 1,8 kg (con
 envase), dosis en Marte 0,67 mSv al día (instrumento RAD de Curiosity) y dosis en una misión de superficie
 0,5 mSv al día (usada para la Luna). El resto sigue siendo balance de juego y se marca `// PROVISIONAL`: la
-energía (puntos abstractos), las reservas, el desgaste de sueño y músculo, los efectos de los eventos y el
-límite de dosis de la misión. Ese límite es mucho menor que el real (600 mSv en toda la carrera de un
-astronauta) porque con cifras reales la radiación no se notaría en 10–20 días.
+energía (puntos abstractos), las reservas, el desgaste de sueño y músculo y los efectos de los eventos.
+Radiación realista (2026-11-15): el indicador llega a 0 con 250 mSv, el límite de la NASA para la dosis de una
+tormenta solar (Radiation Protection Technical Brief, OCHMO). La dosis diaria real apenas se nota; lo peligroso es
+trabajar fuera durante una tormenta solar (130 mSv, PROVISIONAL): una deja la radiación en ámbar y dos la agotan.
 
 Las constantes globales del balance viven en `data/parametros.ts` con comentarios de procedencia; los costes
 y efectos de cada ítem están en `data/catalogo.ts` y los pesos y efectos de cada evento en `data/eventos.ts`. Ahí están también el
@@ -441,6 +442,9 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Jugabilidad (RF-13 a RF-16) | Control con WASD del astronauta elegido (1–4); día de 60 s con ×2 y sin reloj (WCAG 2.2.1); tarea de evento sin hacer → `opcionSinAtender`; mantenimiento sin hacer → el módulo no rinde ese día; especialidades fijas por nombre (Lucía ingeniería, Marco biología, Aiko geología, Dani medicina) | Decidido el 2026-11-14 |
 | Dificultad del día | El trabajo crece con la tripulación y del primer al último día (`cargaDelDia`); día de 60 s y misiones más cortas | Decidido el 2026-11-14 y el 2026-11-15 |
 | Cuaderno de misión (RF-17) | Sin la nota de la misión que lo midió, el evento muestra el riesgo sin cifras; la nota se anota al inspeccionar el equipo en 3D, con primer plano y diálogo | Decidido el 2026-11-15 |
+| Llegada y compuerta | `llegada` y `tripulacionFuera` en `state/reducer.ts` (guardado versión 5); textos en `data/llegada.ts`; `SecuenciaLlegada` y `LeyendaNegra` en `ui/`; `setTripulacionFuera` y `setAmanecer` en `three/EscenaPlaneta.ts`. Las tarjetas del lanzamiento pasan a la llegada | Decidido el 2026-11-15 |
+| Fin del día y datos curiosos | La llegada queda en una sola pantalla. Al terminar el día, `setTripulacionFuera(false)` anima la entrada por la compuerta; `resumen`, `dato` y `datosVistos` en `state/reducer.ts` (guardado versión 6): `CERRAR_RESUMEN` abre el siguiente dato sin ver de `datosDeLaMision` (`data/datosCuriosos.ts`) y `CERRAR_DATO` sigue. Con la misión terminada, la bitácora llega después de los dos. Diagramas SVG propios en `ui/juego/DiagramaDato.tsx`; la preferencia se guarda en `localStorage` (`mision-legado:datos-curiosos`) | Decidido el 2026-11-15 |
+| Radiación y porqués | Límite de 250 mSv por tormenta de la NASA en vez de 12 mSv; Luna fácil sugiere blindaje; cada aviso tiene un caso real (`TextoAviso.historia`) que sale en el «¿Por qué hace falta?» del diseño y en la bitácora (`Estado.causaFin`) | Decidido el 2026-11-15 |
 | Movimiento | Sin jetpack; salto con traje de unos 0,44 m en la Luna (saludo con salto del Apolo 16), postura de piernas juntas en el aire | Decidido el 2026-11-15 |
 | Insignia de la NASA en el hábitat | Lista en `modelos3d.ts` tras `MOSTRAR_LOGO_NASA = false`; la imagen no se publica hasta tener permiso por escrito | Pendiente de permiso |
 | RF-12 (guardado) | Se guarda solo la partida en curso; el inicio ofrece "Continuar partida" y nunca se reanuda sola. Al terminar la misión se borra | Decidido tras la fase 6 |

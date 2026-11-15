@@ -8,7 +8,8 @@ export type EstadoJuego = Extract<EstadoApp, { fase: 'juego' }>;
 type Almacen = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
 const CLAVE = 'mision-legado:partida';
-const VERSION = 4; // 2: tripulación y plan del día; 3: eventos nuevos; 4: cuaderno de misión
+const VERSION = 6; // 2: tripulación y plan del día; 3: eventos nuevos; 4: cuaderno de misión; 5: llegada y compuerta;
+// 6: resumen del día y datos curiosos
 
 function almacenNavegador(): Almacen | null {
   try {

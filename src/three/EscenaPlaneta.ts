@@ -28,14 +28,14 @@ export type ModoCamara3D = 'orbita' | 'tercera_persona' | 'pausa';
 
 export interface ObjetivoCercano {
   id: string;
-  tipo: 'averia' | 'historia' | 'domo' | 'monolito';
+  tipo: 'averia' | 'historia' | 'domo';
   etiqueta: string;
   subetiqueta: string;
   historiaId?: string;
 }
 
 export interface EventoAccion3D {
-  tipo: 'averia' | 'historia' | 'domo' | 'monolito';
+  tipo: 'averia' | 'historia' | 'domo';
   nodoId: string;
   etiqueta: string;
   historiaId?: string;
@@ -66,7 +66,7 @@ export interface EntradaTactil3D {
 
 interface NodoEscena {
   id: string;
-  tipo: 'averia' | 'historia' | 'domo' | 'monolito';
+  tipo: 'averia' | 'historia' | 'domo';
   etiqueta: string;
   subetiqueta: string;
   historiaId?: string;
@@ -812,35 +812,6 @@ export class EscenaPlaneta {
       });
     }
 
-    // Homenaje a «2001: Odisea del espacio» (1968): un monolito negro de proporciones 1:4:9 enterrado en la Luna.
-    // No es un hallazgo real ni da ciencia; el diálogo lo dice.
-    if (this.destino === 'luna') {
-      const mx = -24;
-      const mz = 22;
-      const my = groundHeightAt(mx, mz, this.destino);
-      const monolito = new THREE.Mesh(
-        new THREE.BoxGeometry(2, 4.5, 0.5),
-        new THREE.MeshStandardMaterial({ color: 0x050506, roughness: 0.12, metalness: 0.7 }),
-      );
-      monolito.position.set(mx, my + 2.25, mz);
-      monolito.rotation.y = Math.atan2(-mx, -mz);
-      monolito.castShadow = true;
-      this.grupoBase.add(monolito);
-      this.obstaculos.push({ id: 'monolito', x: mx, z: mz, radio: 1.2, altura: 4.5 });
-      this.posHistorias.set('monolito', { centro: new THREE.Vector3(mx, my, mz), tamano: 5.5 }); // 4,5 m de alto: plano entero
-      this.nodos.push({
-        id: 'nodo-monolito',
-        tipo: 'monolito',
-        etiqueta: 'Un bloque negro',
-        subetiqueta: 'Pulsa [E] para acercarte',
-        x: mx,
-        y: my,
-        z: mz,
-        radio: 3.2,
-        completado: false,
-      });
-    }
-
     // Sonda Surveyor 3 en Luna cuando salga el evento o como hito en el cráter cercano
     if (this.destino === 'luna' && this.eventoActualId === EVENTO_SURVEYOR) {
       const sx = 17;
@@ -971,11 +942,6 @@ export class EscenaPlaneta {
         historiaId: cercano.historiaId,
       });
       this.emitirTelemetria(true);
-      return true;
-    }
-
-    if (cercano.tipo === 'monolito') {
-      this.onAccionCompletada({ tipo: 'monolito', nodoId: cercano.id, etiqueta: cercano.etiqueta });
       return true;
     }
 

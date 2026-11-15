@@ -30,8 +30,6 @@ export function App() {
   const { estado, dispatch } = useEstado();
   const vista3dRef = useRef<Vista3DRef | null>(null);
   const [mostrarSaludExterno, setMostrarSaludExterno] = useState(false);
-  // Homenaje del monolito: primer plano y diálogo, sin pasar por el cuaderno.
-  const [homenaje, setHomenaje] = useState(false);
 
   const enPartida = estado.fase === 'juego' || estado.fase === 'bitacora';
   const config = enPartida ? estado.partida.config : estado.config;
@@ -94,10 +92,6 @@ export function App() {
         setMostrarSaludExterno(true);
         return;
       }
-      if (accion.tipo === 'monolito') {
-        setHomenaje(true);
-        return;
-      }
       dispatch({
         tipo: 'COMPLETAR_TAREA_3D',
         tarea: accion.tipo,
@@ -135,7 +129,7 @@ export function App() {
           tareas={tareas}
           tareasHechas={tareasHechas}
           trabajoActivo={trabajoActivo}
-          enfoque={estado.fase === 'juego' ? (estado.closeUp ?? (homenaje ? 'monolito' : null)) : null}
+          enfoque={estado.fase === 'juego' ? estado.closeUp : null}
           tripulacionFuera={estado.fase === 'juego' ? estado.tripulacionFuera : true}
           amanecer={estado.fase === 'juego' && estado.llegada}
           onTelemetria={setTelemetria}
@@ -165,8 +159,6 @@ export function App() {
           onCambiarEntradaTactil={manejarEntradaTactil}
           onSeleccionarTripulante={seleccionarTripulante}
           tareas={tareas}
-          homenaje={homenaje}
-          onCerrarHomenaje={() => setHomenaje(false)}
           dispatch={dispatch}
         />
       )}

@@ -28,7 +28,6 @@ import { semaforo } from '../../engine/salud';
 import { recursoQueFalta } from '../../engine/turno';
 import type { Archivo, Especialidad, Historia, Recursos, Tarea } from '../../engine/tipos';
 import { datosDeLaMision } from '../../data/datosCuriosos';
-import { HOMENAJE_MONOLITO } from '../../data/llegada';
 import { conocimientoDelDia, type Accion, type EstadoApp } from '../../state/reducer';
 import { LeyendaNegra } from '../comun/LeyendaNegra';
 import { PantallaDato } from './PantallaDato';
@@ -106,8 +105,6 @@ interface PantallaJuegoProps {
   onCambiarEntradaTactil: (entrada: Partial<EntradaTactil3D>) => void;
   onSeleccionarTripulante: (indice: number) => void;
   tareas: Tarea[]; // tareas del día del plan en curso (RF-15)
-  homenaje: boolean; // primer plano del monolito lunar
-  onCerrarHomenaje: () => void;
   dispatch: Dispatch<Accion>;
 }
 
@@ -121,8 +118,6 @@ export function PantallaJuego({
   onCambiarEntradaTactil,
   onSeleccionarTripulante,
   tareas,
-  homenaje,
-  onCerrarHomenaje,
   dispatch,
 }: PantallaJuegoProps) {
   const { partida, plan } = estado;
@@ -138,7 +133,7 @@ export function PantallaJuego({
   const [restante, setRestante] = useState(SEGUNDOS_RELOJ.normal);
 
   // El reloj arranca con cada plan nuevo y se para con una tarjeta o un panel abierto.
-  const primerPlano = estado.closeUp !== null || homenaje;
+  const primerPlano = estado.closeUp !== null;
   // Fin del día: la tripulación entra (unos 3 s), luego el resumen y, si están activados, un dato curioso.
   const cierreDia = estado.resumen !== null || estado.dato !== null;
   const [resumenListo, setResumenListo] = useState(false);
@@ -817,14 +812,6 @@ export function PantallaJuego({
             cambiarDatosActivos(false);
             dispatch({ tipo: 'CERRAR_DATO' });
           }}
-        />
-      )}
-      {homenaje && !estado.closeUp && (
-        <LeyendaNegra
-          titulo={HOMENAJE_MONOLITO.titulo}
-          texto={HOMENAJE_MONOLITO.texto}
-          principal="Volver"
-          onPrincipal={onCerrarHomenaje}
         />
       )}
       {estado.closeUp && HISTORIAS_POR_ID[estado.closeUp] && (

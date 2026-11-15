@@ -11,7 +11,7 @@ interface LeyendaNegraProps {
   onEscape?: () => void; // por defecto, lo del secundario
 }
 
-// Diálogo negro en la parte inferior: primeros planos, pantallas de carga y el homenaje del monolito.
+// Diálogo negro en la parte inferior: primeros planos, la pantalla de llegada y los datos curiosos.
 // El texto se escribe poco a poco salvo con movimiento reducido; el lector de pantalla recibe el texto entero.
 // El primer clic en el botón principal completa el texto; el segundo, sigue. Escape hace lo del secundario, salvo que se indique otra cosa.
 export function LeyendaNegra({

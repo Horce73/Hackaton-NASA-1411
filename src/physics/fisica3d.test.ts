@@ -53,22 +53,18 @@ describe('movimiento', () => {
     expect(maxLuna).toBeGreaterThan(maxMarte * 1.8);
   });
 
-  test('el jetpack gasta combustible y se recarga al tocar el suelo', () => {
+  test('el salto es el de un astronauta con traje: medio metro en la Luna', () => {
     let estado = crearEstadoJugadorInicial('luna');
+    const sueloInicial = estado.y;
     estado = pasoFisicaJugador(estado, { ...QUIETO, saltarPresionado: true }, 'luna', [], 0.016);
-    let empujo = false;
-    for (let i = 0; i < 30; i++) {
-      estado = pasoFisicaJugador(
-        estado,
-        { ...QUIETO, saltarMantenido: true, saltarPresionado: false },
-        'luna',
-        [],
-        0.016,
-      );
-      empujo = empujo || estado.usandoJetpack;
+    let maximo = estado.y;
+    for (let i = 0; i < 200; i++) {
+      estado = pasoFisicaJugador(estado, { ...QUIETO, saltarMantenido: true }, 'luna', [], 0.016);
+      maximo = Math.max(maximo, estado.y);
     }
-    expect(empujo).toBe(true);
-    expect(estado.combustibleJetpack).toBeLessThan(100);
+    // Mantener pulsado no empuja más: ya no hay jetpack.
+    expect(maximo - sueloInicial).toBeGreaterThan(0.3);
+    expect(maximo - sueloInicial).toBeLessThan(0.6);
   });
 });
 

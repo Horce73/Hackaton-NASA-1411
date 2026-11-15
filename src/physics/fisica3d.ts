@@ -4,7 +4,6 @@
 
 import {
   ALTURA_JUGADOR,
-  EMPUJE_JETPACK,
   GRAVEDAD,
   IMPULSO_SALTO,
   RADIO_ARENA,
@@ -37,8 +36,6 @@ export interface EstadoJugadorFisica {
   enSuelo: boolean;
   tiempoCoyote: number;
   bufferSalto: number;
-  combustibleJetpack: number; // 0..100
-  usandoJetpack: boolean;
   distanciaRecorrida: number;
 }
 
@@ -108,8 +105,6 @@ export function crearEstadoJugadorInicial(destino: Destino): EstadoJugadorFisica
     enSuelo: true,
     tiempoCoyote: 0,
     bufferSalto: 0,
-    combustibleJetpack: 100,
-    usandoJetpack: false,
     distanciaRecorrida: 0,
   };
 }
@@ -171,22 +166,12 @@ export function pasoFisicaJugador(
     : Math.max(0, estado.bufferSalto - dt);
 
   let enSuelo = estado.enSuelo;
-  let combustibleJetpack = estado.combustibleJetpack;
-  let usandoJetpack = false;
 
   if (bufferSalto > 0 && tiempoCoyote > 0) {
     vy = IMPULSO_SALTO;
     enSuelo = false;
     tiempoCoyote = 0;
     bufferSalto = 0;
-  } else if (!enSuelo && entrada.saltarMantenido && combustibleJetpack > 0 && vy < 4.5) {
-    vy += EMPUJE_JETPACK * dt;
-    combustibleJetpack = Math.max(0, combustibleJetpack - 36 * dt);
-    usandoJetpack = true;
-  }
-
-  if (enSuelo) {
-    combustibleJetpack = Math.min(100, combustibleJetpack + 45 * dt);
   }
 
   // Gravedad real del destino.
@@ -274,8 +259,6 @@ export function pasoFisicaJugador(
     enSuelo,
     tiempoCoyote,
     bufferSalto,
-    combustibleJetpack,
-    usandoJetpack,
     distanciaRecorrida,
   };
 }

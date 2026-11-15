@@ -1,7 +1,7 @@
 // Máquina de fases de la aplicación (TRD sección 5).
 // La partida simulada vive en engine/; acá se guarda solo la intención de la interfaz.
 
-import { CATALOGO_POR_ID } from '../data/catalogo';
+import { CATALOGO, CATALOGO_POR_ID } from '../data/catalogo';
 import { PREAJUSTES, PRESUPUESTO, TURNOS_MAX, TURNOS_MIN } from '../data/parametros';
 import { describirRecompensa } from '../data/recompensas';
 import type { TareaExploracion } from '../data/recompensas';
@@ -21,6 +21,11 @@ export type EstadoApp =
       avisoCampo: string | null; // aviso breve de una acción 3D
       nodos3dCompletados: string[];
       plan: { opcionId: string; hechas: string[] } | null; // plan del día tras elegir opción (RF-15)
+      // Cuaderno de misión (RF-17): al inspeccionar un equipo histórico en 3D se anota lo que midió su misión
+      // (`notas`, ids de historia) con un primer plano (`closeUp`). Un evento ya vivido queda conocido.
+      notas: string[];
+      closeUp: string | null;
+      eventosConocidos: string[];
     }
   | { fase: 'bitacora'; partida: Estado };
 
@@ -40,6 +45,7 @@ export type Accion =
   | { tipo: 'ELEGIR_OPCION'; opcionId: string }
   | { tipo: 'COMPLETAR_TAREA'; tareaId: string }
   | { tipo: 'TERMINAR_DIA' }
+  | { tipo: 'CERRAR_CLOSEUP' }
   | { tipo: 'COMPLETAR_TAREA_3D'; tarea: TareaExploracion; nodoId: string; historiaId?: string }
   | { tipo: 'LIMPIAR_AVISO_CAMPO' }
   | { tipo: 'ABRIR_HISTORIA'; historiaId: string }
@@ -97,6 +103,9 @@ function juegoNuevo(partida: Estado): EstadoJuego {
     avisoCampo: null,
     nodos3dCompletados: [],
     plan: null,
+    notas: [],
+    closeUp: null,
+    eventosConocidos: [],
   };
 }
 
@@ -109,7 +118,32 @@ function resolverDia(estado: EstadoJuego, opcionId: string, hechas: string[]): E
   const nuevas = siguiente.historiasDesbloqueadas.filter((id) => !yaDesbloqueadas.has(id));
   const cola = [...tarjetas, ...nuevas];
   if (siguiente.resultado && cola.length === 0) return { fase: 'bitacora', partida: siguiente };
-  return { ...estado, partida: siguiente, tarjetas: cola, avisoCampo: null, plan: null };
+  const vivido = partida.eventoActual?.id;
+  return {
+    ...estado,
+    partida: siguiente,
+    tarjetas: cola,
+    avisoCampo: null,
+    plan: null,
+    eventosConocidos:
+      vivido && !estado.eventosConocidos.includes(vivido) ? [...estado.eventosConocidos, vivido] : estado.eventosConocidos,
+  };
+}
+
+// Cuaderno de misión (RF-17): ¿se ven las cifras de las opciones del evento de hoy?
+// `misiones`: las que midieron lo que explica el evento y existen en este destino. Sin ninguna, es conocimiento
+// general. Si alguna ya está anotada, o el evento ya se vivió, se conoce.
+export function conocimientoDelDia(estado: EstadoJuego): { conocido: boolean; misiones: string[] } {
+  const { eventoActual, config } = estado.partida;
+  if (!eventoActual) return { conocido: true, misiones: [] };
+  const misiones = (eventoActual.notaDe ?? []).filter((id) =>
+    CATALOGO.some((item) => item.historiaId === id && item.destinos.includes(config.destino)),
+  );
+  const conocido =
+    misiones.length === 0 ||
+    estado.eventosConocidos.includes(eventoActual.id) ||
+    misiones.some((id) => estado.notas.includes(id));
+  return { conocido, misiones };
 }
 
 function sinAviso(partida: EstadoApp): EstadoApp {
@@ -244,17 +278,27 @@ export function reducer(estado: EstadoApp, accion: Accion): EstadoApp {
       return resolverDia(estado, estado.plan.opcionId, estado.plan.hechas);
     }
 
+    case 'CERRAR_CLOSEUP':
+      if (estado.fase !== 'juego' || !estado.closeUp) return estado;
+      return { ...estado, closeUp: null };
+
     case 'COMPLETAR_TAREA_3D': {
       if (estado.fase !== 'juego') return estado;
-      const yaCompletado = estado.nodos3dCompletados.includes(accion.nodoId);
-      if (yaCompletado) return estado;
+      // Inspeccionar un equipo histórico abre su primer plano y anota su medición, también al releerlo.
+      const { historiaId } = accion;
+      const conNota = historiaId
+        ? {
+            closeUp: historiaId,
+            notas: estado.notas.includes(historiaId) ? estado.notas : [...estado.notas, historiaId],
+          }
+        : {};
+      if (estado.nodos3dCompletados.includes(accion.nodoId)) return historiaId ? { ...estado, ...conNota } : estado;
 
       return {
         ...estado,
-        partida: completarTareaExploracion(estado.partida, accion.tarea, accion.historiaId),
-        avisoCampo: describirRecompensa(accion.tarea, accion.historiaId),
-        // Inspeccionar un equipo NASA abre su historia encima del juego.
-        tarjetas: accion.historiaId ? [accion.historiaId, ...estado.tarjetas] : estado.tarjetas,
+        ...conNota,
+        partida: completarTareaExploracion(estado.partida, accion.tarea, historiaId),
+        avisoCampo: describirRecompensa(accion.tarea, historiaId),
         nodos3dCompletados: [...estado.nodos3dCompletados, accion.nodoId],
       };
     }

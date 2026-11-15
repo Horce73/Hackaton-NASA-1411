@@ -4,10 +4,19 @@
 // Revisado y confirmado por el equipo el 2026-11-14 (`verificada: true`).
 
 import type { Historia } from '../engine/tipos';
+import { AVISOS } from './avisos';
+
+// `medicion` (RF-17): lo que midió cada misión, la nota que se anota al inspeccionar el equipo en 3D.
+// Las que vienen de avisos.ts ya están verificadas; las demás llevan `verificada: false` hasta contrastarlas.
 
 export const HISTORIAS: Historia[] = [
   {
     id: 'retrorreflector',
+    medicion: {
+      dato: 'Disparando un láser a estos espejos desde la Tierra se midió que la Luna se aleja de nosotros unos 3,8 centímetros cada año.',
+      fuente: 'https://www.nasa.gov/missions/apollo/apollo-11/the-apollo-experiment-that-keeps-on-giving/',
+      verificada: false,
+    },
     nombre: 'Retrorreflector láser (Apolo 11)',
     lugar: 'Luna',
     anio: '1969',
@@ -26,6 +35,11 @@ export const HISTORIAS: Historia[] = [
   },
   {
     id: 'alsep',
+    medicion: {
+      dato: 'Entre 1969 y 1976, el espectrómetro del ALSEP del Apolo 12 midió las partículas del viento solar que llegaban a la superficie de la Luna.',
+      fuente: 'https://pds-geosciences.wustl.edu/Lunar/urn-nasa-pds-a12sws_solar_wind_28s_1hr/document/a12a_sws.txt',
+      verificada: false,
+    },
     nombre: 'ALSEP (estaciones de ciencia, Apolo 12–17)',
     lugar: 'Luna',
     anio: '1969–72',
@@ -44,6 +58,11 @@ export const HISTORIAS: Historia[] = [
   },
   {
     id: 'lrv',
+    medicion: {
+      dato: 'En el Apolo 17 se rompió un guardabarros del rover y el polvo cubrió a los astronautas. La cinta no pegaba con tanto polvo: hicieron uno nuevo con cuatro mapas y pinzas.',
+      fuente: 'https://www.hq.nasa.gov/alsj/a17/A17NewFender.html',
+      verificada: false,
+    },
     nombre: 'Vehículo lunar (LRV, Apolo 15–17)',
     lugar: 'Luna',
     anio: '1971–72',
@@ -62,6 +81,11 @@ export const HISTORIAS: Historia[] = [
   },
   {
     id: 'surveyor-3',
+    medicion: {
+      dato: 'Los astronautas del Apolo 12 se llevaron su cámara a la Tierra. Tras más de dos años en la Luna había aguantado bien, pero el polvo y la radiación habían cambiado el color de sus materiales.',
+      fuente: 'https://ntrs.nasa.gov/citations/19710024418',
+      verificada: false,
+    },
     nombre: 'Surveyor 3',
     lugar: 'Luna',
     anio: '1967',
@@ -80,6 +104,11 @@ export const HISTORIAS: Historia[] = [
   },
   {
     id: 'sojourner',
+    medicion: {
+      dato: 'Mars Pathfinder, la nave que llevó a Sojourner, detectó remolinos de polvo: cuando pasaba uno, la presión del aire bajaba de golpe.',
+      fuente: 'https://nssdc.gsfc.nasa.gov/planetary/marspath/dustdevil.html',
+      verificada: false,
+    },
     nombre: 'Sojourner',
     lugar: 'Marte',
     anio: '1997',
@@ -98,6 +127,7 @@ export const HISTORIAS: Historia[] = [
   },
   {
     id: 'spirit-opportunity',
+    medicion: AVISOS.energia,
     nombre: 'Spirit y Opportunity',
     lugar: 'Marte',
     anio: '2004',
@@ -116,6 +146,7 @@ export const HISTORIAS: Historia[] = [
   },
   {
     id: 'curiosity',
+    medicion: AVISOS.radiacion,
     nombre: 'Curiosity',
     lugar: 'Marte',
     anio: '2012',
@@ -134,6 +165,11 @@ export const HISTORIAS: Historia[] = [
   },
   {
     id: 'perseverance-ingenuity',
+    medicion: {
+      dato: 'En 2021 el instrumento MOXIE de Perseverance sacó oxígeno del aire de Marte, que es casi todo dióxido de carbono.',
+      fuente: 'https://www.nasa.gov/news-release/nasas-perseverance-mars-rover-extracts-first-oxygen-from-red-planet/',
+      verificada: false,
+    },
     nombre: 'Perseverance e Ingenuity',
     lugar: 'Marte',
     anio: '2021',

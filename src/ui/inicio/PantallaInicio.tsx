@@ -56,7 +56,7 @@ export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
               Misión Legado
             </h1>
             <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-              Diseña tu base en 3D, explora en gravedad real con jetpack y descubre equipo histórico de la NASA.
+              Diseña tu base en 3D, explora a pie en la gravedad real y descubre equipo histórico de la NASA.
             </p>
           </div>
 
@@ -220,7 +220,7 @@ export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
 
       <div className="pointer-events-none hidden sm:block text-xs text-[var(--color-text-muted)]">
         <span className="inline-block rounded-lg border border-[var(--color-border)] bg-[#0b1020]/85 px-3 py-1.5">
-          Controles en superficie: WASD mover · Espacio saltar / Jetpack · E interactuar · Ratón rotar cámara
+          Controles en superficie: WASD mover · Espacio saltar · E interactuar · Ratón rotar cámara
         </span>
       </div>
     </main>

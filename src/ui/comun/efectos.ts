@@ -50,3 +50,22 @@ export function describirConsecuencia(efectos: EfectosTurno): string {
   else if ((efectos.multiplicadorRadiacion ?? 1) > 1) partes.push('algo más de radiación');
   return partes.length ? partes.join(', ') : 'Sin cambios extra';
 }
+
+// La misma línea sin cifras (RF-17): qué cambia y hacia dónde, para cuando aún no se tiene la nota de la misión.
+export function describirRiesgo(efectos: EfectosTurno): string {
+  const sentido = (valor: number) => (valor > 0 ? 'más' : 'menos');
+  const partes: string[] = [];
+  for (const id of ['energia', 'alimento', 'oxigeno', 'agua'] as const) {
+    const cambio = efectos.recursos?.[id];
+    if (cambio) partes.push(`${sentido(cambio)} ${NOMBRE_RECURSO[id]}`);
+  }
+  for (const id of ['nutricion', 'suenoEstres', 'musculoHueso'] as const) {
+    const cambio = efectos.salud?.[id];
+    if (cambio) partes.push(`${sentido(cambio)} ${NOMBRE_SALUD[id]}`);
+  }
+  if (efectos.ciencia) partes.push(`${sentido(efectos.ciencia)} ciencia`);
+  if (efectos.dosis) partes.push('más radiación por salir');
+  if ((efectos.multiplicadorRadiacion ?? 1) > 2) partes.push('mucha más radiación');
+  else if ((efectos.multiplicadorRadiacion ?? 1) > 1) partes.push('algo más de radiación');
+  return partes.length ? `Afecta a: ${partes.join(', ')}` : 'Sin cambios extra';
+}

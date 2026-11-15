@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { EVENTOS } from '../data/eventos';
-import { DOSIS_BASE, ENERGIA_INICIAL } from '../data/parametros';
+import { CIENCIA_MUESTREO, DOSIS_BASE, ENERGIA_INICIAL } from '../data/parametros';
+import { tareasDelDia } from './tareas';
 import { iniciarMision, recursoQueFalta, siguienteTurno } from './turno';
 import type { Configuracion, Estado } from './tipos';
 
@@ -77,8 +78,15 @@ test('el equipo histórico suma ciencia cada turno (RF-07)', () => {
     conEvento(iniciarMision(marte, [...BASE_MARTE, 'curiosity']), 'dia-tranquilo'),
     'descansar',
   );
-  expect(sin.ciencia).toBe(0);
-  expect(con.ciencia).toBe(3);
+  expect(sin.ciencia).toBe(CIENCIA_MUESTREO);
+  expect(con.ciencia - sin.ciencia).toBe(3);
+});
+
+test('el muestreo sin terminar no da ciencia', () => {
+  const estado = conEvento(iniciarMision(marte, BASE_MARTE), 'dia-tranquilo');
+  const muestreo = tareasDelDia(estado, 'descansar').filter((t) => t.tipo === 'ciencia');
+  expect(muestreo).toHaveLength(1);
+  expect(siguienteTurno(estado, 'descansar', muestreo).ciencia).toBe(0);
 });
 
 test('un evento educativo desbloquea su historia con cualquier opción', () => {

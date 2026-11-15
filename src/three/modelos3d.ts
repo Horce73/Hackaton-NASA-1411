@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { Destino } from '../engine/tipos';
 import type { ConjuntoTexturas } from './texturas';
 
@@ -9,8 +10,6 @@ export interface AstronautaRig {
   brazoDer: THREE.Group;
   piernaIzq: THREE.Group;
   piernaDer: THREE.Group;
-  llamaIzq: THREE.Mesh;
-  llamaDer: THREE.Mesh;
   sombra: THREE.Mesh;
 }
 
@@ -141,19 +140,14 @@ export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): Ast
     roughness: 0.5,
     metalness: 0.9,
   });
-  const matLlama = new THREE.MeshBasicMaterial({
-    color: 0x6ce5ff,
-    transparent: true,
-    opacity: 0.88,
-  });
 
   // Torso con tejido Beta-cloth
-  const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.58, 0.34), matTraje);
+  const torso = new THREE.Mesh(new RoundedBoxGeometry(0.5, 0.58, 0.36, 4, 0.12), matTraje);
   torso.position.y = 1.02;
   cuerpo.add(torso);
 
   // Pechera DCM con instrumentos reales
-  const pechera = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.24, 0.06), matPechera);
+  const pechera = new THREE.Mesh(new RoundedBoxGeometry(0.3, 0.24, 0.06, 2, 0.02), matPechera);
   pechera.position.set(0, 1.07, 0.18);
   cuerpo.add(pechera);
 
@@ -163,19 +157,19 @@ export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): Ast
   cuerpo.add(cuello);
 
   // Cinturón con hebilla metálica
-  const cinturon = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.1, 0.36), matAcento);
+  const cinturon = new THREE.Mesh(new RoundedBoxGeometry(0.52, 0.1, 0.38, 2, 0.04), matAcento);
   cinturon.position.y = 0.74;
   cuerpo.add(cinturon);
 
   // Franja del color de la especialidad, visible de frente y de espaldas
   if (colorRol) {
-    const franja = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.07, 0.36), matAcento);
+    const franja = new THREE.Mesh(new RoundedBoxGeometry(0.52, 0.07, 0.38, 2, 0.03), matAcento);
     franja.position.y = 1.26;
     cuerpo.add(franja);
   }
 
-  // Mochila PLSS con paneles de foil térmico y toberas
-  const mochila = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.54, 0.24), matTraje);
+  // Mochila PLSS (soporte vital) con paneles de foil térmico
+  const mochila = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.54, 0.24, 3, 0.06), matTraje);
   mochila.position.set(0, 1.05, -0.26);
   cuerpo.add(mochila);
 
@@ -183,7 +177,7 @@ export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): Ast
   placaMochila.position.set(0, 1.02, -0.385);
   cuerpo.add(placaMochila);
 
-  const bandaMochila = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.09, 0.26), matAcento);
+  const bandaMochila = new THREE.Mesh(new RoundedBoxGeometry(0.44, 0.09, 0.26, 2, 0.03), matAcento);
   bandaMochila.position.set(0, 1.2, -0.26);
   cuerpo.add(bandaMochila);
 
@@ -194,23 +188,15 @@ export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): Ast
   toberaDer.position.set(0.12, 0.74, -0.28);
   cuerpo.add(toberaIzq, toberaDer);
 
-  const llamaGeo = new THREE.ConeGeometry(0.065, 0.35, 10);
-  llamaGeo.rotateX(Math.PI);
-  const llamaIzq = new THREE.Mesh(llamaGeo, matLlama);
-  llamaIzq.position.set(-0.12, 0.52, -0.28);
-  llamaIzq.visible = false;
-  const llamaDer = new THREE.Mesh(llamaGeo, matLlama);
-  llamaDer.position.set(0.12, 0.52, -0.28);
-  llamaDer.visible = false;
-  cuerpo.add(llamaIzq, llamaDer);
 
   // Casco y visor dorado iridiscente
   const casco = new THREE.Mesh(new THREE.SphereGeometry(0.25, 22, 18), matTraje);
   casco.position.set(0, 1.5, 0);
   cuerpo.add(casco);
 
-  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.215, 20, 14, -0.9, 1.8, 0.45, 1.45), matVisor);
-  visor.position.set(0, 1.5, 0.06);
+  // En la esfera, phi = PI / 2 es el frente (+Z): el visor va centrado ahí.
+  const visor = new THREE.Mesh(new THREE.SphereGeometry(0.24, 24, 16, Math.PI / 2 - 0.9, 1.8, 0.55, 1.2), matVisor);
+  visor.position.set(0, 1.5, 0.03);
   cuerpo.add(visor);
 
   const visera = new THREE.Mesh(new THREE.CylinderGeometry(0.23, 0.23, 0.04, 16, 1, false, -0.9, 1.8), matMetal);
@@ -246,9 +232,9 @@ export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): Ast
     pivote.position.set(lado * 0.14, 0.68, 0);
     const muslo = new THREE.Mesh(new THREE.CapsuleGeometry(0.09, 0.34, 6, 12), matTraje);
     muslo.position.y = -0.24;
-    const rodillera = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.1, 0.14), matAcento);
+    const rodillera = new THREE.Mesh(new RoundedBoxGeometry(0.15, 0.1, 0.15, 2, 0.04), matAcento);
     rodillera.position.set(0, -0.26, 0.04);
-    const bota = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.25), matMetal);
+    const bota = new THREE.Mesh(new RoundedBoxGeometry(0.17, 0.14, 0.27, 3, 0.05), matMetal);
     bota.position.set(0, -0.58, 0.04);
     pivote.add(muslo, rodillera, bota);
     return pivote;
@@ -261,7 +247,7 @@ export function crearAstronauta3D(tex: ConjuntoTexturas, colorRol?: string): Ast
   root.add(sombra);
 
   habilitarSombras(cuerpo);
-  return { root, cuerpo, brazoIzq, brazoDer, piernaIzq, piernaDer, llamaIzq, llamaDer, sombra };
+  return { root, cuerpo, brazoIzq, brazoDer, piernaIzq, piernaDer, sombra };
 }
 
 // Hábitat central a escala real del Surface Habitat de referencia de la NASA (el de Marte es casi idéntico):

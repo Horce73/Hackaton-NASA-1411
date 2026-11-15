@@ -108,7 +108,10 @@ Tres preajustes (Luna fácil, Luna difícil, Marte) rellenan esos selectores y s
 - Aviso flotante sobre cada estación con tarea: icono, nombre corto, especialidad recomendada y barra de
   progreso. Se resalta cuando el astronauta está al alcance ("E para trabajar").
 - Lista de tareas en el panel, con el mismo progreso, para quien no ve bien el 3D, y reloj del día con el
-  tiempo en texto. Botón "Terminar día". Ajuste del reloj: 90 s, ×2 o sin reloj.
+  tiempo en texto. Botón "Terminar día". Ajuste del reloj: 60 s, ×2 o sin reloj. Si el evento lo explica una misión que aún no está en el
+  cuaderno, las opciones dicen qué cambian sin cifras y con qué misión se midió (RF-17).
+- Primer plano (RF-17): al inspeccionar un equipo histórico, la cámara se acerca, el HUD de abajo se oculta y un
+  diálogo negro en la parte inferior escribe lo que midió la misión, con su fuente y el botón "Anotar en el cuaderno".
 - En el diseño, cada módulo indica que pide mantenimiento diario y el total de tareas al día.
 - El panel del plan muestra primero las tareas de la opción y después el mantenimiento en líneas cortas; el pie con
   el reloj y "Terminar día" queda fijo, sin desplazarse.

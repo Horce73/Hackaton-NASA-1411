@@ -2,7 +2,9 @@
 // Costes y efectos son PROVISIONALES. Los costes de panel, reactor, invernadero y Curiosity
 // salen del boceto del UX Brief (5.2); el resto son plausibles y se calibran en la fase 3.
 // Los efectos del equipo histórico siguen la columna "Efecto en el juego" del README.
-// `mantenimiento` (RF-16): tarea diaria de cada módulo, en segundos de un no especialista. PROVISIONAL.
+// `mantenimiento` (RF-16): revisión de cada módulo cada `cadaDias` días, en segundos de un no especialista.
+// PROVISIONAL. No todo se revisa a diario: los cultivos sí, el blindaje o el reactor cada pocos días.
+// El blindaje es de regolito (suelo lunar o marciano), así que lo revisa geología.
 
 import type { Destino, Item } from '../engine/tipos';
 
@@ -16,7 +18,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { energiaSolar: 8 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 12 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 12, cadaDias: 2, etiqueta: 'Limpiar el polvo del panel' },
   },
   {
     id: 'reactor',
@@ -25,7 +27,7 @@ export const CATALOGO: Item[] = [
     coste: 22,
     destinos: AMBOS,
     efectos: { energiaProduccion: 20 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 20 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 20, cadaDias: 3, etiqueta: 'Revisar el reactor' },
   },
   {
     id: 'invernadero',
@@ -34,7 +36,7 @@ export const CATALOGO: Item[] = [
     coste: 15,
     destinos: AMBOS,
     efectos: { alimentoProduccion: 3.6, energiaConsumo: 3 }, // 3,6 kg al día: la comida de 2 tripulantes
-    mantenimiento: { especialidad: 'biologia', trabajo: 20 },
+    mantenimiento: { especialidad: 'biologia', trabajo: 16, cadaDias: 1, etiqueta: 'Cuidar los cultivos' },
   },
   {
     id: 'reciclador',
@@ -43,7 +45,7 @@ export const CATALOGO: Item[] = [
     coste: 12,
     destinos: AMBOS,
     efectos: { soporteVital: 2, energiaConsumo: 3 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 18 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 18, cadaDias: 2, etiqueta: 'Cambiar los filtros del reciclador' },
   },
   {
     id: 'blindaje',
@@ -52,7 +54,7 @@ export const CATALOGO: Item[] = [
     coste: 10,
     destinos: AMBOS,
     efectos: { blindaje: 0.45 },
-    mantenimiento: { especialidad: 'ingenieria', trabajo: 10 },
+    mantenimiento: { especialidad: 'geologia', trabajo: 14, cadaDias: 3, etiqueta: 'Reponer el regolito del blindaje' },
   },
   {
     id: 'zona-descanso',
@@ -60,8 +62,8 @@ export const CATALOGO: Item[] = [
     tipo: 'modulo',
     coste: 8,
     destinos: AMBOS,
-    efectos: { saludBonus: { suenoEstres: 2 }, energiaConsumo: 1 },
-    mantenimiento: { especialidad: 'medicina', trabajo: 10 },
+    efectos: { saludBonus: { suenoEstres: 4 }, energiaConsumo: 1 },
+    mantenimiento: { especialidad: 'medicina', trabajo: 10, cadaDias: 2, etiqueta: 'Controlar el descanso del equipo' },
   },
   {
     id: 'gimnasio',
@@ -70,7 +72,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { saludBonus: { musculoHueso: 2 }, energiaConsumo: 1 },
-    mantenimiento: { especialidad: 'medicina', trabajo: 10 },
+    mantenimiento: { especialidad: 'medicina', trabajo: 10, cadaDias: 2, etiqueta: 'Ajustar el plan de ejercicio' },
   },
   {
     id: 'retrorreflector',

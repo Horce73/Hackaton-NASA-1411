@@ -1,7 +1,7 @@
 // Tareas del día (RF-13 a RF-16, TRD 6.1). Puro: el reloj y el progreso viven en la interfaz y el 3D.
 
 import { CATALOGO_POR_ID } from '../data/catalogo';
-import { CARGA_PRIMER_DIA, CARGA_ULTIMO_DIA, RITMO_ESPECIALISTA } from '../data/parametros';
+import { CARGA_PRIMER_DIA, CARGA_ULTIMO_DIA, RITMO_ESPECIALISTA, TRABAJO_MUESTREO } from '../data/parametros';
 import type { Astronauta, Especialidad, Estado, Tarea } from './tipos';
 
 // Multiplicador del trabajo de hoy: crece con la tripulación y de forma lineal del primer al último día.
@@ -11,7 +11,8 @@ export function cargaDelDia(estado: Pick<Estado, 'config' | 'turno'>): number {
   return (tripulantes / 2) * (CARGA_PRIMER_DIA + (CARGA_ULTIMO_DIA - CARGA_PRIMER_DIA) * avance);
 }
 
-// Lo que hay que hacer hoy tras elegir `opcionId`: las tareas de la opción y el mantenimiento de cada módulo.
+// Lo que hay que hacer hoy tras elegir `opcionId`: las tareas de la opción, el muestreo (opcional) y la revisión
+// de los módulos a los que les toca hoy. Cada módulo se revisa cada `cadaDias`, desfasado por su índice.
 export function tareasDelDia(estado: Estado, opcionId: string): Tarea[] {
   const { itemIds } = estado.diseno;
   const opcion = estado.eventoActual?.opciones.find((o) => o.id === opcionId);
@@ -29,9 +30,19 @@ export function tareasDelDia(estado: Estado, opcionId: string): Tarea[] {
     };
   });
 
+  const muestreo: Tarea = {
+    id: `d${estado.turno}-ciencia`,
+    tipo: 'ciencia',
+    estacion: 'exterior',
+    personas: 2,
+    especialidad: 'geologia',
+    trabajo: Math.round(TRABAJO_MUESTREO * carga),
+    etiqueta: 'Muestreo geológico',
+  };
+
   const mantenimiento: Tarea[] = itemIds.flatMap((id, i) => {
     const item = CATALOGO_POR_ID[id];
-    if (!item?.mantenimiento) return [];
+    if (!item?.mantenimiento || (estado.turno - 1 + i) % item.mantenimiento.cadaDias !== 0) return [];
     return [
       {
         id: `d${estado.turno}-mant-${i}`,
@@ -39,12 +50,12 @@ export function tareasDelDia(estado: Estado, opcionId: string): Tarea[] {
         estacion: `item:${i}`,
         especialidad: item.mantenimiento.especialidad,
         trabajo: Math.round(item.mantenimiento.trabajo * carga),
-        etiqueta: `Revisar ${item.nombre.toLowerCase()}`,
+        etiqueta: item.mantenimiento.etiqueta,
       },
     ];
   });
 
-  return [...deOpcion, ...mantenimiento];
+  return [...deOpcion, muestreo, ...mantenimiento];
 }
 
 // Segundos de trabajo que avanza un astronauta por segundo en una tarea (RF-14).

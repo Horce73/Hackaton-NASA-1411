@@ -33,7 +33,8 @@ export interface Item {
   destinos: Destino[];
   efectos: Efectos;
   historiaId?: string; // solo históricos
-  mantenimiento?: { especialidad: Especialidad; trabajo: number }; // tarea diaria (RF-16)
+  // RF-16: revisión del módulo cada `cadaDias` días; `trabajo` en segundos de un no especialista.
+  mantenimiento?: { especialidad: Especialidad; trabajo: number; cadaDias: number; etiqueta: string };
 }
 
 export interface Astronauta {
@@ -74,7 +75,7 @@ export interface TareaOpcion {
 // Tarea concreta de un día (TRD 6.1). `estacion`: 'habitat', 'exterior' o 'item:<índice en itemIds>'.
 export interface Tarea extends TareaOpcion {
   id: string;
-  tipo: 'evento' | 'mantenimiento';
+  tipo: 'evento' | 'mantenimiento' | 'ciencia'; // ciencia: el muestreo diario, opcional
 }
 
 export interface Opcion {
@@ -82,6 +83,13 @@ export interface Opcion {
   texto: string;
   efectos: EfectosTurno;
   tareas?: TareaOpcion[];
+}
+
+// Lo que sabe la NASA sobre una situación o lo que midió una misión, con su fuente.
+export interface Archivo {
+  dato: string;
+  fuente: string; // URL de la NASA
+  verificada: boolean;
 }
 
 export interface Evento {
@@ -93,6 +101,10 @@ export interface Evento {
   opciones: Opcion[]; // 2..3
   opcionSinAtender?: string; // se aplica si quedan tareas de la opción elegida (RF-15)
   historiaId?: string; // eventos educativos
+  archivo: Archivo;
+  // Misiones (ids de historia) cuya medición explica el evento. Sin ninguna disponible en el destino, el evento
+  // es conocimiento general y sus efectos se ven desde el primer día (RF-17).
+  notaDe?: string[];
 }
 
 export interface Instantanea {
@@ -103,6 +115,7 @@ export interface Instantanea {
 
 export interface Historia {
   id: string;
+  medicion: Archivo; // lo que midió la misión: la nota del cuaderno (RF-17)
   nombre: string;
   lugar: string;
   anio: string; // texto: admite rangos

@@ -2,6 +2,7 @@ import { EVENTOS } from '../data/eventos';
 import {
   BLINDAJE_MAX,
   CAPACIDAD_ENERGIA,
+  CIENCIA_MUESTREO,
   CONSUMO_AGUA,
   CONSUMO_ALIMENTO,
   CONSUMO_ENERGIA_POR_TRIPULANTE,
@@ -202,10 +203,11 @@ export function siguienteTurno(estado: Estado, opcionId: string, pendientes: Tar
     ),
   );
 
-  // 6. Ciencia.
+  // 6. Ciencia. El muestreo diario suma si no quedó pendiente.
+  const muestreo = pendientes.some((t) => t.tipo === 'ciencia') ? 0 : CIENCIA_MUESTREO;
   const ciencia = Math.max(
     0,
-    estado.ciencia + (efectos.ciencia ?? 0) + Math.round(total('ciencia') * coberturaEnergia),
+    estado.ciencia + (efectos.ciencia ?? 0) + muestreo + Math.round(total('ciencia') * coberturaEnergia),
   );
 
   // 7. Historias de eventos educativos.

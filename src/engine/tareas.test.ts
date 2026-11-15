@@ -13,16 +13,19 @@ function conEvento(itemIds: string[], eventoId: string): Estado {
   return { ...estado, eventoActual: EVENTOS.find((e) => e.id === eventoId)! };
 }
 
-test('el día pide las tareas de la opción y una revisión por módulo, no por equipo histórico (RF-15, RF-16)', () => {
+test('el día pide las tareas de la opción, el muestreo y la revisión de los módulos a los que les toca (RF-15, RF-16)', () => {
+  // Paneles y reciclador se revisan cada 2 días, desfasados por su posición; el equipo histórico, nunca.
   const estado = conEvento(['panel-solar', 'panel-solar', 'reciclador', 'curiosity'], 'fallo-equipo');
   const tareas = tareasDelDia(estado, 'reparar');
   expect(tareas.map((t) => [t.tipo, t.estacion])).toEqual([
     ['evento', 'item:2'], // la reparación se hace en el reciclador
     ['evento', 'habitat'], // y la revisión del aire, dentro
+    ['ciencia', 'exterior'],
     ['mantenimiento', 'item:0'],
-    ['mantenimiento', 'item:1'],
     ['mantenimiento', 'item:2'],
   ]);
+  const manana = tareasDelDia({ ...estado, turno: 2 }, 'reparar').filter((t) => t.tipo === 'mantenimiento');
+  expect(manana.map((t) => t.estacion)).toEqual(['item:1']);
   expect(new Set(tareas.map((t) => t.id)).size).toBe(tareas.length);
   expect(tareasDelDia(estado, 'usar-reservas').filter((t) => t.tipo === 'evento')).toEqual([]);
 });
@@ -36,7 +39,7 @@ test('el trabajo crece con la tripulación y del primer al último día', () => 
   const revision = (e: Estado) => tareasDelDia(e, 'usar-reservas').find((t) => t.tipo === 'mantenimiento')!.trabajo;
   const base = CATALOGO_POR_ID.reciclador.mantenimiento!.trabajo;
   expect(revision(estado)).toBe(Math.round(base * cargaDelDia(estado)));
-  expect(revision({ ...estado, turno: marte.turnos })).toBeGreaterThan(revision(estado));
+  expect(revision({ ...estado, turno: marte.turnos - 1 })).toBeGreaterThan(revision(estado));
 });
 
 test('una tarea en un módulo que no está en el diseño se hace en el hábitat', () => {

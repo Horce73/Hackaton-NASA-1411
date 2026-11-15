@@ -207,14 +207,14 @@ test('la tripulación sale al decidir o al explorar, y vuelve a entrar al termin
   expect(explorando).toMatchObject({ tripulacionFuera: true });
   expect(reducer(explorando, { tipo: 'SALIR_TRIPULACION' })).toBe(explorando);
 
-  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !o.descanso && !recursoQueFalta(lanzada.partida, o.id))!;
+  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !o.dentro && !recursoQueFalta(lanzada.partida, o.id))!;
   expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id })).toMatchObject({ tripulacionFuera: true });
   expect(jugarDia(lanzada, opcion.id)).toMatchObject({ tripulacionFuera: false });
 });
 
 test('al terminar el día sale el resumen y luego un dato curioso, que no se repite (RF-08)', () => {
   const lanzada = lanzar(['reciclador', 'panel-solar']);
-  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !o.descanso && !recursoQueFalta(lanzada.partida, o.id))!;
+  const opcion = lanzada.partida.eventoActual!.opciones.find((o) => !o.dentro && !recursoQueFalta(lanzada.partida, o.id))!;
   const conResumen = jugarDia(lanzada, opcion.id, false) as EstadoJuego;
   expect(conResumen.resumen?.dia).toBe(1);
   expect(conResumen.resumen?.tareas.length).toBeGreaterThan(0);
@@ -227,7 +227,7 @@ test('al terminar el día sale el resumen y luego un dato curioso, que no se rep
   expect(conDato).toMatchObject({ resumen: null, dato: 'olympus', datosVistos: ['olympus'] });
   const sinDato = reducer(conDato, { tipo: 'CERRAR_DATO' }) as EstadoJuego;
   expect(sinDato).toMatchObject({ fase: 'juego', dato: null });
-  const opcion2 = sinDato.partida.eventoActual!.opciones.find((o) => !o.descanso && !recursoQueFalta(sinDato.partida, o.id))!;
+  const opcion2 = sinDato.partida.eventoActual!.opciones.find((o) => !o.dentro && !recursoQueFalta(sinDato.partida, o.id))!;
   const segundo = reducer(jugarDia(sinDato, opcion2.id), { tipo: 'CERRAR_RESUMEN', conDato: true });
   expect(segundo).toMatchObject({ dato: 'fobos' });
 
@@ -334,7 +334,7 @@ test('ABORTAR_MISION cierra la partida como abortada', () => {
 test('ELEGIR_OPCION abre el plan del día sin avanzar el turno (RF-15)', () => {
   const lanzada = lanzar(['reciclador', 'panel-solar']);
   const { opciones } = lanzada.partida.eventoActual!;
-  const opcionId = opciones.find((o) => !o.descanso)!.id;
+  const opcionId = opciones.find((o) => !o.dentro)!.id;
   const conPlan = reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId });
   expect(conPlan).toMatchObject({ partida: { turno: 1 }, plan: { opcionId, hechas: [] } });
   // Con un plan en marcha no se puede cambiar de opción.
@@ -351,16 +351,16 @@ test('ELEGIR_OPCION abre el plan del día sin avanzar el turno (RF-15)', () => {
 
 test('terminar el día con tareas sin hacer aplica la opción de riesgo y para los módulos (RF-15, RF-16)', () => {
   const lanzada = lanzar(['reciclador', 'panel-solar']);
-  const solar = EVENTOS.find((e) => e.id === 'tormenta-solar')!;
-  const conEvento: EstadoJuego = { ...lanzada, partida: { ...lanzada.partida, eventoActual: solar } };
+  const fuga = EVENTOS.find((e) => e.id === 'fuga-agua')!;
+  const conEvento: EstadoJuego = { ...lanzada, partida: { ...lanzada.partida, eventoActual: fuga } };
 
-  const bien = jugarDia(conEvento, 'refugiarse');
-  const mal = jugarDia(conEvento, 'refugiarse', false);
+  const bien = jugarDia(conEvento, 'sellar');
+  const mal = jugarDia(conEvento, 'sellar', false);
   if (bien.fase !== 'juego' || mal.fase !== 'juego') throw new Error('esperaba seguir en juego');
-  expect(bien.partida.ultimoDelta).toMatchObject({ opcionTexto: 'Refugiarse en la base' });
+  expect(bien.partida.ultimoDelta).toMatchObject({ opcionTexto: 'Salir a sellar la fuga' });
   // El día 1 solo le toca revisión al reciclador: el panel, en segunda posición, la tiene mañana.
   expect(mal.partida.ultimoDelta).toMatchObject({ sinAtender: true, modulosParados: 1 });
-  expect(mal.partida.ultimoDelta!.dosisMedia).toBeGreaterThan(bien.partida.ultimoDelta!.dosisMedia);
+  expect(mal.partida.recursos.agua).toBeLessThan(bien.partida.recursos.agua);
 });
 
 test('cuaderno: sin la nota de la misión que lo midió, el evento no muestra cifras (RF-17)', () => {
@@ -401,7 +401,7 @@ test('cuaderno: los eventos de conocimiento general se ven desde el primer día 
   expect(conocimientoDelDia({ ...lanzada, partida: { ...lanzada.partida, eventoActual: fallo } }).conocido).toBe(false);
 
   const evento = lanzada.partida.eventoActual!;
-  const opcion = evento.opciones.find((o) => !o.descanso && !recursoQueFalta(lanzada.partida, o.id))!;
+  const opcion = evento.opciones.find((o) => !o.dentro && !recursoQueFalta(lanzada.partida, o.id))!;
   const manana = jugarDia(lanzada, opcion.id);
   if (manana.fase !== 'juego') throw new Error('esperaba seguir en juego');
   expect(manana.eventosConocidos).toContain(evento.id);

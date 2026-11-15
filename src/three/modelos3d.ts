@@ -408,7 +408,12 @@ export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSo
   return grupo;
 }
 
-export function crearModulo3D(itemId: string, tex: ConjuntoTexturas, isSoftwareGl: boolean): THREE.Group {
+export function crearModulo3D(
+  itemId: string,
+  tex: ConjuntoTexturas,
+  isSoftwareGl: boolean,
+  destino: Destino = 'luna',
+): THREE.Group {
   const g = new THREE.Group();
   g.name = `item-${itemId}`;
 
@@ -416,174 +421,164 @@ export function crearModulo3D(itemId: string, tex: ConjuntoTexturas, isSoftwareG
 
   switch (itemId) {
     case 'panel-solar': {
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.82, 0.35, 8), matOscuro);
-      base.position.y = 0.175;
-      const juntaFoil = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.28, 10), matFoil);
-      juntaFoil.position.y = 0.45;
-      const poste = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1.45, 10), matMetal);
-      poste.position.y = 1.05;
-      const ala1 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 1.32), matSolar);
-      ala1.position.set(-1.3, 1.78, 0);
-      ala1.rotation.x = 0.45;
-      const ala2 = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.08, 1.32), matSolar);
-      ala2.position.set(1.3, 1.78, 0);
-      ala2.rotation.x = 0.45;
-      const marco = new THREE.Mesh(new THREE.BoxGeometry(5.1, 0.07, 0.16), matMetal);
-      marco.position.set(0, 1.78, 0);
-      g.add(base, juntaFoil, poste, ala1, ala2, marco);
-      g.add(crearSombraContacto(tex.sombraContacto, 2.3));
+      if (destino === 'luna') {
+        // VSAT (Vertical Solar Array Technology): panel vertical en un mástil de unos 10 m que gira siguiendo al Sol,
+        // bajo en el horizonte del polo sur. Se puede recoger para cambiarlo de sitio.
+        // https://www.nasa.gov/technology/nasa-industry-to-mature-vertical-solar-array-technologies-for-lunar-surface/
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.5, 8), matOscuro);
+        base.position.y = 0.25;
+        const mastil = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 10, 10), matMetal);
+        mastil.position.y = 5.25;
+        const gira = new THREE.Group(); // el panel gira con el Sol: lo anima la escena
+        gira.name = 'seguidor-solar';
+        const manta = new THREE.Mesh(new THREE.BoxGeometry(2.2, 6.2, 0.04), matSolar);
+        manta.position.set(1.2, 6.6, 0);
+        const larguero = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.08, 0.08), matMetal);
+        larguero.position.set(1.2, 9.75, 0);
+        const larguero2 = larguero.clone();
+        larguero2.position.y = 3.45;
+        gira.add(manta, larguero, larguero2);
+        const remate = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.12, 0.3, 10), matFoil);
+        remate.position.y = 10.3;
+        g.add(base, mastil, gira, remate, crearSombraContacto(tex.sombraContacto, 1.4));
+      } else {
+        // En Marte el Sol sube más: paneles inclinados a ras de suelo, en dos filas.
+        [-0.85, 0.85].forEach((z) => {
+          const fila = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.05, 1.3), matSolar);
+          fila.position.set(0, 0.95, z);
+          fila.rotation.x = -0.5;
+          g.add(fila);
+          [-1.4, 1.4].forEach((x) => {
+            const pata = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.95, 0.08), matMetal);
+            pata.position.set(x, 0.47, z);
+            g.add(pata);
+          });
+        });
+        g.add(crearSombraContacto(tex.sombraContacto, 2.2));
+      }
       break;
     }
 
     case 'reactor': {
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.35, 1.5, 0.3, 12), matOscuro);
-      base.position.y = 0.15;
-      const nucleo = new THREE.Mesh(new THREE.CylinderGeometry(0.65, 0.72, 1.9, 16), matMetal);
-      nucleo.position.y = 1.2;
-      const tapaFoil = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.66, 0.28, 14), matFoil);
-      tapaFoil.position.y = 2.25;
-      const anillo = new THREE.Mesh(
-        new THREE.TorusGeometry(0.74, 0.08, 10, 24),
-        new THREE.MeshStandardMaterial({
-          color: 0x4cd7a1,
-          emissive: 0x32b886,
-          emissiveIntensity: 1.15,
-          roughness: 0.2,
-        }),
-      );
-      anillo.rotation.x = Math.PI / 2;
-      anillo.position.y = 1.45;
+      // Fission Surface Power: reactor de 40 kW con radiadores desplegables de herencia ISS. La NASA lo coloca a 1 km
+      // de la base; aquí está más cerca para que se pueda visitar, y los radiadores son más pequeños.
+      // https://www.nasa.gov/exploration-systems-development-mission-directorate/fission-surface-power/
+      // https://ntrs.nasa.gov/citations/20220004670
+      const cubierta = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 6), matOscuro);
+      cubierta.position.y = 1.2;
       for (let i = 0; i < 4; i++) {
-        const aleta = new THREE.Mesh(new THREE.BoxGeometry(0.09, 1.65, 0.92), matAcento);
         const ang = (i * Math.PI) / 2 + Math.PI / 4;
-        aleta.position.set(Math.cos(ang) * 0.96, 1.25, Math.sin(ang) * 0.96);
-        aleta.rotation.y = -ang;
-        g.add(aleta);
+        const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1.3, 8), matMetal);
+        pata.position.set(Math.cos(ang) * 1.2, 0.62, Math.sin(ang) * 1.2);
+        const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.26, 0.08, 10), matMetal);
+        pie.position.set(Math.cos(ang) * 1.3, 0.04, Math.sin(ang) * 1.3);
+        g.add(pata, pie);
       }
-      g.add(base, nucleo, tapaFoil, anillo, crearSombraContacto(tex.sombraContacto, 1.95));
+      // El escudo cónico bajo el núcleo protege de la radiación del reactor.
+      const escudo = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.45, 0.9, 14), matOscuro);
+      escudo.position.y = 1.8;
+      const nucleo = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.1, 14), matFoil);
+      nucleo.position.y = 2.8;
+      const conversores = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.5, 12), matMetal);
+      conversores.position.y = 3.6;
+      const mastil = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4.4, 8), matMetal);
+      mastil.position.y = 5.9;
+      g.add(cubierta, escudo, nucleo, conversores, mastil);
+      // Radiadores blancos a los dos lados, de canto al Sol.
+      const matRadiador = new THREE.MeshStandardMaterial({ color: 0xe9ecf1, roughness: 0.55, metalness: 0.2 });
+      [-1, 1].forEach((lado) => {
+        const radiador = new THREE.Mesh(new THREE.BoxGeometry(2.6, 3.6, 0.06), matRadiador);
+        radiador.position.set(lado * 1.45, 5.6, 0);
+        const tubo = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.08, 0.1), matMetal);
+        tubo.position.set(lado * 1.45, 7.45, 0);
+        g.add(radiador, tubo);
+      });
+      g.add(crearSombraContacto(tex.sombraContacto, 2.2));
       break;
     }
 
     case 'invernadero': {
-      const base = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.35, 2.4), matOscuro);
-      base.position.y = 0.175;
-      const cultivoMat = new THREE.MeshStandardMaterial({
-        map: tex.cultivoAlbedo,
-        normalMap: tex.cultivoNormal,
-        normalScale: new THREE.Vector2(1.1, 1.1),
-        roughness: 0.78,
-      });
-      const cama1 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.36, 0.72), cultivoMat);
-      cama1.position.set(0, 0.52, -0.5);
-      const cama2 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.36, 0.72), cultivoMat);
-      cama2.position.set(0, 0.52, 0.5);
-      const luzUv = new THREE.Mesh(
-        new THREE.BoxGeometry(2.4, 0.06, 0.18),
-        new THREE.MeshBasicMaterial({ color: 0xd980fa }),
-      );
-      luzUv.position.set(0, 1.32, 0);
-      const domo = new THREE.Mesh(
-        new THREE.CylinderGeometry(1.15, 1.15, 3.0, 14, 1, false, 0, Math.PI),
-        new THREE.MeshPhysicalMaterial({
-          color: 0xd0ffe8,
-          roughness: 0.08,
-          clearcoat: 1,
+      // Invernadero inflable y desplegable, como el prototipo lunar de la Universidad de Arizona con la NASA:
+      // un cilindro tumbado con los cultivos dentro y tapas rígidas en los extremos.
+      // https://www.nasa.gov/science-research/lunar-martian-greenhouses-designed-to-mimic-those-on-earth/
+      const largo = 5;
+      const radio = 1.25;
+      const membrana = new THREE.Mesh(
+        new THREE.CylinderGeometry(radio, radio, largo, 20, 1, true),
+        new THREE.MeshStandardMaterial({
+          color: 0xf4f1e8,
+          roughness: 0.6,
           transparent: true,
-          opacity: isSoftwareGl ? 0.34 : 0.38,
+          opacity: isSoftwareGl ? 0.45 : 0.4,
+          side: THREE.DoubleSide,
           depthWrite: false,
         }),
       );
-      domo.rotation.z = Math.PI / 2;
-      domo.rotation.y = Math.PI / 2;
-      domo.position.y = 0.35;
-      const arco = new THREE.Mesh(new THREE.TorusGeometry(1.17, 0.05, 8, 18, Math.PI), matMetal);
-      arco.position.set(0, 0.35, 0);
-      arco.rotation.y = Math.PI / 2;
-      g.add(base, cama1, cama2, luzUv, domo, arco, crearSombraContacto(tex.sombraContacto, 2.15));
-      break;
-    }
-
-    case 'reciclador': {
-      const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.26, 1.8), matOscuro);
-      base.position.y = 0.13;
-      const matAgua = new THREE.MeshPhysicalMaterial({
-        color: 0x38bdf8,
-        emissive: 0x0b4c75,
-        emissiveIntensity: 0.6,
-        roughness: 0.12,
-        metalness: 0.2,
-        clearcoat: 1,
+      membrana.rotation.z = Math.PI / 2;
+      membrana.position.y = radio;
+      for (let i = 0; i <= 4; i++) {
+        const costilla = new THREE.Mesh(new THREE.TorusGeometry(radio + 0.02, 0.04, 6, 24), matMetal);
+        costilla.rotation.y = Math.PI / 2;
+        costilla.position.set(-largo / 2 + (i * largo) / 4, radio, 0);
+        g.add(costilla);
+      }
+      [-1, 1].forEach((lado) => {
+        const tapa = new THREE.Mesh(new THREE.CylinderGeometry(radio + 0.05, radio + 0.05, 0.25, 20), matMetal);
+        tapa.rotation.z = Math.PI / 2;
+        tapa.position.set(lado * (largo / 2 + 0.12), radio, 0);
+        g.add(tapa);
       });
-      const tanque1 = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 1.9, 16), matMetal);
-      tanque1.position.set(-0.6, 1.15, 0);
-      const tanque2 = new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.52, 1.9, 16), matAgua);
-      tanque2.position.set(0.6, 1.15, 0);
-      const aro = new THREE.Mesh(new THREE.CylinderGeometry(0.54, 0.54, 0.16, 16), matMetal);
-      aro.position.set(0.6, 1.15, 0);
-      const tubo = new THREE.Mesh(
-        new THREE.TorusGeometry(0.6, 0.11, 10, 20, Math.PI),
-        matAcento,
-      );
-      tubo.position.set(0, 2.1, 0);
-      g.add(base, tanque1, tanque2, aro, tubo, crearSombraContacto(tex.sombraContacto, 1.8));
+      // Dentro: dos bancales de cultivo y las barras de luz encima.
+      const matPlanta = new THREE.MeshStandardMaterial({
+        map: tex.cultivoAlbedo,
+        normalMap: tex.cultivoNormal,
+        color: 0x7fd36b,
+        emissive: 0x1d4a14,
+        emissiveIntensity: 0.5,
+        roughness: 0.8,
+      });
+      const matLuz = new THREE.MeshBasicMaterial({ color: 0xfff1d6 });
+      [-0.55, 0.55].forEach((z) => {
+        const bancal = new THREE.Mesh(new THREE.BoxGeometry(largo - 0.6, 0.5, 0.6), matPlanta);
+        bancal.position.set(0, 0.45, z);
+        const luz = new THREE.Mesh(new THREE.BoxGeometry(largo - 0.8, 0.04, 0.12), matLuz);
+        luz.position.set(0, 1.85, z);
+        g.add(bancal, luz);
+      });
+      g.add(membrana, crearSombraContacto(tex.sombraContacto, 2.6));
       break;
     }
 
     case 'blindaje': {
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.8, 0.25, 6), matOscuro);
-      base.position.y = 0.125;
-      const muro1 = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.65, 0.35), matMetal);
-      muro1.position.set(0, 1.0, -0.7);
-      const muro2 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.45, 0.35), matAcento);
-      muro2.position.set(-1.1, 0.9, 0.2);
-      muro2.rotation.y = Math.PI / 3;
-      const muro3 = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.45, 0.35), matAcento);
-      muro3.position.set(1.1, 0.9, 0.2);
-      muro3.rotation.y = -Math.PI / 3;
-      g.add(base, muro1, muro2, muro3, crearSombraContacto(tex.sombraContacto, 2.0));
-      break;
-    }
-
-    case 'zona-descanso': {
-      const soporte1 = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 1.55), matOscuro);
-      soporte1.position.set(-0.9, 0.21, 0);
-      const soporte2 = soporte1.clone();
-      soporte2.position.x = 0.9;
-      const modulo = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.95, 2.7, 18), matMetal);
-      modulo.rotation.z = Math.PI / 2;
-      modulo.position.y = 1.2;
-      const anillo1 = new THREE.Mesh(new THREE.CylinderGeometry(0.98, 0.98, 0.18, 18), matAcento);
-      anillo1.rotation.z = Math.PI / 2;
-      anillo1.position.set(-0.9, 1.2, 0);
-      const anillo2 = anillo1.clone();
-      anillo2.position.x = 0.9;
-      const ventanaMat = new THREE.MeshBasicMaterial({ color: 0xf9ca5c });
-      const marcoMat = matOscuro;
-      [-0.48, 0.48].forEach((vx) => {
-        const marco = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.08, 14), marcoMat);
-        marco.rotation.x = Math.PI / 2;
-        marco.position.set(vx, 1.25, 0.93);
-        const cristal = new THREE.Mesh(new THREE.CircleGeometry(0.22, 14), ventanaMat);
-        cristal.position.set(vx, 1.25, 0.98);
-        g.add(marco, cristal);
+      // Berma de sacos de regolito: el suelo del sitio, en sacos apilados, frena la radiación. Los sacos pesan menos
+      // por volumen que el regolito suelto y necesitan una capa más gruesa (estudio Lunar Safe Haven, NASA 2021).
+      // https://ntrs.nasa.gov/api/citations/20210022066/downloads/Grande_Lunar%20Safe%20Haven_ASCEND%202021_Full_v2b.docx.pdf
+      const matSaco = new THREE.MeshStandardMaterial({
+        color: destino === 'luna' ? 0x9c9b95 : 0xa45f3f,
+        roughness: 0.95,
+        metalness: 0,
       });
-      g.add(soporte1, soporte2, modulo, anillo1, anillo2, crearSombraContacto(tex.sombraContacto, 1.9));
+      const geoSaco = new RoundedBoxGeometry(0.85, 0.36, 0.6, 2, 0.14);
+      const filas = 4;
+      for (let fila = 0; fila < filas; fila++) {
+        const n = 6 - Math.floor(fila / 2);
+        for (let i = 0; i < n; i++) {
+          // Arco de unos 100 grados, cóncavo hacia la base; cada fila desplazada medio saco y algo torcida.
+          const ang = -0.85 + ((i + (fila % 2) * 0.5) / 5.5) * 1.7;
+          const saco = new THREE.Mesh(geoSaco, matSaco);
+          saco.position.set(Math.sin(ang) * 2.3, 0.18 + fila * 0.34, -Math.cos(ang) * 2.3 + 1.6);
+          saco.rotation.set(0, -ang + ((i * 7 + fila * 3) % 5) * 0.04 - 0.08, ((i + fila) % 3) * 0.03);
+          g.add(saco);
+        }
+      }
+      g.add(crearSombraContacto(tex.sombraContacto, 2.2));
       break;
     }
 
+    case 'reciclador':
+    case 'zona-descanso':
     case 'gimnasio': {
-      const base = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.28, 2.0), matOscuro);
-      base.position.y = 0.14;
-      const arco1 = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.1, 10, 20, Math.PI), matAcento);
-      arco1.position.set(0, 0.3, -0.5);
-      const arco2 = arco1.clone();
-      arco2.position.z = 0.5;
-      const cinta = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.24, 0.8), matMetal);
-      cinta.position.set(0, 0.4, 0);
-      const volante = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.14, 16), matFoil);
-      volante.rotation.z = Math.PI / 2;
-      volante.position.set(0.5, 0.78, 0);
-      g.add(base, arco1, arco2, cinta, volante, crearSombraContacto(tex.sombraContacto, 1.9));
+      crearModuloPresurizado(g, itemId, tex);
       break;
     }
 
@@ -811,30 +806,211 @@ export function crearModulo3D(itemId: string, tex: ConjuntoTexturas, isSoftwareG
 
     case 'surveyor-3':
     default: {
-      const chasis = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 0.45, 6), matMetal);
-      chasis.position.y = 0.85;
-      for (let i = 0; i < 3; i++) {
-        const ang = (i * Math.PI * 2) / 3;
-        const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.05, 8), matMetal);
-        pata.position.set(Math.cos(ang) * 0.72, 0.45, Math.sin(ang) * 0.72);
-        pata.rotation.z = Math.cos(ang) * 0.45;
-        pata.rotation.x = -Math.sin(ang) * 0.45;
-        const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.08, 10), matFoil);
-        pie.position.set(Math.cos(ang) * 0.96, 0.04, Math.sin(ang) * 0.96);
-        g.add(pata, pie);
-      }
-      const mastil = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 1.3, 8), matMetal);
-      mastil.position.y = 1.65;
-      const panel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.7), matSolar);
-      panel.position.set(0, 2.3, 0);
-      panel.rotation.x = 0.3;
-      const camara = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.42, 0.28), matFoil);
-      camara.position.set(0.32, 1.38, 0.32);
-      g.add(chasis, mastil, panel, camara, crearSombraContacto(tex.sombraContacto, 1.4));
+      // A escala real según la NSSDCA (https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1967-035A):
+      // trípode de tubo de aluminio, mástil de 1 m sobre el vértice, unos 3 m de alto, patas de 4,3 m de punta a punta,
+      // panel solar de 0,855 m² y antena plana arriba, dos compartimentos térmicos, cámara de TV cerca del vértice y
+      // pala de 12 × 5 cm en un brazo de 1,5 m. La forma sigue la foto del Apolo 12 (public/img/surveyor-3.webp).
+      const matBlanco = new THREE.MeshStandardMaterial({ color: 0xd8d4c8, roughness: 0.7, metalness: 0.1 });
+      const matAntena = new THREE.MeshStandardMaterial({ color: 0xc9cdd4, roughness: 0.45, metalness: 0.55 });
+      const tubo = (a: THREE.Vector3, b: THREE.Vector3, radio = 0.03, mat: THREE.Material = matMetal) => {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(radio, radio, a.distanceTo(b), 8), mat);
+        m.position.copy(a).lerp(b, 0.5);
+        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+        g.add(m);
+      };
+      const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
+      const enAngulo = (ang: number, r: number, y: number) => v(Math.cos(ang) * r, y, Math.sin(ang) * r);
+      const angulos = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3].map((a) => a + Math.PI / 2);
+
+      // Trípode: tres esquinas abajo unidas entre sí y con el vértice, con riostras.
+      const vertice = v(0, 2.0, 0);
+      const esquinas = angulos.map((ang) => enAngulo(ang, 0.85, 0.7));
+      esquinas.forEach((e, i) => {
+        const siguiente = esquinas[(i + 1) % 3];
+        tubo(e, vertice);
+        tubo(e, siguiente);
+        tubo(e.clone().lerp(vertice, 0.5), siguiente.clone().lerp(vertice, 0.5), 0.02);
+      });
+
+      // Patas articuladas en las esquinas, con amortiguador y pie redondo que se aplasta al tocar el suelo.
+      angulos.forEach((ang, i) => {
+        const pie = enAngulo(ang, 2.15, 0.12);
+        tubo(esquinas[i], pie, 0.035);
+        tubo(enAngulo(ang, 0.45, 1.25), esquinas[i].clone().lerp(pie, 0.55), 0.045, matOscuro);
+        const zapata = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.12, 14), matBlanco);
+        zapata.position.copy(pie).setY(0.06);
+        g.add(zapata);
+      });
+
+      // Mástil con el panel solar inclinado y la antena plana casi vertical.
+      tubo(vertice, v(0, 3.0, 0), 0.035);
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.03, 0.93), matSolar);
+      panel.position.set(0.25, 3.0, 0);
+      panel.rotation.z = -0.35;
+      const antena = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.62, 0.06), matAntena);
+      antena.position.set(-0.45, 2.75, 0.05);
+      antena.rotation.y = 0.5;
+      antena.rotation.x = -0.2;
+      tubo(v(0, 2.8, 0), antena.position.clone(), 0.02);
+
+      // Dos compartimentos térmicos blancos colgados del trípode.
+      [0, 1].forEach((k) => {
+        const e = esquinas[k].clone().lerp(esquinas[(k + 1) % 3], 0.5);
+        const caja = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.36, 0.46), matBlanco);
+        caja.position.copy(e).multiplyScalar(1.25).setY(0.95);
+        caja.lookAt(0, 0.95, 0);
+        g.add(caja);
+      });
+
+      // Cámara de TV cerca del vértice: cilindro con el espejo en una capucha inclinada.
+      const camara = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.5, 12), matBlanco);
+      const posCamara = enAngulo(angulos[2] + 0.5, 0.4, 1.6);
+      camara.position.copy(posCamara);
+      const capucha = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.22, 12), matMetal);
+      capucha.position.copy(posCamara).setY(1.95);
+      capucha.rotation.z = 0.5;
+      g.add(camara, capucha);
+
+      // Brazo de la pala (pantógrafo de 1,5 m) estirado hacia el suelo, con la pala al final.
+      const hombro = enAngulo(angulos[1] + 0.6, 0.6, 0.85);
+      const punta = enAngulo(angulos[1] + 0.6, 2.05, 0.2);
+      tubo(hombro, punta, 0.025);
+      tubo(hombro.clone().setY(0.75), punta.clone().setY(0.14), 0.02);
+      const pala = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.05), matOscuro);
+      pala.position.copy(punta).setY(0.1);
+      g.add(pala);
+
+      // Motores vernier bajo el trípode.
+      esquinas.forEach((e) => {
+        const tobera = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.2, 10, 1, true), matOscuro);
+        tobera.position.copy(e).setY(0.55);
+        g.add(tobera);
+      });
+
+      g.add(panel, antena, crearSombraContacto(tex.sombraContacto, 2.4));
       break;
     }
   }
 
+  habilitarSombras(g);
+  return g;
+}
+
+// Módulos que en una base real estarían presurizados (dentro no se lleva traje): cilindro tumbado sobre patas,
+// unido al hábitat por un túnel. El eje va en X; la escotilla del túnel mira a +Z (hacia el hábitat) y la ventana
+// grande a -Z (hacia fuera), para ver el interior desde el exterior.
+export const MODULO_PRESURIZADO = { radio: 1.1, largo: 4, altoEje: 1.55, radioTunel: 0.6 };
+export const MODULOS_PRESURIZADOS = new Set(['reciclador', 'zona-descanso', 'gimnasio']);
+
+const FRANJA_PRESURIZADO: Record<string, number> = {
+  reciclador: 0x4cd7a1,
+  'zona-descanso': 0x9b8cf5,
+  gimnasio: 0xf5b942,
+};
+
+function crearModuloPresurizado(g: THREE.Group, itemId: string, tex: ConjuntoTexturas) {
+  const { matMetal, matOscuro } = crearMaterialesBase(tex);
+  const { radio, largo, altoEje } = MODULO_PRESURIZADO;
+  const horizontal = (m: THREE.Mesh, x = 0) => {
+    m.rotation.z = Math.PI / 2;
+    m.position.set(x, altoEje, 0);
+    g.add(m);
+  };
+
+  // Casco: dos tramos enteros en los extremos y uno central con el hueco de la ventana (centrado en -Z).
+  // Con el eje en X, el ángulo θ de CylinderGeometry pone el punto en (y, z) = (r·sen θ, r·cos θ): -Z es θ = π.
+  const centroVentana = Math.PI - 0.15;
+  const hueco = 1.3;
+  const tramo = (largo - 2) / 2;
+  horizontal(new THREE.Mesh(new THREE.CylinderGeometry(radio, radio, tramo, 20), matMetal), -1 - tramo / 2);
+  horizontal(new THREE.Mesh(new THREE.CylinderGeometry(radio, radio, tramo, 20), matMetal), 1 + tramo / 2);
+  horizontal(
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(radio, radio, 2, 20, 1, true, centroVentana + hueco / 2, Math.PI * 2 - hueco),
+      new THREE.MeshStandardMaterial({ map: tex.metalHullAlbedo, roughness: 0.72, metalness: 0.68, side: THREE.DoubleSide }),
+    ),
+  );
+  horizontal(
+    new THREE.Mesh(
+      new THREE.CylinderGeometry(radio, radio, 2, 8, 1, true, centroVentana - hueco / 2, hueco),
+      new THREE.MeshStandardMaterial({ color: 0x9fc6e8, transparent: true, opacity: 0.22, roughness: 0.05, depthWrite: false }),
+    ),
+  );
+  // Tapas redondeadas y franjas del color de su sistema.
+  [-1, 1].forEach((lado) => {
+    const tapa = new THREE.Mesh(new THREE.SphereGeometry(radio, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), matMetal);
+    tapa.rotation.z = -lado * (Math.PI / 2);
+    tapa.position.set((lado * largo) / 2, altoEje, 0);
+    tapa.scale.y = 0.35;
+    const franja = new THREE.Mesh(
+      new THREE.CylinderGeometry(radio + 0.02, radio + 0.02, 0.18, 20),
+      new THREE.MeshStandardMaterial({ color: FRANJA_PRESURIZADO[itemId] ?? 0xf5b942, roughness: 0.5 }),
+    );
+    horizontal(franja, lado * 1.1);
+    const pata = new THREE.Mesh(new THREE.BoxGeometry(0.25, altoEje - radio + 0.3, 1.6), matOscuro);
+    pata.position.set(lado * 1.3, (altoEje - radio + 0.3) / 2, 0);
+    g.add(tapa, pata);
+  });
+  // Escotilla del túnel hacia el hábitat.
+  const escotilla = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.66, 0.2, 16), matOscuro);
+  escotilla.rotation.x = Math.PI / 2;
+  escotilla.position.set(0, altoEje, radio - 0.02);
+  g.add(escotilla);
+
+  // Interior iluminado, visible por la ventana: suelo, pared del fondo y el equipo de cada módulo.
+  const matInterior = new THREE.MeshStandardMaterial({ color: 0xe9e4d6, emissive: 0x6b5a3a, emissiveIntensity: 0.55 });
+  const suelo = new THREE.Mesh(new THREE.BoxGeometry(largo - 0.4, 0.05, 1.5), matInterior);
+  suelo.position.set(0, altoEje - 0.65, 0);
+  g.add(suelo);
+  const equipo = (w: number, h: number, d: number, color: number, x: number, y: number, z: number) => {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.25, roughness: 0.6 }),
+    );
+    m.position.set(x, altoEje - 0.62 + y, z);
+    g.add(m);
+  };
+  if (itemId === 'zona-descanso') {
+    // Literas: dos camas, una sobre otra, y una luz cálida.
+    equipo(1.7, 0.2, 0.7, 0x6d7fd1, -0.3, 0.25, 0.25);
+    equipo(1.7, 0.2, 0.7, 0x6d7fd1, -0.3, 0.85, 0.25);
+    equipo(0.1, 1.1, 0.7, 0xbfc4cc, -1.2, 0.55, 0.25);
+    equipo(0.6, 0.06, 0.3, 0xfff1d6, 0.9, 1.25, 0);
+  } else if (itemId === 'gimnasio') {
+    // Cinta de correr con arnés, como la de la ISS, y una bicicleta estática.
+    equipo(1.5, 0.2, 0.7, 0x3b4863, -0.4, 0.1, 0.1);
+    equipo(0.08, 1.0, 0.08, 0xbfc4cc, -1.1, 0.6, 0.1);
+    equipo(0.08, 0.08, 0.7, 0xbfc4cc, -1.1, 1.1, 0.1);
+    equipo(0.5, 0.5, 0.12, 0xf5b942, 0.9, 0.35, 0.1);
+    equipo(0.1, 0.7, 0.1, 0xbfc4cc, 1.1, 0.45, 0.1);
+  } else {
+    // Reciclador: bastidores del sistema de soporte vital, con luces de estado.
+    [-1.1, -0.35, 0.4].forEach((x) => equipo(0.6, 1.15, 0.5, 0xd9dde4, x, 0.6, 0.35));
+    [-1.1, -0.35, 0.4].forEach((x) => equipo(0.3, 0.06, 0.02, 0x4cd7a1, x, 0.9, 0.09));
+    // Fuera: depósitos de agua junto a un extremo.
+    [-0.45, 0.45].forEach((z) => {
+      const deposito = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 1.6, 14), matMetal);
+      deposito.position.set(largo / 2 + 0.7, 0.8, z);
+      g.add(deposito);
+    });
+  }
+  g.add(crearSombraContacto(tex.sombraContacto, 2.4));
+}
+
+// Túnel presurizado de `largo` metros entre el hábitat y un módulo: a lo largo de +Z, con aros cada metro.
+export function crearTunel3D(largo: number, tex: ConjuntoTexturas): THREE.Group {
+  const g = new THREE.Group();
+  const { matMetal, matOscuro } = crearMaterialesBase(tex);
+  const r = MODULO_PRESURIZADO.radioTunel;
+  const tubo = new THREE.Mesh(new THREE.CylinderGeometry(r, r, largo, 14, 1, true), matMetal);
+  tubo.rotation.x = Math.PI / 2;
+  tubo.position.z = largo / 2;
+  g.add(tubo);
+  for (let z = 0.5; z < largo; z += 1) {
+    const aro = new THREE.Mesh(new THREE.TorusGeometry(r + 0.02, 0.05, 6, 16), matOscuro);
+    aro.position.z = z;
+    g.add(aro);
+  }
   habilitarSombras(g);
   return g;
 }

@@ -35,7 +35,7 @@ import { ResumenDia } from './ResumenDia';
 import { SecuenciaLlegada } from './SecuenciaLlegada';
 import type { EntradaTactil3D, EstadoTelemetria3D } from '../../three/EscenaPlaneta';
 import { describirConsecuencia, describirRiesgo } from '../comun/efectos';
-import { porcentajeDosis } from '../comun/formato';
+import { numero, porcentajeDosis } from '../comun/formato';
 import { PanelSalud } from '../salud/PanelSalud';
 
 type EstadoJuego = Extract<EstadoApp, { fase: 'juego' }>;
@@ -140,7 +140,7 @@ export function PantallaJuego({
   useEffect(() => {
     setResumenListo(false);
     if (!estado.resumen) return;
-    // Sin tareas (día de descanso) la tripulación no salió: el resumen sale sin esperar a la entrada.
+    // Sin tareas (se quedó dentro) la tripulación no salió: el resumen sale sin esperar a la entrada.
     const sinEntrada = movimientoReducido() || estado.resumen.tareas.length === 0;
     const t = window.setTimeout(() => setResumenListo(true), sinEntrada ? 0 : ESPERA_ENTRADA_MS);
     return () => window.clearTimeout(t);
@@ -293,8 +293,10 @@ export function PantallaJuego({
 
   return (
     <main className="relative z-10 h-screen w-screen overflow-hidden pointer-events-none flex flex-col justify-between p-2.5 sm:p-4">
-      <header className={`${estado.llegada || estado.dato ? 'invisible' : ''} pointer-events-auto rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 px-3 py-2 flex flex-wrap items-center justify-between gap-2 shadow-xl`}>
-        <div className="flex items-center gap-3">
+      <header className={`${estado.llegada || estado.dato ? 'invisible' : ''} pointer-events-auto rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 p-2 flex flex-wrap items-stretch justify-between gap-2 shadow-xl`}>
+        {/* Tres grupos: misión, recursos y acciones. En pantallas estrechas, los recursos bajan a su propia fila. */}
+        <div role="group" aria-label="Misión" className="rounded-lg border border-[var(--color-border)] bg-[#141b34]/70 px-2.5 py-1 flex flex-col justify-center">
+          <div className="flex items-center gap-3">
           <div className="font-mono tabular-nums text-sm sm:text-base font-bold text-[var(--color-text)] whitespace-nowrap">
             Día {partida.turno} / {partida.config.turnos}
           </div>
@@ -309,6 +311,7 @@ export function PantallaJuego({
               {relojPausado && <span className="text-xs font-normal text-[var(--color-text-muted)]">(pausa)</span>}
             </div>
           )}
+          </div>
           <div className={`${esTactil ? 'hidden' : 'hidden md:flex'} items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono`}>
             <span>
               {partida.config.destino === 'luna' ? 'Luna' : 'Marte'} ({telemetria.gravedad} m/s²)
@@ -321,19 +324,23 @@ export function PantallaJuego({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        <div
+          role="group"
+          aria-label="Recursos"
+          className="rounded-lg border border-[var(--color-border)] bg-[#141b34]/70 px-1.5 py-1 flex flex-wrap items-center gap-1 max-sm:order-last max-sm:basis-full max-sm:justify-between"
+        >
           {indicadoresGlobales.map(({ id, etiqueta, valor, delta, Icono, critico }) => (
             <div
               key={id}
               title={etiqueta}
-              className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-xs ${
+              className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs ${
                 critico
                   ? 'border-[var(--color-danger)] bg-[#2a1520] text-[var(--color-danger)]'
-                  : 'border-[var(--color-border)] bg-[#141b34] text-[var(--color-text)]'
+                  : 'border-transparent text-[var(--color-text)]'
               }`}
             >
               <Icono className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              <span className={`${esTactil ? 'hidden' : 'hidden sm:inline'} text-[var(--color-text-muted)]`}>{etiqueta}</span>
+              <span className={`${esTactil ? 'sr-only' : 'sr-only xl:not-sr-only'} text-[var(--color-text-muted)]`}>{etiqueta}</span>
               <span className="font-mono tabular-nums font-bold">{valor}</span>
               {delta !== undefined && delta !== 0 && (
                 <span
@@ -341,24 +348,22 @@ export function PantallaJuego({
                     delta > 0 ? 'text-[var(--color-ok)]' : 'text-[var(--color-warn)]'
                   }`}
                 >
-                  {delta > 0 ? `+${delta}` : delta}
+                  {delta > 0 ? `+${numero(delta)}` : numero(delta)}
                 </span>
               )}
             </div>
           ))}
 
-          <div
-            title="Dosis de radiación"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border)] bg-[#141b34] px-2 py-1 text-xs"
-          >
+          <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-[var(--color-border-strong)]" />
+          <div title="Dosis de radiación" className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs">
             <Radio className={`w-3.5 h-3.5 ${colorDosis}`} aria-hidden="true" />
-            <span className="hidden sm:inline text-[var(--color-text-muted)]">Rad</span>
+            <span className="sr-only xl:not-sr-only text-[var(--color-text-muted)]">Rad</span>
             <span className={`font-mono tabular-nums font-bold ${colorDosis}`}>{dosisMediaPct}%</span>
           </div>
         </div>
 
         {(!esTactil || menuAbierto) && (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div role="group" aria-label="Acciones" className="rounded-lg border border-[var(--color-border)] bg-[#141b34]/70 p-1 flex flex-wrap items-center gap-1">
           <button
             type="button"
             onClick={() => {
@@ -394,6 +399,7 @@ export function PantallaJuego({
             </button>
           )}
 
+          <span aria-hidden="true" className="mx-0.5 h-6 w-px bg-[var(--color-border-strong)]" />
           <button
             type="button"
             onClick={toggleMute}

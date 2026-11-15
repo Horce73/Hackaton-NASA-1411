@@ -84,7 +84,7 @@ export interface Opcion {
   texto: string;
   efectos: EfectosTurno;
   tareas?: TareaOpcion[];
-  descanso?: boolean; // el día pasa al momento, sin salir: sin tareas, sin mantenimiento y sin muestreo
+  dentro?: boolean; // la tripulación no sale: el día pasa al momento, sin tareas, sin mantenimiento y sin muestreo
 }
 
 // Lo que sabe la NASA sobre una situación o lo que midió una misión, con su fuente.

@@ -211,6 +211,12 @@ Rejilla de 8 px. Radios de 12 px. Áreas táctiles de al menos 44 × 44 px. Máx
 - En la salud de la tripulación, la tarjeta de cada astronauta lleva un borde del color de su indicador más bajo.
 - Homenajes a «2001: Odisea del espacio», sin material de la película: el amanecer alineado, la fanfarria de Strauss
   sintetizada (obra de dominio público) y la voz de la compuerta. El monolito lunar se quitó.
+- Módulos de la base basados en conceptos de la NASA: los que en una base real estarían presurizados (reciclador,
+  gimnasio, zona de descanso) van unidos al hábitat por un túnel, con una ventana que deja ver el equipo de dentro y
+  una franja del color de su sistema.
+- Barra superior en tres grupos: misión (día, reloj, destino y ciencia), recursos (cuatro recursos y, separada, la
+  radiación) y acciones (Salud y NASA; sonido, ayuda y abortar). Por debajo de 1280 px los recursos muestran solo
+  icono y valor (el nombre queda para lectores de pantalla y en el tooltip); en móvil bajan a una fila propia.
 
 ## 11. Responsive
 

@@ -5,6 +5,7 @@ import type { Configuracion, Destino } from '../../engine/tipos';
 import { cargarPartida } from '../../state/guardado';
 import type { Accion } from '../../state/reducer';
 import { CODIGO_MISION, codigoMision, ParcheMision } from '../comun/EmblemaMision';
+import { BotonPantallaCompleta } from '../comun/PantallaCompleta';
 
 interface PantallaInicioProps {
   config: Configuracion;
@@ -213,15 +214,18 @@ export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
         </div>
 
         <div className="shrink-0 space-y-2 border-t border-[var(--color-border)] px-5 py-4 sm:px-6">
-          <button
+          <div className="flex gap-2">
+            <BotonPantallaCompleta className="min-h-[52px] min-w-[52px] rounded-xl" />
+            <button
             type="button"
             data-start="true"
             onClick={() => dispatch({ tipo: 'INICIAR' })}
-            className="w-full inline-flex items-center justify-center gap-2 min-h-[52px] rounded-xl bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] text-[var(--color-on-accent)] font-bold text-lg transition-colors cursor-pointer whitespace-nowrap"
+            className="flex-1 inline-flex items-center justify-center gap-2 min-h-[52px] rounded-xl bg-[var(--color-mars)] hover:bg-[var(--color-mars-hover)] text-[var(--color-on-accent)] font-bold text-lg transition-colors cursor-pointer whitespace-nowrap"
           >
             <span>Diseñar la base</span>
             <ArrowRight className="w-5 h-5" aria-hidden="true" />
           </button>
+          </div>
 
           {guardada && (
             <button

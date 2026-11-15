@@ -209,12 +209,12 @@ ajustarlo tras ensayar con cronómetro.
    rápido. Pulsar **2** y llevar a Marco, biólogo, al invernadero. **Terminar día**: la tripulación vuelve a entrar por
    la compuerta y sale el resumen del día; los módulos sin revisar no rinden. **Continuar** abre un dato curioso
    (Olympus Mons junto al Everest) y **Siguiente día** (RF-03, RF-04, RF-08, RF-13 a RF-17).
-5. **[0:30] Día 2, tormenta solar:** el panel dice que esto se midió con Curiosity. Caminar hasta Curiosity (a la
+5. **[0:30] Día 2, tormenta solar:** el panel dice que esto se midió con Curiosity. Pulsar **Salir a explorar**, caminar hasta Curiosity (a la
    izquierda, detrás de la base) y pulsar **E**: la cámara se acerca y el diálogo cuenta lo que midió su instrumento RAD.
    **Anotar en el cuaderno**: ahora las opciones tienen cifras. Elegir **Seguir trabajando fuera** y **Terminar día**
    para mostrar el riesgo (RF-17).
 6. **[0:35] Día 3:** abrir **Salud**: Curiosity avisa de la radiación antes de que sea peligrosa (RF-05).
-   Opcional: pulsar **Explorar 3D [H]** y caminar con WASD hasta un equipo de la NASA.
+   Opcional: pulsar **Salir a explorar** y caminar con WASD hasta un equipo de la NASA.
 7. **[0:35] Cierre:** **Abortar** y **Confirmar regreso** para abrir la bitácora con puntuación, tendencia e
    historias desbloqueadas (RF-06, RF-09).
 

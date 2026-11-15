@@ -31,6 +31,7 @@ import type { Archivo, Especialidad, Historia, Recursos, Tarea } from '../../eng
 import { datosDeLaMision } from '../../data/datosCuriosos';
 import { conocimientoDelDia, type Accion, type EstadoApp } from '../../state/reducer';
 import { LeyendaNegra } from '../comun/LeyendaNegra';
+import { BotonPantallaCompleta } from '../comun/PantallaCompleta';
 import { PantallaDato } from './PantallaDato';
 import { ResumenDia } from './ResumenDia';
 import { SecuenciaLlegada } from './SecuenciaLlegada';
@@ -163,10 +164,12 @@ export function PantallaJuego({
     if (esTactil) setPanelEventoAbierto(!claveDia);
     else if (!claveDia) setPanelEventoAbierto(true); // cada día empieza decidiendo, con la tripulación dentro
   }, [claveDia, esTactil]);
-  // Plegar el panel para explorar saca a la tripulación por la compuerta, aunque aún no se haya decidido.
-  useEffect(() => {
-    if (!panelEventoAbierto && !estado.tripulacionFuera && !estado.llegada) dispatch({ tipo: 'SALIR_TRIPULACION' });
-  }, [panelEventoAbierto, estado.tripulacionFuera, estado.llegada, dispatch]);
+  // Antes de decidir, la tripulación solo sale con «Salir a explorar» (para tomar notas del equipo histórico);
+  // plegar el panel solo lo oculta.
+  const salirAExplorar = () => {
+    dispatch({ tipo: 'SALIR_TRIPULACION' });
+    setPanelEventoAbierto(false);
+  };
   // Guiño a HAL 9000: el ordenador de la base anuncia la salida por la compuerta.
   const [vozCompuerta, setVozCompuerta] = useState<string | null>(null);
   const fueraAntes = useRef(estado.tripulacionFuera);
@@ -456,6 +459,8 @@ export function PantallaJuego({
         </div>
         )}
         {esTactil && (
+          <div className="flex items-start gap-2">
+          <BotonPantallaCompleta />
           <button
             type="button"
             onClick={() => setMenuAbierto((v) => !v)}
@@ -465,6 +470,7 @@ export function PantallaJuego({
           >
             {menuAbierto ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
           </button>
+          </div>
         )}
       </header>
 
@@ -678,7 +684,7 @@ export function PantallaJuego({
                 className="inline-flex items-center gap-1 min-h-[44px] px-2.5 rounded-lg border border-[var(--color-border)] bg-[#0b1020] text-xs font-semibold text-[var(--color-text)] hover:border-[var(--color-moon)] cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <span>
-                  {panelEventoAbierto ? (esTactil ? 'Ocultar' : 'Explorar 3D [H]') : plan ? 'Ver plan' : esTactil ? 'Decidir' : 'Decidir [H]'}
+                  {panelEventoAbierto ? (esTactil ? 'Ocultar' : 'Ocultar [H]') : plan ? 'Ver plan' : esTactil ? 'Decidir' : 'Decidir [H]'}
                 </span>
                 {panelEventoAbierto ? (
                   <ChevronDown className="w-4 h-4" aria-hidden="true" />
@@ -724,6 +730,16 @@ export function PantallaJuego({
                   misiones={conocimiento.misiones}
                   itemIds={partida.diseno.itemIds}
                 />
+                {!estado.tripulacionFuera && (
+                  <button
+                    type="button"
+                    onClick={salirAExplorar}
+                    className="w-full min-h-[44px] rounded-lg border border-[var(--color-border-strong)] bg-[#0b1020] px-3 py-2 text-left text-xs text-[var(--color-text-muted)] hover:border-[var(--color-moon)] cursor-pointer"
+                  >
+                    <span className="block text-sm font-semibold text-[var(--color-text)]">Salir a explorar</span>
+                    Antes de decidir: inspecciona el equipo NASA de tu base para anotar lo que midió.
+                  </button>
+                )}
                 <ul className="space-y-1.5">
                   {evento.opciones.map((op) => {
                     const falta = recursoQueFalta(partida, op.id);
@@ -767,7 +783,7 @@ export function PantallaJuego({
           />
         )}
 
-        {esTactil && !panelEventoAbierto && (
+        {esTactil && !panelEventoAbierto && estado.tripulacionFuera && (
           <div className="pointer-events-auto flex items-end justify-between w-full gap-2 shrink-0">
             <Joystick onCambio={onCambiarEntradaTactil} />
             <div className="flex flex-col items-end gap-2">
@@ -884,7 +900,7 @@ function ArchivoNasa({
       <span>
       <strong className="text-[var(--color-text)]">Sin cifras todavía.</strong>{' '}
       {traidas.length > 0
-        ? `Esto se midió con ${nombres(traidas)}: acércate en la base y pulsa E para anotarlo en tu cuaderno.`
+        ? `Esto se midió con ${nombres(traidas)}: pulsa «Salir a explorar», acércate y pulsa E para anotarlo en tu cuaderno.`
         : `Esto se midió con ${nombres(misiones)}, que no trajiste. Lo sabrás cuando lo vivas.`}
       </span>
     </p>

@@ -203,8 +203,8 @@ export function siguienteTurno(estado: Estado, opcionId: string, pendientes: Tar
     ),
   );
 
-  // 6. Ciencia. El muestreo diario suma si no quedó pendiente.
-  const muestreo = pendientes.some((t) => t.tipo === 'ciencia') ? 0 : CIENCIA_MUESTREO;
+  // 6. Ciencia. El muestreo diario suma si no quedó pendiente; un día de descanso no hay muestreo.
+  const muestreo = opcion.descanso || pendientes.some((t) => t.tipo === 'ciencia') ? 0 : CIENCIA_MUESTREO;
   const ciencia = Math.max(
     0,
     estado.ciencia + (efectos.ciencia ?? 0) + muestreo + Math.round(total('ciencia') * coberturaEnergia),

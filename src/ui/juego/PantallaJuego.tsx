@@ -140,7 +140,9 @@ export function PantallaJuego({
   useEffect(() => {
     setResumenListo(false);
     if (!estado.resumen) return;
-    const t = window.setTimeout(() => setResumenListo(true), movimientoReducido() ? 0 : ESPERA_ENTRADA_MS);
+    // Sin tareas (día de descanso) la tripulación no salió: el resumen sale sin esperar a la entrada.
+    const sinEntrada = movimientoReducido() || estado.resumen.tareas.length === 0;
+    const t = window.setTimeout(() => setResumenListo(true), sinEntrada ? 0 : ESPERA_ENTRADA_MS);
     return () => window.clearTimeout(t);
   }, [estado.resumen]);
   const [datosActivos, setDatosActivos] = useState(leerDatosActivos);

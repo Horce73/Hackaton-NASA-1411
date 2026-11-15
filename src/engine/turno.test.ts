@@ -73,10 +73,10 @@ test('el blindaje reduce la dosis del turno', () => {
 });
 
 test('el equipo histórico suma ciencia cada turno (RF-07)', () => {
-  const sin = siguienteTurno(conEvento(iniciarMision(marte, BASE_MARTE), 'dia-tranquilo'), 'descansar');
+  const sin = siguienteTurno(conEvento(iniciarMision(marte, BASE_MARTE), 'dia-tranquilo'), 'ejercicio');
   const con = siguienteTurno(
     conEvento(iniciarMision(marte, [...BASE_MARTE, 'curiosity']), 'dia-tranquilo'),
-    'descansar',
+    'ejercicio',
   );
   expect(sin.ciencia).toBe(CIENCIA_MUESTREO);
   expect(con.ciencia - sin.ciencia).toBe(3);
@@ -84,9 +84,9 @@ test('el equipo histórico suma ciencia cada turno (RF-07)', () => {
 
 test('el muestreo sin terminar no da ciencia', () => {
   const estado = conEvento(iniciarMision(marte, BASE_MARTE), 'dia-tranquilo');
-  const muestreo = tareasDelDia(estado, 'descansar').filter((t) => t.tipo === 'ciencia');
+  const muestreo = tareasDelDia(estado, 'ejercicio').filter((t) => t.tipo === 'ciencia');
   expect(muestreo).toHaveLength(1);
-  expect(siguienteTurno(estado, 'descansar', muestreo).ciencia).toBe(0);
+  expect(siguienteTurno(estado, 'ejercicio', muestreo).ciencia).toBe(0);
 });
 
 test('un evento educativo desbloquea su historia con cualquier opción', () => {

@@ -151,10 +151,7 @@ export const EVENTOS: Evento[] = [
         id: 'descansar',
         texto: 'Descansar',
         efectos: { salud: { suenoEstres: 10 } },
-        tareas: [
-          { estacion: 'zona-descanso', especialidad: 'medicina', trabajo: 8, etiqueta: 'Organizar el descanso' },
-          { estacion: 'habitat', especialidad: 'medicina', trabajo: 8, etiqueta: 'Revisión médica' },
-        ],
+        descanso: true,
       },
       {
         id: 'ejercicio',

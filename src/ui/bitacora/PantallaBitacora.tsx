@@ -146,7 +146,7 @@ export function PantallaBitacora({ partida, dispatch }: PantallaBitacoraProps) {
                 En esta partida no llevaste equipo histórico de la NASA.
               </p>
               <p className="text-sm text-[var(--color-text-muted)]">
-                Prueba en la siguiente misión a incluir equipo marcado con ★ en la pestaña «Equipo NASA».
+                Prueba en la siguiente misión a incluir equipo de la pestaña «Equipo NASA», el que lleva una estrella.
               </p>
             </div>
           ) : (

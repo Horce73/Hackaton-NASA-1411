@@ -195,8 +195,8 @@ https://horce73.github.io/Hackaton-NASA-1411/?seed=12 (en local, `npm run dev` y
 Recorrido comprobado en Chrome el 2026-11-14. Entre corchetes, el tiempo orientativo de cada paso (suma 3 min);
 ajustarlo tras ensayar con cronómetro.
 
-1. **[0:15] Inicio:** pulsar el preajuste **Marte** y **Empezar** (RF-01).
-2. **[0:30] Diseño:** enseñar el presupuesto, la pestaña **Equipo NASA** con Curiosity y la previsión técnica.
+1. **[0:15] Inicio:** elegir la misión **Marte** y pulsar **Diseñar la base** (RF-01). Destino, astronautas y duración se cambian en **Personalizar**.
+2. **[0:30] Diseño:** enseñar los créditos que quedan, la pestaña **Equipo NASA** con Curiosity y «Así aguantará tu base».
    Pulsar **Lanzar misión** (RF-02, RF-07).
 3. **[0:15] Llegada:** amanecer con el Sol alineado sobre la antena, la fanfarria y cuánto dura un sol en Marte.
    **Empezar la misión**. La tripulación espera dentro.

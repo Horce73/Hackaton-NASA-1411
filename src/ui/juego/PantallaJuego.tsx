@@ -13,6 +13,7 @@ import {
   Menu,
   Radio,
   Sparkles,
+  Star,
   Timer,
   Volume2,
   VolumeX,
@@ -293,9 +294,9 @@ export function PantallaJuego({
 
   return (
     <main className="relative z-10 h-screen w-screen overflow-hidden pointer-events-none flex flex-col justify-between p-2.5 sm:p-4">
-      <header className={`${estado.llegada || estado.dato ? 'invisible' : ''} pointer-events-auto rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 p-2 flex flex-wrap items-stretch justify-between gap-2 shadow-xl`}>
+      <header className={`${estado.llegada || estado.dato ? 'invisible' : ''} pointer-events-auto flex flex-wrap items-stretch justify-between gap-2`}>
         {/* Tres grupos: misión, recursos y acciones. En pantallas estrechas, los recursos bajan a su propia fila. */}
-        <div role="group" aria-label="Misión" className="rounded-lg border border-[var(--color-border)] bg-[#141b34]/70 px-2.5 py-1 flex flex-col justify-center">
+        <div role="group" aria-label="Misión" className="rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 shadow-[0_6px_18px_rgba(0,0,0,0.35)] px-2.5 py-1 flex flex-col justify-center">
           <div className="flex items-center gap-3">
           <div className="font-mono tabular-nums text-sm sm:text-base font-bold text-[var(--color-text)] whitespace-nowrap">
             Día {partida.turno} / {partida.config.turnos}
@@ -312,9 +313,9 @@ export function PantallaJuego({
             </div>
           )}
           </div>
-          <div className={`${esTactil ? 'hidden' : 'hidden md:flex'} items-center gap-2 text-xs text-[var(--color-text-muted)] font-mono`}>
-            <span>
-              {partida.config.destino === 'luna' ? 'Luna' : 'Marte'} ({telemetria.gravedad} m/s²)
+          <div className={`${esTactil ? 'hidden' : 'hidden md:flex'} items-center gap-2 text-xs text-[var(--color-text-muted)]`}>
+            <span title={`Gravedad: ${telemetria.gravedad} m/s²`}>
+              {partida.config.destino === 'luna' ? 'La Luna · pesas 6 veces menos' : 'Marte · pesas casi 3 veces menos'}
             </span>
             <span>·</span>
             <span className="inline-flex items-center gap-1 text-[var(--color-moon)]">
@@ -327,7 +328,7 @@ export function PantallaJuego({
         <div
           role="group"
           aria-label="Recursos"
-          className="rounded-lg border border-[var(--color-border)] bg-[#141b34]/70 px-1.5 py-1 flex flex-wrap items-center gap-1 max-sm:order-last max-sm:basis-full max-sm:justify-between"
+          className="rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 shadow-[0_6px_18px_rgba(0,0,0,0.35)] px-1.5 py-1 flex flex-wrap items-center gap-1 max-sm:order-last max-sm:basis-full max-sm:justify-between"
         >
           {indicadoresGlobales.map(({ id, etiqueta, valor, delta, Icono, critico }) => (
             <div
@@ -344,7 +345,7 @@ export function PantallaJuego({
               <span className="font-mono tabular-nums font-bold">{valor}</span>
               {delta !== undefined && delta !== 0 && (
                 <span
-                  className={`hidden xl:inline font-mono tabular-nums text-[11px] ${
+                  className={`hidden xl:inline font-mono tabular-nums text-xs ${
                     delta > 0 ? 'text-[var(--color-ok)]' : 'text-[var(--color-warn)]'
                   }`}
                 >
@@ -363,7 +364,7 @@ export function PantallaJuego({
         </div>
 
         {(!esTactil || menuAbierto) && (
-        <div role="group" aria-label="Acciones" className="rounded-lg border border-[var(--color-border)] bg-[#141b34]/70 p-1 flex flex-wrap items-center gap-1">
+        <div role="group" aria-label="Acciones" className="rounded-xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 shadow-[0_6px_18px_rgba(0,0,0,0.35)] p-1 flex flex-wrap items-center gap-1">
           <button
             type="button"
             onClick={() => {
@@ -535,7 +536,10 @@ export function PantallaJuego({
                     }}
                     className="text-left min-h-[42px] px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[#141b34] hover:border-[var(--color-warn)] text-sm text-[var(--color-text)] transition-colors cursor-pointer"
                   >
-                    ★ {hist.nombre}
+                    <span className="inline-flex items-center gap-1.5">
+                      <Star className="h-3.5 w-3.5 shrink-0 text-[var(--color-warn)]" aria-hidden="true" />
+                      {hist.nombre}
+                    </span>
                     <span className="block text-xs text-[var(--color-text-muted)]">
                       {estado.notas.includes(hId)
                         ? hist.medicion.dato
@@ -638,16 +642,19 @@ export function PantallaJuego({
           >
             <div className="flex items-center justify-between gap-2 px-3.5 py-2.5 bg-[#141b34] border-b border-[var(--color-border)]">
               <div className="min-w-0">
-                <div className="text-[11px] font-mono text-[var(--color-warn)] truncate">
-                  Parte diario · Día {partida.turno} ·{' '}
-                  {plan ? `${tareasHechasCount}/${tareas.length} tareas` : `${telemetria.nodosRestantes} extras 3D`}
-                </div>
                 <h1
                   id="titulo-evento-actual"
                   className="text-sm sm:text-base font-bold text-[var(--color-text)] truncate"
                 >
                   {evento.titulo}
                 </h1>
+                <p className="text-xs text-[var(--color-warn)] truncate tabular-nums">
+                  {plan
+                    ? `${tareasHechasCount} de ${tareas.length} tareas hechas`
+                    : telemetria.nodosRestantes > 0
+                      ? `Día ${partida.turno} · ${telemetria.nodosRestantes} ${telemetria.nodosRestantes === 1 ? 'cosa' : 'cosas'} por revisar fuera`
+                      : `Día ${partida.turno} · elige qué hacer hoy`}
+                </p>
               </div>
 
               {plan && !panelEventoAbierto && (
@@ -788,7 +795,7 @@ export function PantallaJuego({
                   className="h-20 w-24 rounded-2xl bg-[var(--color-mars)] text-[var(--color-on-accent)] font-bold shadow-xl active:scale-95 disabled:opacity-40 flex flex-col items-center justify-center px-1"
                 >
                   <span className="text-base">{telemetria.tareaCercana ? 'Trabajar' : telemetria.objetivoCercano ? 'Usar' : 'Acción'}</span>
-                  <span className="text-[10px] leading-tight line-clamp-2 text-center">
+                  <span className="text-xs leading-tight line-clamp-2 text-center">
                     {telemetria.tareaCercana?.etiqueta ?? telemetria.objetivoCercano?.etiqueta ?? 'Acércate a una tarea'}
                   </span>
                 </button>
@@ -853,22 +860,28 @@ function ArchivoNasa({
 }) {
   if (conocido) {
     return (
-      <p className="rounded-lg border border-[var(--color-ok)]/50 bg-[#0f241f] px-2.5 py-1.5 text-xs leading-snug text-[var(--color-text)]">
-        <strong>Archivo NASA:</strong> {archivo.dato}{' '}
+      <p className="flex gap-2 text-xs leading-snug text-[var(--color-text)]">
+        <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--color-ok)]" aria-hidden="true" />
+        <span>
+        <strong className="text-[var(--color-ok)]">Archivo NASA:</strong> {archivo.dato}{' '}
         <a href={archivo.fuente} target="_blank" rel="noreferrer" className="underline text-[var(--color-text-muted)]">
           Fuente
         </a>
+        </span>
       </p>
     );
   }
   const traidas = misiones.filter((id) => itemIds.some((item) => CATALOGO_POR_ID[item]?.historiaId === id));
   const nombres = (ids: string[]) => ids.map((id) => HISTORIAS_POR_ID[id]?.nombre ?? id).join(' o ');
   return (
-    <p className="rounded-lg border border-[var(--color-border)] bg-[#141b34] px-2.5 py-1.5 text-xs leading-snug text-[var(--color-text-muted)]">
+    <p className="flex gap-2 text-xs leading-snug text-[var(--color-text-muted)]">
+      <BookOpen className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span>
       <strong className="text-[var(--color-text)]">Sin cifras todavía.</strong>{' '}
       {traidas.length > 0
         ? `Esto se midió con ${nombres(traidas)}: acércate en la base y pulsa E para anotarlo en tu cuaderno.`
         : `Esto se midió con ${nombres(misiones)}, que no trajiste. Lo sabrás cuando lo vivas.`}
+      </span>
     </p>
   );
 }

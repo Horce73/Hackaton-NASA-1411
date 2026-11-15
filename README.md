@@ -185,6 +185,7 @@ se entrega eso con las fases 4 y 5 reducidas.
 | **Asumido:** las imágenes de NASA se pueden usar en la demo. | ¿Hay reglas de uso de imágenes en la hackatón? | Usar ilustraciones propias. | RF-08, RF-10. |
 | **Asumido:** los 3 preajustes de partida solo rellenan destino, tripulación y duración (RF-01): Luna fácil 2 y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14. El motor no tiene un campo de dificultad. | ¿Qué diferencia "Luna difícil" de "Luna fácil"? | Añadir `dificultad` a `Configuracion` y a `parametros.ts`. | Fase 2. |
 | **Asumido:** Curiosity adelanta la alerta de radiación (avisa en ámbar) pero no cambia la dosis. | ¿Debe cambiar también la simulación (por ejemplo, menos dosis en tormenta solar)? | Aplicarlo en `engine/turno.ts`. | Balance (fase 6). |
+| **Asumido:** no se puede usar la insignia de la NASA sin permiso (https://www.nasa.gov/nasa-brand-center/nasa-logo-use/); queda lista y apagada en el hábitat (`MOSTRAR_LOGO_NASA` en `src/three/modelos3d.ts`). | ¿La organización de Space Apps autoriza por escrito poner la insignia en el juego? | Copiar `RAW/logo nasa pe.png` a `public/img/logo-nasa.png` y poner el flag en `true`. | Nada: el juego funciona sin el logo. |
 | **Asumido:** cada evento afecta solo al turno en que ocurre. | ¿Hacen falta eventos que duren varios días? | Añadir efectos activos con duración al `Estado`. | Fase 3. |
 
 ## Guion de demo (3 minutos)
@@ -232,6 +233,6 @@ ajustarlo tras ensayar con cronómetro.
 | RNF-05 | Hecho (fase 6): 69 kB comprimidos al arrancar; el 3D (149 kB) se descarga aparte. Lighthouse rendimiento 57 móvil / 65 escritorio, medido con gráficos por software |
 | RF-12 | Hecho: la partida en curso se guarda en `localStorage` y el inicio ofrece "Continuar partida" |
 | RF-10 | No se hace (decidido, TRD sección 13) |
-| RF-13 a RF-16 | Hecho (fases 7 a 10): tripulación en 3D con selección 1–4, especialidades, tareas del día con avisos flotantes y reloj de 90 s (×2 o sin reloj), mantenimiento por módulo. Comprobado en Chrome; falta jugarlo con personas para ajustar tiempos |
+| RF-13 a RF-16 | Hecho (fases 7 a 10): tripulación en 3D con selección 1–4, especialidades, tareas del día con avisos flotantes y reloj de 90 s (×2 o sin reloj), mantenimiento por módulo; el trabajo crece con la tripulación y con los días. Comprobado en Chrome; falta jugarlo con personas para ajustar tiempos |
 | Textos con fuente | Historias y avisos verificados por el equipo el 2026-11-14; `npm run test:entrega` pasa |
 | Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

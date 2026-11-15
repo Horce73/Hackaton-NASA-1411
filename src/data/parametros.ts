@@ -85,6 +85,10 @@ export const ESPECIALIDADES: Record<Especialidad, { nombre: string; color: strin
 // Por eso cada módulo pide su tarea diaria y comprar de más sobrecarga a la tripulación.
 export const DURACION_DIA = 90; // PROVISIONAL, segundos de reloj por día
 export const RITMO_ESPECIALISTA = 2; // PROVISIONAL, el especialista trabaja el doble de rápido
+// PROVISIONAL: el trabajo de cada tarea se multiplica por (tripulantes / 2) y por una carga que sube del primer
+// al último día. Así cada tripulante extra trae su propio trabajo y el final de la misión no da para todo.
+export const CARGA_PRIMER_DIA = 1.4;
+export const CARGA_ULTIMO_DIA = 2.4;
 
 // Energía
 export const CAPACIDAD_ENERGIA = 100; // PROVISIONAL

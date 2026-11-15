@@ -1,7 +1,8 @@
 import { expect, test } from 'vitest';
 import { EVENTOS } from '../data/eventos';
-import { RITMO_ESPECIALISTA } from '../data/parametros';
-import { ritmoEquipo, ritmoTrabajo, tareasDelDia } from './tareas';
+import { CATALOGO_POR_ID } from '../data/catalogo';
+import { CARGA_PRIMER_DIA, CARGA_ULTIMO_DIA, RITMO_ESPECIALISTA } from '../data/parametros';
+import { cargaDelDia, ritmoEquipo, ritmoTrabajo, tareasDelDia } from './tareas';
 import { iniciarMision, siguienteTurno } from './turno';
 import type { Configuracion, Estado } from './tipos';
 
@@ -24,6 +25,18 @@ test('el día pide las tareas de la opción y una revisión por módulo, no por 
   ]);
   expect(new Set(tareas.map((t) => t.id)).size).toBe(tareas.length);
   expect(tareasDelDia(estado, 'usar-reservas').filter((t) => t.tipo === 'evento')).toEqual([]);
+});
+
+test('el trabajo crece con la tripulación y del primer al último día', () => {
+  const estado = conEvento(['reciclador'], 'fallo-equipo');
+  expect(cargaDelDia(estado)).toBeCloseTo(1.5 * CARGA_PRIMER_DIA);
+  expect(cargaDelDia({ ...estado, turno: marte.turnos })).toBeCloseTo(1.5 * CARGA_ULTIMO_DIA);
+  expect(cargaDelDia({ ...estado, config: { ...marte, tripulantes: 4 } })).toBeCloseTo(2 * CARGA_PRIMER_DIA);
+
+  const revision = (e: Estado) => tareasDelDia(e, 'usar-reservas').find((t) => t.tipo === 'mantenimiento')!.trabajo;
+  const base = CATALOGO_POR_ID.reciclador.mantenimiento!.trabajo;
+  expect(revision(estado)).toBe(Math.round(base * cargaDelDia(estado)));
+  expect(revision({ ...estado, turno: marte.turnos })).toBeGreaterThan(revision(estado));
 });
 
 test('una tarea en un módulo que no está en el diseño se hace en el hábitat', () => {

@@ -65,6 +65,7 @@ src/
     prng.ts           # generador con semilla
     diseno.ts         # validarDiseno, presupuestoRestante, reservasIniciales, avisosDiseno
     turno.ts          # iniciarMision, siguienteTurno (orden de resolución)
+    tareas.ts         # tareasDelDia, ritmoTrabajo (RF-14 a RF-16)
     salud.ts          # actualizarSalud, semaforo, alertasSalud
     puntuacion.ts     # puntuar
     *.test.ts
@@ -225,8 +226,20 @@ interface Estado {
 ```ts
 function validarDiseno(config: Configuracion, itemIds: string[]): ResultadoDiseno
 function iniciarMision(config: Configuracion, itemIds: string[]): Estado
-function siguienteTurno(estado: Estado, opcionId: string): Estado
+function siguienteTurno(estado: Estado, opcionId: string, pendientes?: Tarea[]): Estado
+function tareasDelDia(estado: Estado, opcionId: string): Tarea[]
+function ritmoTrabajo(astronauta: Astronauta, tarea: Tarea): number
 ```
+
+**Tareas del día (RF-13 a RF-16).** `tareasDelDia` lista lo que hay que hacer tras elegir una opción: las
+`tareas` de la opción (en `data/eventos.ts`) y una tarea de mantenimiento por cada módulo del diseño (de
+`Item.mantenimiento`, en `data/catalogo.ts`). Cada `Tarea` tiene `id`, `estacion` (`habitat`, `exterior` o
+`item:<índice en itemIds>`), `tipo` (`evento` o `mantenimiento`), `especialidad`, `trabajo` (segundos de un
+no especialista) y `etiqueta`. Una tarea de opción que apunta a un módulo que no está en el diseño se hace en
+el hábitat. `ritmoTrabajo` vale `RITMO_ESPECIALISTA` si la especialidad coincide y 1 si no. El reloj y el
+progreso viven en la interfaz y la escena 3D; al terminar el día, el reducer pasa a `siguienteTurno` las
+tareas que quedaron `pendientes`. Sin `pendientes` el turno se resuelve como antes, así que las pruebas y el
+balance de la fase 6 siguen valiendo cuando se completa todo.
 
 `siguienteTurno` es pura: mismo estado y misma opción producen el mismo resultado. El azar sale de `estado.rng`.
 
@@ -252,6 +265,9 @@ function siguienteTurno(estado: Estado, opcionId: string): Estado
 
 ### 6.2 Orden de resolución de un turno
 
+0. **Tareas pendientes:** si queda alguna tarea de tipo `evento`, se usan los efectos de
+   `Evento.opcionSinAtender` (o ninguno si el evento no la define) en lugar de los de la opción elegida. Cada
+   módulo con su mantenimiento pendiente no cuenta en los pasos 2 a 6 de este turno.
 1. Aplicar los `efectos` de la opción elegida al evento actual: cambios directos en recursos, dosis, salud y
    ciencia. Tras aplicarlos, recursos e indicadores se acotan a su rango (un descanso con la salud a 100 no
    evita el desgaste del turno; una opción con coste no deja un almacén en negativo). Un evento no tiene efectos propios: `factorSolar` y `multiplicadorRadiacion` vienen de la opción
@@ -330,6 +346,11 @@ recién desbloqueadas que aún no se han mostrado (RF-08). Mientras quede una ta
 no hace nada; `CERRAR_TARJETA` la quita de la cola. `REPETIR` no vuelve a mostrar tarjetas ya vistas. Si la
 misión termina con una tarjeta pendiente, la bitácora muestra la historia completa. `AÑADIR_ITEM` no hace nada si `validarDiseno` rechaza el resultado.
 
+Fase de jugabilidad: el estado `juego` añade `plan: { opcionId, hechas: string[] } | null`. `ELEGIR_OPCION`
+crea el plan del día en lugar de resolver el turno; `COMPLETAR_TAREA` anota una tarea hecha y `TERMINAR_DIA`
+resuelve el turno con las pendientes. La selección de astronauta, su posición y el progreso parcial de cada
+tarea viven en la escena 3D; el reloj (90 s, ×2 o sin reloj), en la interfaz.
+
 La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo usa una semilla fija.
 
 ## 8. Datos y contenido
@@ -390,6 +411,7 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | RF-07, RF-08 | `data/catalogo.ts`, `data/historias.ts`, `ui/comun/TarjetaHistoria` |
 | RF-09 | `engine/puntuacion.ts`, `ui/bitacora` |
 | RF-12 | `state/guardado.ts`, `ui/comun/EstadoContext.tsx`, `ui/inicio` |
+| RF-13 a RF-16 | `engine/tareas.ts`, `data/catalogo.ts`, `data/eventos.ts`, `state/reducer.ts`, `three/`, `ui/juego` |
 | RNF-01, RNF-02 | Sin backend; recursos en `public/` |
 | RNF-04 | Carpeta `engine/` sin importar React |
 
@@ -405,4 +427,5 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | Efecto de Curiosity en la alerta de dosis | Alerta temprana de radiación (`alertaRadiacion`); no cambia la simulación | Decidido en la fase 4 |
 | Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3. Objetivo de la fase 6, en victorias con decisiones al azar sobre el diseño sugerido: Luna fácil 70–85 %, Luna difícil 20–35 %, Marte 35–55 %; decidiendo bien, los tres se ganan casi siempre. Las cifras de la NASA no se tocan | Decidido en la fase 6 |
 | RF-10 (API de imágenes) | No se hace: las 8 historias ya tienen su foto de images.nasa.gov en el repo, y los resultados en vivo no pasarían la revisión de textos e imágenes para niños | Decidido tras la fase 6 |
+| Jugabilidad (RF-13 a RF-16) | Control con WASD del astronauta elegido (1–4); día de 90 s con ×2 y sin reloj (WCAG 2.2.1); tarea de evento sin hacer → `opcionSinAtender`; mantenimiento sin hacer → el módulo no rinde ese día; especialidades fijas por nombre (Lucía ingeniería, Marco biología, Aiko geología, Dani medicina) | Decidido el 2026-11-14 |
 | RF-12 (guardado) | Se guarda solo la partida en curso; el inicio ofrece "Continuar partida" y nunca se reanuda sola. Al terminar la misión se borra | Decidido tras la fase 6 |

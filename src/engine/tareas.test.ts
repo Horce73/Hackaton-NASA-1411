@@ -1,0 +1,59 @@
+import { expect, test } from 'vitest';
+import { EVENTOS } from '../data/eventos';
+import { RITMO_ESPECIALISTA } from '../data/parametros';
+import { ritmoTrabajo, tareasDelDia } from './tareas';
+import { iniciarMision, siguienteTurno } from './turno';
+import type { Configuracion, Estado } from './tipos';
+
+const marte: Configuracion = { destino: 'marte', tripulantes: 3, turnos: 14, semilla: 3 };
+
+function conEvento(itemIds: string[], eventoId: string): Estado {
+  const estado = iniciarMision(marte, itemIds);
+  return { ...estado, eventoActual: EVENTOS.find((e) => e.id === eventoId)! };
+}
+
+test('el día pide las tareas de la opción y una revisión por módulo, no por equipo histórico (RF-15, RF-16)', () => {
+  const estado = conEvento(['panel-solar', 'panel-solar', 'reciclador', 'curiosity'], 'fallo-equipo');
+  const tareas = tareasDelDia(estado, 'reparar');
+  expect(tareas.map((t) => [t.tipo, t.estacion])).toEqual([
+    ['evento', 'item:2'], // la reparación se hace en el reciclador
+    ['mantenimiento', 'item:0'],
+    ['mantenimiento', 'item:1'],
+    ['mantenimiento', 'item:2'],
+  ]);
+  expect(new Set(tareas.map((t) => t.id)).size).toBe(tareas.length);
+  expect(tareasDelDia(estado, 'usar-reservas').filter((t) => t.tipo === 'evento')).toEqual([]);
+});
+
+test('una tarea en un módulo que no está en el diseño se hace en el hábitat', () => {
+  const estado = conEvento(['reactor'], 'fallo-equipo');
+  expect(tareasDelDia(estado, 'reparar')[0].estacion).toBe('habitat');
+});
+
+test('cada tripulante tiene su especialidad y el especialista trabaja más rápido (RF-14)', () => {
+  const estado = conEvento(['reciclador'], 'fallo-equipo');
+  expect(estado.tripulacion.map((a) => a.especialidad)).toEqual(['ingenieria', 'biologia', 'geologia']);
+  const [reparar] = tareasDelDia(estado, 'reparar');
+  expect(ritmoTrabajo(estado.tripulacion[0], reparar)).toBe(RITMO_ESPECIALISTA);
+  expect(ritmoTrabajo(estado.tripulacion[1], reparar)).toBe(1);
+});
+
+test('una tarea de evento sin hacer aplica la opción de riesgo; sin pendientes, el turno es el de siempre', () => {
+  const estado = conEvento(['reciclador', 'panel-solar'], 'tormenta-polvo');
+  const tareas = tareasDelDia(estado, 'ahorrar-energia');
+  const sinHacer = siguienteTurno(estado, 'ahorrar-energia', tareas.filter((t) => t.tipo === 'evento'));
+  const riesgo = siguienteTurno(estado, 'seguir-con-todo');
+  expect(sinHacer.recursos).toEqual(riesgo.recursos);
+  expect(sinHacer.tripulacion).toEqual(riesgo.tripulacion);
+  expect(sinHacer.ultimoDelta?.sinAtender).toBe(true);
+  expect(siguienteTurno(estado, 'ahorrar-energia', [])).toEqual(siguienteTurno(estado, 'ahorrar-energia'));
+});
+
+test('un módulo sin mantenimiento no rinde ese día (RF-16)', () => {
+  const estado = conEvento(['reactor', 'reciclador'], 'dia-tranquilo');
+  const mantReactor = tareasDelDia(estado, 'descansar').filter((t) => t.estacion === 'item:0');
+  const bien = siguienteTurno(estado, 'descansar');
+  const sinReactor = siguienteTurno(estado, 'descansar', mantReactor);
+  expect(sinReactor.recursos.energia).toBeLessThan(bien.recursos.energia);
+  expect(sinReactor.ultimoDelta?.modulosParados).toBe(1);
+});

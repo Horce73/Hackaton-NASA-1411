@@ -2,6 +2,8 @@
 // las opciones arriesgadas castigan más para que decidir bien importe).
 // Unidades: energía en puntos, oxígeno y alimento en kg, agua en litros, dosis en mSv.
 // Cada efecto vale solo para el turno en que se elige la opción.
+// RF-15: `tareas` es el trabajo que pide la opción (segundos PROVISIONALES). Si no se termina antes de que
+// acabe el día, se aplica `opcionSinAtender`, la opción de riesgo, o nada si el evento no la define.
 // Los textos siguen el tono del UX Brief (sección 4): frases cortas y de "tú".
 
 import type { Destino, Evento } from '../engine/tipos';
@@ -15,11 +17,13 @@ export const EVENTOS: Evento[] = [
     texto: 'El Sol lanza una ráfaga de radiación. Hoy es peligroso estar fuera.',
     destinos: AMBOS,
     peso: 2,
+    opcionSinAtender: 'seguir-fuera',
     opciones: [
       {
         id: 'refugiarse',
         texto: 'Refugiarse en la base',
         efectos: { multiplicadorRadiacion: 1.5, salud: { suenoEstres: -4 } },
+        tareas: [{ estacion: 'habitat', especialidad: 'medicina', trabajo: 10, etiqueta: 'Preparar el refugio' }],
       },
       {
         id: 'seguir-fuera',
@@ -34,11 +38,13 @@ export const EVENTOS: Evento[] = [
     texto: 'Tus paneles solares producen menos hoy.',
     destinos: ['marte'],
     peso: 6,
+    opcionSinAtender: 'seguir-con-todo',
     opciones: [
       {
         id: 'ahorrar-energia',
         texto: 'Ahorrar energía',
         efectos: { factorSolar: 0.4, recursos: { energia: 8 }, salud: { suenoEstres: -3 } },
+        tareas: [{ estacion: 'panel-solar', especialidad: 'ingenieria', trabajo: 10, etiqueta: 'Ajustar la energía' }],
       },
       {
         id: 'seguir-con-todo',
@@ -49,6 +55,7 @@ export const EVENTOS: Evento[] = [
         id: 'explorar',
         texto: 'Salir a explorar',
         efectos: { factorSolar: 0.4, recursos: { energia: -8 }, ciencia: 6 },
+        tareas: [{ estacion: 'exterior', especialidad: 'geologia', trabajo: 14, etiqueta: 'Explorar con el rover' }],
       },
     ],
   },
@@ -58,11 +65,13 @@ export const EVENTOS: Evento[] = [
     texto: 'Una pieza del sistema de aire deja de funcionar.',
     destinos: AMBOS,
     peso: 2,
+    opcionSinAtender: 'usar-reservas',
     opciones: [
       {
         id: 'reparar',
         texto: 'Repararla ahora',
         efectos: { recursos: { energia: -10 }, salud: { suenoEstres: -8 } },
+        tareas: [{ estacion: 'reciclador', especialidad: 'ingenieria', trabajo: 16, etiqueta: 'Reparar el sistema de aire' }],
       },
       {
         id: 'usar-reservas',
@@ -77,11 +86,13 @@ export const EVENTOS: Evento[] = [
     texto: 'Un depósito pierde agua poco a poco.',
     destinos: AMBOS,
     peso: 2,
+    opcionSinAtender: 'racionar',
     opciones: [
       {
         id: 'sellar',
         texto: 'Salir a sellar la fuga',
         efectos: { recursos: { agua: -5 }, dosis: 1 },
+        tareas: [{ estacion: 'exterior', especialidad: 'ingenieria', trabajo: 12, etiqueta: 'Sellar la fuga' }],
       },
       {
         id: 'racionar',
@@ -101,16 +112,19 @@ export const EVENTOS: Evento[] = [
         id: 'descansar',
         texto: 'Descansar',
         efectos: { salud: { suenoEstres: 10 } },
+        tareas: [{ estacion: 'zona-descanso', especialidad: 'medicina', trabajo: 8, etiqueta: 'Organizar el descanso' }],
       },
       {
         id: 'ejercicio',
         texto: 'Hacer ejercicio',
         efectos: { salud: { musculoHueso: 8 }, recursos: { alimento: -1.8 } },
+        tareas: [{ estacion: 'gimnasio', especialidad: 'medicina', trabajo: 10, etiqueta: 'Dirigir el ejercicio' }],
       },
       {
         id: 'ciencia',
         texto: 'Trabajar en ciencia',
         efectos: { ciencia: 4, salud: { suenoEstres: -10 } },
+        tareas: [{ estacion: 'exterior', especialidad: 'geologia', trabajo: 12, etiqueta: 'Tomar muestras' }],
       },
     ],
   },
@@ -121,11 +135,13 @@ export const EVENTOS: Evento[] = [
     texto: 'El equipo detecta cerca una sonda antigua de la NASA: Surveyor 3.',
     destinos: ['luna'],
     peso: 1,
+    opcionSinAtender: 'seguir-plan',
     opciones: [
       {
         id: 'visitar',
         texto: 'Ir a verla',
         efectos: { ciencia: 6, dosis: 3, recursos: { energia: -5 } },
+        tareas: [{ estacion: 'exterior', especialidad: 'geologia', trabajo: 14, etiqueta: 'Llegar a la sonda' }],
       },
       {
         id: 'seguir-plan',

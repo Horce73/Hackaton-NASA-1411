@@ -4,7 +4,8 @@ import { sonido } from '../audio/sonido';
 import { CATALOGO_POR_ID } from '../data/catalogo';
 import { EVENTOS_REPARABLES, EVENTO_SURVEYOR } from '../data/eventos';
 import { GRAVEDAD } from '../data/parametros';
-import type { Destino } from '../engine/tipos';
+import { ritmoTrabajo } from '../engine/tareas';
+import type { Destino, Especialidad, Tarea } from '../engine/tipos';
 import {
   crearEstadoJugadorInicial,
   groundHeightAt,
@@ -49,6 +50,11 @@ export interface EstadoTelemetria3D {
   gravedad: number;
   nodosRestantes: number;
   softwareGl: boolean;
+  // Tripulación y tareas del día (RF-13 a RF-15)
+  seleccionado: number;
+  trabajoTripulacion: (string | null)[]; // tarea en la que trabaja cada tripulante
+  progresoTareas: Record<string, number>; // 0..1
+  tareaCercana: { id: string; etiqueta: string } | null; // tarea pendiente al alcance del seleccionado
 }
 
 export interface EntradaTactil3D {
@@ -92,7 +98,32 @@ interface OpcionesEscena {
   itemsIniciales: string[];
   onTelemetria: (estado: EstadoTelemetria3D) => void;
   onAccionCompletada: (accion: EventoAccion3D) => void;
+  onTareaCompletada: (tareaId: string) => void;
 }
+
+interface Tripulante3D {
+  rig: AstronautaRig;
+  fisica: EstadoJugadorFisica;
+  fasePaso: number;
+  tareaId: string | null;
+  etiqueta: HTMLDivElement;
+}
+
+const ENTRADA_QUIETA: EntradaMovimiento = {
+  adelante: 0,
+  derecha: 0,
+  camaraYaw: 0,
+  saltarPresionado: false,
+  saltarMantenido: false,
+  sprint: false,
+};
+const ALCANCE_TAREA = 3.4; // metros desde la estación
+const NOMBRE_ESPECIALIDAD: Record<Especialidad, string> = {
+  ingenieria: 'Ingeniería',
+  biologia: 'Biología',
+  geologia: 'Geología',
+  medicina: 'Medicina',
+};
 
 function detectarSoftwareWebGL(gl: WebGLRenderingContext | WebGL2RenderingContext): boolean {
   try {
@@ -137,8 +168,29 @@ export class EscenaPlaneta {
   private grupoCielo = new THREE.Group();
 
   private terrenoMesh: THREE.Mesh | null = null;
-  private astronauta!: AstronautaRig;
-  private fisica: EstadoJugadorFisica;
+  // Tripulación (RF-13): `astronauta` y `fisica` son siempre los del tripulante seleccionado.
+  private tripulantes: Tripulante3D[] = [];
+  private seleccionado = 0;
+  private especialidades: Especialidad[] = [];
+  private get astronauta(): AstronautaRig {
+    return this.tripulantes[this.seleccionado].rig;
+  }
+  private get fisica(): EstadoJugadorFisica {
+    return this.tripulantes[this.seleccionado].fisica;
+  }
+  private set fisica(f: EstadoJugadorFisica) {
+    this.tripulantes[this.seleccionado].fisica = f;
+  }
+
+  // Tareas del día (RF-15): progreso en segundos de trabajo hechos / trabajo de la tarea.
+  private tareas: Tarea[] = [];
+  private tareasHechas = new Set<string>();
+  private trabajoActivo = false;
+  private progreso = new Map<string, number>();
+  private posEstaciones = new Map<string, THREE.Vector3>();
+  private capaPops: HTMLDivElement;
+  private pops = new Map<string, HTMLDivElement>();
+  private anilloSeleccion!: THREE.Mesh;
   private obstaculos: ObstaculoCilindro[] = [];
   private nodos: NodoEscena[] = [];
   private historiasInspeccionadas = new Set<string>();
@@ -184,7 +236,6 @@ export class EscenaPlaneta {
   private timerId: number | null = null;
   private ultimoTiempo = performance.now();
   private ultimaTelemetria = 0;
-  private fasePaso = 0;
 
   private readonly tmpVecA = new THREE.Vector3();
   private readonly tmpVecB = new THREE.Vector3();
@@ -197,6 +248,7 @@ export class EscenaPlaneta {
 
   private onTelemetria: (estado: EstadoTelemetria3D) => void;
   private onAccionCompletada: (accion: EventoAccion3D) => void;
+  private onTareaCompletada: (tareaId: string) => void;
 
   // Listeners guardados para limpieza
   private onResizeBound: () => void;
@@ -215,6 +267,12 @@ export class EscenaPlaneta {
     this.itemIds = [...opciones.itemsIniciales];
     this.onTelemetria = opciones.onTelemetria;
     this.onAccionCompletada = opciones.onAccionCompletada;
+    this.onTareaCompletada = opciones.onTareaCompletada;
+
+    // Capa HTML de avisos flotantes y nombres. Es solo visual: la lista de tareas del HUD la repite en texto.
+    this.capaPops = document.createElement('div');
+    this.capaPops.setAttribute('aria-hidden', 'true');
+    this.capaPops.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1';
 
     // Detectar software WebGL en un contexto de prueba o usando el propio renderer
     const probeCanvas = document.createElement('canvas');
@@ -242,6 +300,7 @@ export class EscenaPlaneta {
     this.renderer.domElement.style.height = '100%';
     this.renderer.domElement.setAttribute('aria-label', 'Escena espacial 3D interactiva');
     this.contenedor.appendChild(this.renderer.domElement);
+    this.contenedor.appendChild(this.capaPops);
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(
@@ -288,10 +347,14 @@ export class EscenaPlaneta {
     // Construir planeta inicial
     const maxAniso = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
     this.tex = crearConjuntoTexturas(this.destino, maxAniso);
-    this.astronauta = crearAstronauta3D(this.tex);
-    this.scene.add(this.astronauta.root);
+    this.anilloSeleccion = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, 0.72, 32),
+      new THREE.MeshBasicMaterial({ color: 0xf5b942, transparent: true, opacity: 0.9, depthWrite: false }),
+    );
+    this.anilloSeleccion.rotation.x = -Math.PI / 2;
+    this.scene.add(this.anilloSeleccion);
+    this.crearTripulacion(1);
 
-    this.fisica = crearEstadoJugadorInicial(this.destino);
     this.construirPlaneta();
     this.reconstruirBase();
 
@@ -586,6 +649,7 @@ export class EscenaPlaneta {
     this.limpiarGrupo(this.grupoNodos);
     this.obstaculos = [...this.rocasObstaculos];
     this.nodos = [];
+    this.posEstaciones.clear();
     this.mallasColisionCam.length = 0;
     if (this.terrenoMesh) {
       this.mallasColisionCam.push(this.terrenoMesh);
@@ -619,10 +683,18 @@ export class EscenaPlaneta {
     });
 
     // 2. Módulos y equipo histórico del diseño actual
-    const modulos = this.itemIds.filter((id) => CATALOGO_POR_ID[id]?.tipo === 'modulo');
+    this.posEstaciones.set('habitat', new THREE.Vector3(0, yBase, 5.7));
+    const ex = 3;
+    const ez = 18;
+    this.posEstaciones.set('exterior', new THREE.Vector3(ex, groundHeightAt(ex, ez, this.destino), ez));
+
+    // Cada módulo guarda su índice en itemIds: las tareas de mantenimiento lo usan como estación ('item:<i>').
+    const modulos = this.itemIds
+      .map((id, indice) => ({ id, indice }))
+      .filter(({ id }) => CATALOGO_POR_ID[id]?.tipo === 'modulo');
     const historicos = this.itemIds.filter((id) => CATALOGO_POR_ID[id]?.tipo === 'historico');
 
-    modulos.forEach((id, idx) => {
+    modulos.forEach(({ id, indice }, idx) => {
       const total = Math.max(1, modulos.length);
       // Evitar el frente directo (+Z donde aparece el jugador)
       const angulo = Math.PI * 0.72 + (idx / total) * Math.PI * 1.56;
@@ -635,6 +707,7 @@ export class EscenaPlaneta {
       modelo.position.set(mx, my, mz);
       modelo.rotation.y = Math.atan2(-mx, -mz);
       this.grupoBase.add(modelo);
+      this.posEstaciones.set(`item:${indice}`, new THREE.Vector3(mx, my, mz));
 
       this.obstaculos.push({
         id: `mod-${id}-${idx}`,
@@ -781,14 +854,9 @@ export class EscenaPlaneta {
     const maxAniso = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
     this.tex = crearConjuntoTexturas(destino, maxAniso);
 
-    this.limpiarGrupo(this.astronauta.root);
-    this.scene.remove(this.astronauta.root);
-    this.astronauta = crearAstronauta3D(this.tex);
-    this.scene.add(this.astronauta.root);
-
     this.construirPlaneta();
     this.reconstruirBase();
-    this.fisica = crearEstadoJugadorInicial(this.destino);
+    this.crearTripulacion(this.tripulantes.length);
   }
 
   public setMisionItems(itemIds: string[]) {
@@ -813,10 +881,11 @@ export class EscenaPlaneta {
 
   public setModo(modo: ModoCamara3D) {
     if (this.modo === modo) return;
-    const veniaDeNoJuego = this.modo !== 'tercera_persona';
+    // Cerrar una tarjeta (pausa) no mueve a nadie: la tripulación sigue donde estaba trabajando.
+    const veniaDeOrbita = this.modo === 'orbita';
     this.modo = modo;
-    if (modo === 'tercera_persona' && veniaDeNoJuego) {
-      this.fisica = crearEstadoJugadorInicial(this.destino);
+    if (modo === 'tercera_persona' && veniaDeOrbita) {
+      this.colocarTripulacion();
       this.camYaw = 0;
       this.camPitch = 0.21;
     }
@@ -836,6 +905,7 @@ export class EscenaPlaneta {
   }
 
   public ejecutarAccionCercana(): boolean {
+    if (this.empezarTareaCercana()) return true;
     const cercano = this.obtenerNodoCercano();
     if (!cercano) return false;
 
@@ -902,6 +972,264 @@ export class EscenaPlaneta {
     return false;
   }
 
+  // ---- Tripulación y tareas del día (RF-13 a RF-15) ----
+
+  public setTripulacion(especialidades: Especialidad[]) {
+    this.especialidades = [...especialidades];
+    if (especialidades.length !== this.tripulantes.length) this.crearTripulacion(especialidades.length);
+  }
+
+  public setTareas(tareas: Tarea[], hechas: string[], activo: boolean) {
+    this.tareas = tareas;
+    this.tareasHechas = new Set(hechas);
+    this.trabajoActivo = activo;
+    const ids = new Set(tareas.map((t) => t.id));
+    for (const id of [...this.progreso.keys()]) if (!ids.has(id)) this.progreso.delete(id);
+    for (const [id, pop] of this.pops) {
+      if (!ids.has(id) || this.tareasHechas.has(id)) {
+        pop.remove();
+        this.pops.delete(id);
+      }
+    }
+    for (const t of this.tripulantes) {
+      if (t.tareaId && (!ids.has(t.tareaId) || this.tareasHechas.has(t.tareaId))) t.tareaId = null;
+    }
+    this.emitirTelemetria(true);
+  }
+
+  public seleccionar(indice: number) {
+    if (indice < 0 || indice >= this.tripulantes.length || indice === this.seleccionado) return;
+    this.seleccionado = indice;
+    sonido.escaneo();
+    this.emitirTelemetria(true);
+  }
+
+  private crearTripulacion(n: number) {
+    for (const t of this.tripulantes) {
+      this.limpiarGrupo(t.rig.root);
+      this.scene.remove(t.rig.root);
+      t.etiqueta.remove();
+    }
+    this.tripulantes = Array.from({ length: Math.max(1, n) }, () => {
+      const rig = crearAstronauta3D(this.tex);
+      this.scene.add(rig.root);
+      const etiqueta = document.createElement('div');
+      etiqueta.style.cssText =
+        'position:absolute;left:0;top:0;padding:2px 8px;border-radius:999px;font:600 12px/1.4 system-ui,sans-serif;' +
+        'white-space:nowrap;background:rgba(11,16,32,.85);color:#e8ecf6;border:1px solid rgba(255,255,255,.25);will-change:transform';
+      this.capaPops.appendChild(etiqueta);
+      return { rig, fisica: crearEstadoJugadorInicial(this.destino), fasePaso: 0, tareaId: null, etiqueta };
+    });
+    this.seleccionado = Math.min(this.seleccionado, this.tripulantes.length - 1);
+    this.colocarTripulacion();
+  }
+
+  // Coloca a la tripulación en fila frente al hábitat.
+  private colocarTripulacion() {
+    const n = this.tripulantes.length;
+    this.tripulantes.forEach((t, i) => {
+      const inicial = crearEstadoJugadorInicial(this.destino);
+      const x = inicial.x + (i - (n - 1) / 2) * 1.8;
+      t.fisica = { ...inicial, x, y: groundHeightAt(x, inicial.z, this.destino) };
+      t.tareaId = null;
+    });
+  }
+
+  private moverTripulante(t: Tripulante3D, entrada: EntradaMovimiento, dt: number, esSeleccionado: boolean) {
+    const prevEnSuelo = t.fisica.enSuelo;
+    const prevVy = t.fisica.vy;
+    t.fisica = pasoFisicaJugador(t.fisica, entrada, this.destino, this.obstaculos, dt);
+    const f = t.fisica;
+
+    if (esSeleccionado) {
+      // Sonidos de salto, aterrizaje y pasos, solo del astronauta que manejas
+      if (prevEnSuelo && !f.enSuelo && f.vy > 1.2) {
+        sonido.salto();
+      } else if (!prevEnSuelo && f.enSuelo && prevVy < -1.5) {
+        sonido.aterrizaje();
+        this.lanzarRafaga(f.x, f.y + 0.15, f.z, this.destino === 'luna' ? 0x9aa4b8 : 0xc46b45, 8);
+      }
+      if (f.usandoJetpack) {
+        this.emitirParticula(
+          f.x - Math.sin(f.yaw) * 0.28,
+          f.y + 0.55,
+          f.z - Math.cos(f.yaw) * 0.28,
+          (Math.random() - 0.5) * 0.8,
+          -2.4,
+          (Math.random() - 0.5) * 0.8,
+          0.35,
+          0.95,
+          0x6ce5ff,
+        );
+      }
+    }
+
+    const velH = Math.hypot(f.vx, f.vz);
+    if (f.enSuelo && velH > 0.6) {
+      const prevCiclo = Math.floor(t.fasePaso / Math.PI);
+      t.fasePaso += velH * dt * 1.65;
+      if (esSeleccionado && Math.floor(t.fasePaso / Math.PI) !== prevCiclo) sonido.paso();
+    } else {
+      t.fasePaso = 0;
+    }
+
+    const rig = t.rig;
+    rig.root.position.set(f.x, f.y, f.z);
+    rig.cuerpo.rotation.y = f.yaw;
+
+    const amplitudPaso = f.enSuelo ? Math.min(0.65, velH / 10) : 0.18;
+    const swing = Math.sin(t.fasePaso) * amplitudPaso;
+    rig.piernaIzq.rotation.x = swing;
+    rig.piernaDer.rotation.x = -swing;
+    rig.brazoIzq.rotation.x = -swing * 0.85;
+    // Trabajando: el brazo derecho se mueve como si usara una herramienta.
+    const trabajando = t.tareaId !== null && this.trabajoActivo;
+    rig.brazoDer.rotation.x =
+      trabajando && !this.movimientoReducido ? -1.1 + Math.sin(performance.now() / 120) * 0.35 : swing * 0.85;
+    rig.brazoIzq.rotation.z = f.enSuelo ? 0.08 : 0.35;
+    rig.brazoDer.rotation.z = f.enSuelo ? -0.08 : -0.35;
+
+    rig.llamaIzq.visible = f.usandoJetpack;
+    rig.llamaDer.visible = f.usandoJetpack;
+    if (f.usandoJetpack) {
+      const parpadeo = 0.8 + Math.random() * 0.45;
+      rig.llamaIzq.scale.set(1, parpadeo, 1);
+      rig.llamaDer.scale.set(1, parpadeo, 1);
+    }
+
+    // Sombra de contacto proyectada en el suelo bajo el astronauta
+    const alturaSobreSuelo = Math.max(0, f.y - groundHeightAt(f.x, f.z, this.destino));
+    rig.sombra.position.y = -alturaSobreSuelo + 0.03;
+    const escalaSombra = Math.max(0.4, 1 - alturaSobreSuelo * 0.12);
+    rig.sombra.scale.set(escalaSombra, escalaSombra, 1);
+    (rig.sombra.material as THREE.MeshBasicMaterial).opacity = 0.48 * escalaSombra;
+  }
+
+  private tareasPendientes(): Tarea[] {
+    return this.tareas.filter((t) => !this.tareasHechas.has(t.id));
+  }
+
+  private distanciaAEstacion(f: EstadoJugadorFisica, tarea: Tarea): number {
+    const pos = this.posEstaciones.get(tarea.estacion) ?? this.posEstaciones.get('habitat');
+    return pos ? Math.hypot(f.x - pos.x, f.z - pos.z) : Infinity;
+  }
+
+  // Tarea pendiente más cercana al alcance de un tripulante.
+  private tareaAlAlcance(f: EstadoJugadorFisica): Tarea | null {
+    if (!this.trabajoActivo) return null;
+    let mejor: Tarea | null = null;
+    let mejorDist = ALCANCE_TAREA;
+    for (const tarea of this.tareasPendientes()) {
+      const d = this.distanciaAEstacion(f, tarea);
+      if (d <= mejorDist) {
+        mejor = tarea;
+        mejorDist = d;
+      }
+    }
+    return mejor;
+  }
+
+  private empezarTareaCercana(): boolean {
+    const t = this.tripulantes[this.seleccionado];
+    const tarea = this.tareaAlAlcance(t.fisica);
+    if (!tarea || t.tareaId === tarea.id) return Boolean(tarea);
+    t.tareaId = tarea.id;
+    sonido.escaneo();
+    this.emitirTelemetria(true);
+    return true;
+  }
+
+  private avanzarTrabajo(dt: number) {
+    if (!this.trabajoActivo) return;
+    this.tripulantes.forEach((t, i) => {
+      if (!t.tareaId) return;
+      const tarea = this.tareas.find((x) => x.id === t.tareaId);
+      // Alejarse de la estación deja la tarea a medias: el progreso se conserva.
+      if (!tarea || this.tareasHechas.has(tarea.id) || this.distanciaAEstacion(t.fisica, tarea) > ALCANCE_TAREA) {
+        t.tareaId = null;
+        return;
+      }
+      const ritmo = ritmoTrabajo({ especialidad: this.especialidades[i] ?? 'ingenieria' }, tarea);
+      const avance = (this.progreso.get(tarea.id) ?? 0) + (dt * ritmo) / tarea.trabajo;
+      if (avance < 1) {
+        this.progreso.set(tarea.id, avance);
+        return;
+      }
+      this.progreso.set(tarea.id, 1);
+      this.tareasHechas.add(tarea.id);
+      for (const otro of this.tripulantes) if (otro.tareaId === tarea.id) otro.tareaId = null;
+      const pos = this.posEstaciones.get(tarea.estacion) ?? this.posEstaciones.get('habitat')!;
+      this.lanzarRafaga(pos.x, pos.y + 1.2, pos.z, 0x4cd7a1, 18);
+      sonido.reparacion();
+      this.onTareaCompletada(tarea.id);
+      this.emitirTelemetria(true);
+    });
+  }
+
+  // Avisos flotantes sobre las estaciones y nombre sobre cada tripulante (UX Brief 5.3).
+  private actualizarPops(ahoraSec: number) {
+    const ancho = this.contenedor.clientWidth;
+    const alto = this.contenedor.clientHeight;
+    const enJuego = this.modo === 'tercera_persona';
+    const proyectar = (v: THREE.Vector3, el: HTMLElement) => {
+      this.tmpVecA.copy(v).project(this.camera);
+      const visible = enJuego && this.tmpVecA.z < 1 && Math.abs(this.tmpVecA.x) < 1.2 && Math.abs(this.tmpVecA.y) < 1.2;
+      el.style.display = visible ? 'block' : 'none';
+      if (visible) {
+        const x = (this.tmpVecA.x * 0.5 + 0.5) * ancho;
+        const y = (-this.tmpVecA.y * 0.5 + 0.5) * alto;
+        el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
+        el.style.zIndex = String(Math.round((1 - this.tmpVecA.z) * 100000)); // el más cercano, encima
+      }
+    };
+
+    // Nombres de la tripulación
+    this.tripulantes.forEach((t, i) => {
+      const nombre = `${i + 1} · ${NOMBRE_ESPECIALIDAD[this.especialidades[i] ?? 'ingenieria']}`;
+      if (t.etiqueta.textContent !== nombre) t.etiqueta.textContent = nombre;
+      const esSel = i === this.seleccionado;
+      t.etiqueta.style.borderColor = esSel ? '#f5b942' : 'rgba(255,255,255,.25)';
+      t.etiqueta.style.fontWeight = esSel ? '800' : '600';
+      this.tmpVecB.copy(t.rig.root.position).setY(t.rig.root.position.y + 2.3);
+      proyectar(this.tmpVecB, t.etiqueta);
+    });
+
+    // Avisos de tareas pendientes
+    const alcanceSel = this.trabajoActivo ? this.tareaAlAlcance(this.fisica) : null;
+    const pendientes = this.trabajoActivo ? this.tareasPendientes() : [];
+    for (const tarea of pendientes) {
+      let pop = this.pops.get(tarea.id);
+      if (!pop) {
+        pop = document.createElement('div');
+        pop.style.cssText =
+          'position:absolute;left:0;top:0;min-width:120px;max-width:180px;padding:6px 8px;border-radius:10px;' +
+          'font:12px/1.3 system-ui,sans-serif;color:#e8ecf6;background:rgba(11,16,32,.9);border:2px solid rgba(255,255,255,.3);will-change:transform';
+        pop.innerHTML =
+          '<div data-t style="font-weight:700"></div><div data-e style="opacity:.85"></div>' +
+          '<div style="height:6px;margin-top:4px;border-radius:3px;background:rgba(255,255,255,.18)"><div data-p style="height:100%;border-radius:3px;background:#4cd7a1;width:0"></div></div>' +
+          '<div data-k style="margin-top:3px;font-weight:700;color:#f5b942"></div>';
+        pop.querySelector<HTMLElement>('[data-t]')!.textContent = tarea.etiqueta;
+        pop.querySelector<HTMLElement>('[data-e]')!.textContent = NOMBRE_ESPECIALIDAD[tarea.especialidad];
+        this.capaPops.appendChild(pop);
+        this.pops.set(tarea.id, pop);
+      }
+      const prog = this.progreso.get(tarea.id) ?? 0;
+      pop.querySelector<HTMLElement>('[data-p]')!.style.width = `${Math.round(prog * 100)}%`;
+      const trabajando = this.tripulantes.some((t) => t.tareaId === tarea.id);
+      const alAlcance = alcanceSel?.id === tarea.id;
+      const aviso = trabajando ? 'Trabajando…' : alAlcance ? 'E para trabajar' : '';
+      const k = pop.querySelector<HTMLElement>('[data-k]')!;
+      if (k.textContent !== aviso) k.textContent = aviso;
+      pop.style.borderColor = alAlcance ? '#f5b942' : trabajando ? '#4cd7a1' : 'rgba(255,255,255,.3)';
+      const pos = this.posEstaciones.get(tarea.estacion) ?? this.posEstaciones.get('habitat')!;
+      // Varias tareas en la misma estación (el hábitat) se apilan.
+      const pila = pendientes.filter((x) => x.estacion === tarea.estacion).indexOf(tarea);
+      const flotar = this.movimientoReducido ? 0 : Math.sin(ahoraSec * 2 + pila) * 0.08;
+      this.tmpVecB.set(pos.x, pos.y + 3.4 + pila * 1.3 + flotar, pos.z);
+      proyectar(this.tmpVecB, pop);
+    }
+  }
+
   private lanzarRafaga(x: number, y: number, z: number, colorHex: number, cantidad: number) {
     for (let i = 0; i < cantidad; i++) {
       const ang = (i / cantidad) * Math.PI * 2 + Math.random() * 0.4;
@@ -957,6 +1285,8 @@ export class EscenaPlaneta {
     if (code === 'KeyE') {
       this.ejecutarAccionCercana();
     }
+    const digito = /^Digit([1-4])$/.exec(code);
+    if (digito) this.seleccionar(Number(digito[1]) - 1);
     this.teclas.add(code);
   }
 
@@ -1021,7 +1351,7 @@ export class EscenaPlaneta {
     };
   }
 
-  private animarEscena(dt: number, ahoraSec: number) {
+  private animarEscena(dt: number, ahoraSec: number, dtReal: number) {
     // Animar antena de la base central y hélices del helicóptero Ingenuity
     if (!this.movimientoReducido) this.grupoBase.traverse((obj) => {
       if (obj.name === 'antena-rotatoria') {
@@ -1089,109 +1419,33 @@ export class EscenaPlaneta {
       );
     }
 
-    // Actualizar física y animación del astronauta en modo tercera persona
+    // Física y animación de la tripulación: solo el seleccionado recibe la entrada (RF-13).
     if (this.modo === 'tercera_persona') {
       const entrada = this.construirEntradaMovimiento();
-      const prevEnSuelo = this.fisica.enSuelo;
-      const prevVy = this.fisica.vy;
-
-      this.fisica = pasoFisicaJugador(
-        this.fisica,
-        entrada,
-        this.destino,
-        this.obstaculos,
-        dt,
-      );
-
-      // Sonidos de salto, aterrizaje y pasos
-      if (prevEnSuelo && !this.fisica.enSuelo && this.fisica.vy > 1.2) {
-        sonido.salto();
-      } else if (!prevEnSuelo && this.fisica.enSuelo && prevVy < -1.5) {
-        sonido.aterrizaje();
-        this.lanzarRafaga(
-          this.fisica.x,
-          this.fisica.y + 0.15,
-          this.fisica.z,
-          this.destino === 'luna' ? 0x9aa4b8 : 0xc46b45,
-          8,
-        );
-      }
-
-      if (this.fisica.usandoJetpack) {
-        this.emitirParticula(
-          this.fisica.x - Math.sin(this.fisica.yaw) * 0.28,
-          this.fisica.y + 0.55,
-          this.fisica.z - Math.cos(this.fisica.yaw) * 0.28,
-          (Math.random() - 0.5) * 0.8,
-          -2.4,
-          (Math.random() - 0.5) * 0.8,
-          0.35,
-          0.95,
-          0x6ce5ff,
-        );
-      }
-
-      const velH = Math.hypot(this.fisica.vx, this.fisica.vz);
-      if (this.fisica.enSuelo && velH > 0.6) {
-        const prevCiclo = Math.floor(this.fasePaso / Math.PI);
-        this.fasePaso += velH * dt * 1.65;
-        const nuevoCiclo = Math.floor(this.fasePaso / Math.PI);
-        if (nuevoCiclo !== prevCiclo) {
-          sonido.paso();
-        }
-      } else {
-        this.fasePaso = 0;
-      }
-
-      // Aplicar pose al rig del astronauta
-      this.astronauta.root.position.set(this.fisica.x, this.fisica.y, this.fisica.z);
-      this.astronauta.cuerpo.rotation.y = this.fisica.yaw;
-
-      const amplitudPaso = this.fisica.enSuelo ? Math.min(0.65, velH / 10) : 0.18;
-      const swing = Math.sin(this.fasePaso) * amplitudPaso;
-      this.astronauta.piernaIzq.rotation.x = swing;
-      this.astronauta.piernaDer.rotation.x = -swing;
-      this.astronauta.brazoIzq.rotation.x = -swing * 0.85;
-      this.astronauta.brazoDer.rotation.x = swing * 0.85;
-
-      if (!this.fisica.enSuelo) {
-        this.astronauta.brazoIzq.rotation.z = 0.35;
-        this.astronauta.brazoDer.rotation.z = -0.35;
-      } else {
-        this.astronauta.brazoIzq.rotation.z = 0.08;
-        this.astronauta.brazoDer.rotation.z = -0.08;
-      }
-
-      this.astronauta.llamaIzq.visible = this.fisica.usandoJetpack;
-      this.astronauta.llamaDer.visible = this.fisica.usandoJetpack;
-      if (this.fisica.usandoJetpack) {
-        const parpadeo = 0.8 + Math.random() * 0.45;
-        this.astronauta.llamaIzq.scale.set(1, parpadeo, 1);
-        this.astronauta.llamaDer.scale.set(1, parpadeo, 1);
-      }
-
-      // Sombra de contacto proyectada en el suelo bajo el astronauta
-      const sueloBajoY = groundHeightAt(this.fisica.x, this.fisica.z, this.destino);
-      const alturaSobreSuelo = Math.max(0, this.fisica.y - sueloBajoY);
-      this.astronauta.sombra.position.y = -alturaSobreSuelo + 0.03;
-      const escalaSombra = Math.max(0.4, 1 - alturaSobreSuelo * 0.12);
-      this.astronauta.sombra.scale.set(escalaSombra, escalaSombra, 1);
-      (this.astronauta.sombra.material as THREE.MeshBasicMaterial).opacity =
-        0.48 * escalaSombra;
+      this.tripulantes.forEach((t, i) => {
+        this.moverTripulante(t, i === this.seleccionado ? entrada : { ...ENTRADA_QUIETA, camaraYaw: this.camYaw }, dt, i === this.seleccionado);
+      });
+      this.avanzarTrabajo(dtReal);
     } else {
-      // En modo órbita, astronauta de pie frente al hábitat
-      const yIdle = groundHeightAt(0, 8.2, this.destino);
-      this.astronauta.root.position.set(0, yIdle, 8.2);
-      this.astronauta.cuerpo.rotation.y = Math.sin(ahoraSec * 0.6) * 0.25;
-      this.astronauta.piernaIzq.rotation.x = 0;
-      this.astronauta.piernaDer.rotation.x = 0;
-      this.astronauta.brazoIzq.rotation.set(0, 0, 0.1);
-      this.astronauta.brazoDer.rotation.set(0, 0, -0.1);
-      this.astronauta.llamaIzq.visible = false;
-      this.astronauta.llamaDer.visible = false;
-      this.astronauta.sombra.position.y = 0.03;
-      this.astronauta.sombra.scale.set(1, 1, 1);
+      // En modo órbita, la tripulación espera de pie frente al hábitat.
+      this.tripulantes.forEach((t, i) => {
+        const x = (i - (this.tripulantes.length - 1) / 2) * 1.8;
+        t.rig.root.position.set(x, groundHeightAt(x, 8.2, this.destino), 8.2);
+        t.rig.cuerpo.rotation.y = this.movimientoReducido ? 0 : Math.sin(ahoraSec * 0.6 + i) * 0.25;
+        t.rig.piernaIzq.rotation.x = 0;
+        t.rig.piernaDer.rotation.x = 0;
+        t.rig.brazoIzq.rotation.set(0, 0, 0.1);
+        t.rig.brazoDer.rotation.set(0, 0, -0.1);
+        t.rig.llamaIzq.visible = false;
+        t.rig.llamaDer.visible = false;
+        t.rig.sombra.position.y = 0.03;
+        t.rig.sombra.scale.set(1, 1, 1);
+      });
     }
+    const sel = this.astronauta.root.position;
+    this.anilloSeleccion.visible = this.modo === 'tercera_persona' && this.tripulantes.length > 1;
+    this.anilloSeleccion.position.set(sel.x, groundHeightAt(sel.x, sel.z, this.destino) + 0.05, sel.z);
+    this.actualizarPops(ahoraSec);
 
     // Actualizar pool de partículas
     let hayParticulas = false;
@@ -1318,6 +1572,13 @@ export class EscenaPlaneta {
       gravedad: GRAVEDAD[this.destino],
       nodosRestantes: restantes,
       softwareGl: this.isSoftwareGl,
+      seleccionado: this.seleccionado,
+      trabajoTripulacion: this.tripulantes.map((t) => t.tareaId),
+      progresoTareas: Object.fromEntries(this.progreso),
+      tareaCercana: (() => {
+        const t = this.tareaAlAlcance(this.fisica);
+        return t ? { id: t.id, etiqueta: t.etiqueta } : null;
+      })(),
     });
   }
 
@@ -1327,10 +1588,13 @@ export class EscenaPlaneta {
     const ejecutar = (now: number) => {
       if (this.destruido || this.perdido) return;
       const dt = Math.min(0.05, Math.max(0.001, (now - this.ultimoTiempo) / 1000));
+      // El trabajo usa tiempo real, como el reloj del día: en un equipo lento la física va más despacio,
+      // pero una tarea no debe tardar más en terminarse.
+      const dtReal = Math.min(0.5, Math.max(0, (now - this.ultimoTiempo) / 1000));
       this.ultimoTiempo = now;
 
       if (this.modo !== 'pausa') {
-        this.animarEscena(dt, now / 1000);
+        this.animarEscena(dt, now / 1000, dtReal);
         this.actualizarCamara(dt);
         this.renderer.render(this.scene, this.camera);
         if (this.modo === 'tercera_persona') {
@@ -1396,7 +1660,8 @@ export class EscenaPlaneta {
     this.limpiarGrupo(this.grupoRocas);
     this.limpiarGrupo(this.grupoNodos);
     this.limpiarGrupo(this.grupoCielo);
-    this.limpiarGrupo(this.astronauta.root);
+    for (const t of this.tripulantes) this.limpiarGrupo(t.rig.root);
+    this.capaPops.remove();
     this.particulasMesh.geometry.dispose();
     (this.particulasMesh.material as THREE.Material).dispose();
     this.tex.dispose();

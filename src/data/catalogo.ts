@@ -2,6 +2,7 @@
 // Costes y efectos son PROVISIONALES. Los costes de panel, reactor, invernadero y Curiosity
 // salen del boceto del UX Brief (5.2); el resto son plausibles y se calibran en la fase 3.
 // Los efectos del equipo histórico siguen la columna "Efecto en el juego" del README.
+// `mantenimiento` (RF-16): tarea diaria de cada módulo, en segundos de un no especialista. PROVISIONAL.
 
 import type { Destino, Item } from '../engine/tipos';
 
@@ -15,6 +16,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { energiaSolar: 8 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 6 },
   },
   {
     id: 'reactor',
@@ -23,6 +25,7 @@ export const CATALOGO: Item[] = [
     coste: 22,
     destinos: AMBOS,
     efectos: { energiaProduccion: 20 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 12 },
   },
   {
     id: 'invernadero',
@@ -31,6 +34,7 @@ export const CATALOGO: Item[] = [
     coste: 15,
     destinos: AMBOS,
     efectos: { alimentoProduccion: 3.6, energiaConsumo: 3 }, // 3,6 kg al día: la comida de 2 tripulantes
+    mantenimiento: { especialidad: 'biologia', trabajo: 12 },
   },
   {
     id: 'reciclador',
@@ -39,6 +43,7 @@ export const CATALOGO: Item[] = [
     coste: 12,
     destinos: AMBOS,
     efectos: { soporteVital: 2, energiaConsumo: 3 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 10 },
   },
   {
     id: 'blindaje',
@@ -47,6 +52,7 @@ export const CATALOGO: Item[] = [
     coste: 10,
     destinos: AMBOS,
     efectos: { blindaje: 0.45 },
+    mantenimiento: { especialidad: 'ingenieria', trabajo: 6 },
   },
   {
     id: 'zona-descanso',
@@ -55,6 +61,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { saludBonus: { suenoEstres: 2 }, energiaConsumo: 1 },
+    mantenimiento: { especialidad: 'medicina', trabajo: 6 },
   },
   {
     id: 'gimnasio',
@@ -63,6 +70,7 @@ export const CATALOGO: Item[] = [
     coste: 8,
     destinos: AMBOS,
     efectos: { saludBonus: { musculoHueso: 2 }, energiaConsumo: 1 },
+    mantenimiento: { especialidad: 'medicina', trabajo: 6 },
   },
   {
     id: 'retrorreflector',

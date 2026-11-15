@@ -3,6 +3,7 @@
 export type Destino = 'luna' | 'marte';
 export type Fase = 'inicio' | 'diseno' | 'juego' | 'bitacora';
 export type Indicador = 'radiacion' | 'nutricion' | 'suenoEstres' | 'musculoHueso';
+export type Especialidad = 'ingenieria' | 'biologia' | 'geologia' | 'medicina'; // RF-14
 
 export interface Configuracion {
   destino: Destino;
@@ -32,11 +33,13 @@ export interface Item {
   destinos: Destino[];
   efectos: Efectos;
   historiaId?: string; // solo históricos
+  mantenimiento?: { especialidad: Especialidad; trabajo: number }; // tarea diaria (RF-16)
 }
 
 export interface Astronauta {
   id: string;
   nombre: string;
+  especialidad: Especialidad;
   salud: Record<Indicador, number>; // 0..100
   dosis: number; // acumulada, en mSv
 }
@@ -58,10 +61,26 @@ export interface EfectosTurno {
   multiplicadorRadiacion?: number; // por defecto 1
 }
 
+// Trabajo que pide una opción (RF-15). `estacion`: 'habitat', 'exterior' o el id de un módulo;
+// si el módulo no está en el diseño, la tarea se hace en el hábitat.
+export interface TareaOpcion {
+  estacion: string;
+  especialidad: Especialidad;
+  trabajo: number; // segundos de un no especialista
+  etiqueta: string;
+}
+
+// Tarea concreta de un día (TRD 6.1). `estacion`: 'habitat', 'exterior' o 'item:<índice en itemIds>'.
+export interface Tarea extends TareaOpcion {
+  id: string;
+  tipo: 'evento' | 'mantenimiento';
+}
+
 export interface Opcion {
   id: string;
   texto: string;
   efectos: EfectosTurno;
+  tareas?: TareaOpcion[];
 }
 
 export interface Evento {
@@ -71,6 +90,7 @@ export interface Evento {
   destinos: Destino[];
   peso: number; // probabilidad relativa
   opciones: Opcion[]; // 2..3
+  opcionSinAtender?: string; // se aplica si quedan tareas de la opción elegida (RF-15)
   historiaId?: string; // eventos educativos
 }
 
@@ -153,6 +173,8 @@ export interface DeltaTurno {
   dosisMedia: number; // mSv que sumó el turno a cada astronauta, en promedio
   ciencia: number;
   opcionTexto: string;
+  sinAtender?: boolean; // quedaron tareas del evento y se aplicó la opción de riesgo
+  modulosParados?: number; // módulos sin mantenimiento ese día
 }
 
 export interface Estado {

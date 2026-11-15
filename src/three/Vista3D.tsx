@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import type { Destino } from '../engine/tipos';
+import type { Destino, Especialidad, Tarea } from '../engine/tipos';
 import {
   EscenaPlaneta,
   type EntradaTactil3D,
@@ -11,6 +11,7 @@ import {
 export interface Vista3DRef {
   ejecutarAccionCercana: () => boolean;
   setEntradaTactil: (entrada: Partial<EntradaTactil3D>) => void;
+  seleccionar: (indice: number) => void;
 }
 
 interface Vista3DProps {
@@ -19,12 +20,30 @@ interface Vista3DProps {
   modo: ModoCamara3D;
   eventoActualId: string | null;
   turno: number;
+  especialidades: Especialidad[]; // una por tripulante (RF-13, RF-14)
+  tareas: Tarea[];
+  tareasHechas: string[];
+  trabajoActivo: boolean;
   onTelemetria: (estado: EstadoTelemetria3D) => void;
   onAccionCompletada: (accion: EventoAccion3D) => void;
+  onTareaCompletada: (tareaId: string) => void;
 }
 
 export const Vista3D = forwardRef<Vista3DRef, Vista3DProps>(function Vista3D(
-  { destino, itemIds, modo, eventoActualId, turno, onTelemetria, onAccionCompletada },
+  {
+    destino,
+    itemIds,
+    modo,
+    eventoActualId,
+    turno,
+    especialidades,
+    tareas,
+    tareasHechas,
+    trabajoActivo,
+    onTelemetria,
+    onAccionCompletada,
+    onTareaCompletada,
+  },
   ref,
 ) {
   const contenedorRef = useRef<HTMLDivElement | null>(null);
@@ -32,14 +51,17 @@ export const Vista3D = forwardRef<Vista3DRef, Vista3DProps>(function Vista3D(
 
   const onTelemetriaRef = useRef(onTelemetria);
   const onAccionRef = useRef(onAccionCompletada);
+  const onTareaRef = useRef(onTareaCompletada);
   onTelemetriaRef.current = onTelemetria;
   onAccionRef.current = onAccionCompletada;
+  onTareaRef.current = onTareaCompletada;
 
   useImperativeHandle(
     ref,
     () => ({
       ejecutarAccionCercana: () => escenaRef.current?.ejecutarAccionCercana() ?? false,
       setEntradaTactil: (entrada) => escenaRef.current?.setEntradaTactil(entrada),
+      seleccionar: (indice) => escenaRef.current?.seleccionar(indice),
     }),
     [],
   );
@@ -55,6 +77,7 @@ export const Vista3D = forwardRef<Vista3DRef, Vista3DProps>(function Vista3D(
       itemsIniciales: itemIds,
       onTelemetria: (t) => onTelemetriaRef.current(t),
       onAccionCompletada: (a) => onAccionRef.current(a),
+      onTareaCompletada: (id) => onTareaRef.current(id),
     });
     escenaRef.current = escena;
 
@@ -79,6 +102,14 @@ export const Vista3D = forwardRef<Vista3DRef, Vista3DProps>(function Vista3D(
   useEffect(() => {
     escenaRef.current?.setEventoYTurno(eventoActualId, turno);
   }, [eventoActualId, turno]);
+
+  useEffect(() => {
+    escenaRef.current?.setTripulacion(especialidades);
+  }, [especialidades]);
+
+  useEffect(() => {
+    escenaRef.current?.setTareas(tareas, tareasHechas, trabajoActivo);
+  }, [tareas, tareasHechas, trabajoActivo]);
 
   return (
     <div

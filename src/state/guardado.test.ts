@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { tareasDelDia } from '../engine/tareas';
 import { recursoQueFalta } from '../engine/turno';
 import { cargarPartida, guardarPartida, type EstadoJuego } from './guardado';
 import { crearEstadoInicial, reducer, type EstadoApp } from './reducer';
@@ -21,6 +22,10 @@ function avanzar(estado: EstadoApp, dias: number): EstadoApp {
     const { partida } = estado;
     const opcion = partida.eventoActual!.opciones.find((o) => !recursoQueFalta(partida, o.id))!;
     estado = reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id });
+    if (estado.fase === 'juego' && estado.plan) {
+      for (const t of tareasDelDia(estado.partida, opcion.id)) estado = reducer(estado, { tipo: 'COMPLETAR_TAREA', tareaId: t.id });
+      estado = reducer(estado, { tipo: 'TERMINAR_DIA' });
+    }
   }
   return estado;
 }

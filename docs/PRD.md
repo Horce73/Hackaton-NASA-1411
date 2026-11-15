@@ -32,7 +32,7 @@ una recompensa, no en una lección.
 - Backend, base de datos o analítica.
 - Simulación científicamente exacta: es un modelo educativo simplificado.
 - Datos de NASA en vivo (RF-10 se descartó; TRD sección 13).
-- Realidad virtual, 3D o motor de juego.
+- Realidad virtual o un motor de juego externo. El 3D se hace con Three.js en el navegador (PR #2).
 
 ## 4. Historias de usuario
 
@@ -46,6 +46,9 @@ una recompensa, no en una lección.
 | HU-06 | Como explorador, llevo equipo histórico real y descubro su historia en una tarjeta. | RF-07, RF-08 |
 | HU-07 | Como explorador, al terminar veo mi puntuación y las historias que desbloqueé. | RF-09 |
 | HU-08 | Como docente, juego sin instalar nada ni necesitar internet en el aula. | RNF-01, RNF-02 |
+| HU-09 | Como explorador, muevo a cada astronauta hasta la estación donde hace falta, para cumplir el plan del día. | RF-13, RF-15 |
+| HU-10 | Como explorador, mando a cada especialista a su tipo de trabajo, para terminar a tiempo. | RF-14 |
+| HU-11 | Como explorador, aprendo que cada módulo pide mantenimiento, para no comprar más de los que mi tripulación puede cuidar. | RF-16 |
 
 ## 5. Alcance
 
@@ -54,6 +57,9 @@ RF-01 a RF-05, RF-07, RF-08 y RF-09. RNF-01 a RNF-05.
 
 ### Después del MVP (S y C)
 RF-06 (gráfica de tendencia), RF-10 (imágenes de la API de la NASA), RF-11 (sonido), RF-12 (guardado).
+
+### Fase de jugabilidad (después de la entrega del MVP)
+RF-13 a RF-16: tripulación controlable, especialidades, tareas en las estaciones y mantenimiento.
 
 ### Contenido mínimo del MVP
 
@@ -78,6 +84,10 @@ RF-06 (gráfica de tendencia), RF-10 (imágenes de la API de la NASA), RF-11 (so
 | RF-07 | **Dado** el catálogo, **cuando** añado un equipo histórico y juego, **entonces** su efecto de juego se aplica en la simulación. |
 | RF-08 | **Dado** un equipo histórico en el diseño, **cuando** se lanza la misión (o se resuelve un evento educativo), **entonces** su historia se desbloquea y se muestra una tarjeta con imagen, año, lugar, 2–3 frases y fuente. |
 | RF-09 | **Dado** el fin de la misión (por turnos o aborto), **entonces** se muestra si la misión terminó con éxito o abortada, la puntuación y las historias desbloqueadas. |
+| RF-13 | **Dado** una partida con N tripulantes, **cuando** pulso un número de 1 a N, **entonces** controlo a ese astronauta y los demás se quedan donde están, trabajando si estaban en una tarea. |
+| RF-14 | **Dado** una tarea de su especialidad, **cuando** un especialista trabaja en ella, **entonces** avanza al doble de velocidad, y la interfaz lo indica. |
+| RF-15 | **Dado** una opción elegida, **cuando** termina el día (reloj a 0 o "Terminar día") con alguna de sus tareas sin hacer, **entonces** se aplica la opción de riesgo del evento y la bitácora del día lo explica. Con "sin reloj", el día solo termina con el botón. |
+| RF-16 | **Dado** un módulo del diseño, **cuando** termina el día sin su mantenimiento, **entonces** ese módulo no produce ese día; el diseño avisa de cuántas tareas diarias genera. |
 
 ## 7. Métricas de éxito
 

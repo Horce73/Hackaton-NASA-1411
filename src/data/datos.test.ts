@@ -139,3 +139,18 @@ test('physics/ no importa React, three, ui/ ni state/', () => {
     expect(codigo, archivo).not.toMatch(/from\s+['"](react|three|[./]*\/(ui|state)\/)/);
   }
 });
+
+test('las tareas de las opciones apuntan a estaciones que existen y la opción de riesgo es del evento (RF-15)', () => {
+  for (const evento of EVENTOS) {
+    if (evento.opcionSinAtender) {
+      const riesgo = evento.opciones.find((o) => o.id === evento.opcionSinAtender);
+      expect(riesgo, evento.id).toBeDefined();
+      expect(riesgo!.tareas ?? [], `${evento.id}: la opción de riesgo no pide tareas`).toEqual([]);
+    }
+    for (const tarea of evento.opciones.flatMap((o) => o.tareas ?? [])) {
+      const valida = ['habitat', 'exterior'].includes(tarea.estacion) || CATALOGO_POR_ID[tarea.estacion]?.tipo === 'modulo';
+      expect(valida, `${evento.id}: ${tarea.estacion}`).toBe(true);
+      expect(tarea.trabajo).toBeGreaterThan(0);
+    }
+  }
+});

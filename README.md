@@ -49,6 +49,10 @@ Prioridad: **M** = imprescindible (MVP), **S** = si hay tiempo, **C** = opcional
 | RF-10 | Fotos desde la API de imágenes de la NASA, con imágenes estáticas de respaldo. | 1 | C |
 | RF-11 | Efectos de sonido con Web Audio. | — | C |
 | RF-12 | Guardar la última partida en `localStorage`. | — | C |
+| RF-13 | Tripulación en 3D: un astronauta por tripulante; las teclas 1–4 eligen a quién mover y los demás siguen con su tarea. | 13 | S |
+| RF-14 | Especialidades fijas (ingeniería, biología, geología, medicina): el especialista hace su tipo de tarea el doble de rápido. | 13 | S |
+| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. La opción elegida solo hace efecto si se terminan sus tareas; si no, se aplica la opción de riesgo del evento. Día de 90 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
+| RF-16 | Mantenimiento diario de cada módulo: si no se hace, el módulo no rinde ese día. Comprar demasiados módulos sobrecarga a la tripulación. | 13 | S |
 
 ## Requisitos no funcionales
 
@@ -148,6 +152,15 @@ porcentaje. **A partir del 80 % del tiempo no se añaden funciones, solo pulido 
 | 6. Pulido y demo | 15 % | Accesibilidad, balance, guion de demo, despliegue. |
 | Reserva | 5 % | Imprevistos. |
 
+Tras la entrega del MVP, fases de jugabilidad (decididas el 2026-11-14, en la rama `feat/tripulacion-multitarea`):
+
+| Fase | Resultado |
+|---|---|
+| 7. Documentos | RF-13 a RF-16 en el PRD, el TRD y el UX Brief. |
+| 8. Motor | Tareas del día, especialidades y mantenimiento en `engine/`, con pruebas. |
+| 9. 3D | Varios astronautas, selección con 1–4 y avisos flotantes con progreso. |
+| 10. HUD y verificación | Barra de tripulación, lista de tareas, reloj y "Terminar día"; teclado, movimiento reducido y rendimiento. |
+
 Al terminar la fase 3 ya hay un juego completo, aunque feo. Si el tiempo se acaba antes,
 se entrega eso con las fases 4 y 5 reducidas.
 
@@ -184,9 +197,12 @@ ajustarlo tras ensayar con cronómetro.
 1. **[0:15] Inicio:** pulsar el preajuste **Marte** y **Empezar** (RF-01).
 2. **[0:30] Diseño:** enseñar el presupuesto, la pestaña **Equipo NASA** con Curiosity y la previsión técnica.
    Pulsar **Lanzar misión** (RF-02, RF-07).
-3. **[0:25] Tarjetas:** se abren las de Curiosity y Sojourner con foto, año y fuente (RF-08). Cerrar con **Entendido**.
-4. **[0:20] Día 1, tormenta de polvo:** elegir **Ahorrar energía**; los paneles solares rinden menos (RF-03, RF-04).
-5. **[0:20] Día 2, tormenta solar:** elegir **Seguir trabajando fuera** para mostrar el riesgo.
+3. **[0:20] Tarjetas:** se abren las de Curiosity y Sojourner con foto, año y fuente (RF-08). Cerrar con **Entendido**.
+4. **[0:30] Día 1, tormenta de polvo:** elegir **Ahorrar energía**. Sale el plan del día: reloj de 90 s y un aviso
+   flotante sobre cada estación. Caminar con W hacia el hábitat y pulsar **E**: Lucía es ingeniera y termina la tarea
+   clave el doble de rápido. Pulsar **2** para cambiar a Marco. **Terminar día**: los módulos sin revisar no rinden
+   (RF-03, RF-04, RF-13 a RF-16).
+5. **[0:15] Día 2, tormenta solar:** elegir **Seguir trabajando fuera** y **Terminar día** para mostrar el riesgo.
 6. **[0:35] Día 3:** abrir **Salud**: Curiosity avisa de la radiación antes de que sea peligrosa (RF-05).
    Opcional: pulsar **Explorar 3D [H]** y caminar con WASD hasta un equipo de la NASA.
 7. **[0:35] Cierre:** **Abortar** y **Confirmar regreso** para abrir la bitácora con puntuación, tendencia e
@@ -215,5 +231,6 @@ ajustarlo tras ensayar con cronómetro.
 | RNF-05 | Hecho (fase 6): 69 kB comprimidos al arrancar; el 3D (149 kB) se descarga aparte. Lighthouse rendimiento 57 móvil / 65 escritorio, medido con gráficos por software |
 | RF-12 | Hecho: la partida en curso se guarda en `localStorage` y el inicio ofrece "Continuar partida" |
 | RF-10 | No se hace (decidido, TRD sección 13) |
+| RF-13 a RF-16 | Hecho (fases 7 a 10): tripulación en 3D con selección 1–4, especialidades, tareas del día con avisos flotantes y reloj de 90 s (×2 o sin reloj), mantenimiento por módulo. Comprobado en Chrome; falta jugarlo con personas para ajustar tiempos |
 | Textos con fuente | Historias y avisos verificados por el equipo el 2026-11-14; `npm run test:entrega` pasa |
 | Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

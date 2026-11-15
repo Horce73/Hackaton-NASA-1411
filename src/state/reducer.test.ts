@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { EVENTOS } from '../data/eventos';
+import { tareasDelDia } from '../engine/tareas';
 import { PREAJUSTES, TURNOS_MAX, TURNOS_MIN } from '../data/parametros';
 import type { Configuracion } from '../engine/tipos';
 import { crearEstadoInicial, ESTADO_INICIAL, reducer, type Accion, type EstadoApp } from './reducer';
@@ -33,6 +34,16 @@ function lanzar(itemIds: string[], config: Configuracion = marte): EstadoJuego {
   return estado;
 }
 
+// Un día completo: elegir, hacer todas las tareas (o ninguna) y terminar el día (RF-15).
+function jugarDia(estado: EstadoJuego, opcionId: string, hacerTareas = true): EstadoApp {
+  let actual: EstadoApp = reducer(estado, { tipo: 'ELEGIR_OPCION', opcionId });
+  if (actual.fase !== 'juego' || !actual.plan) return actual;
+  if (hacerTareas) {
+    for (const t of tareasDelDia(actual.partida, opcionId)) actual = reducer(actual, { tipo: 'COMPLETAR_TAREA', tareaId: t.id });
+  }
+  return reducer(actual, { tipo: 'TERMINAR_DIA' });
+}
+
 function jugarHastaElFinal(estado: EstadoApp): EstadoApp {
   let actual = estado;
   // Tope defensivo: una partida nunca debería superar los turnos más las tarjetas.
@@ -44,7 +55,7 @@ function jugarHastaElFinal(estado: EstadoApp): EstadoApp {
     const opcion = actual.partida.eventoActual!.opciones.find(
       (o) => reducer(actual, { tipo: 'ELEGIR_OPCION', opcionId: o.id }) !== actual,
     )!;
-    actual = reducer(actual, { tipo: 'ELEGIR_OPCION', opcionId: opcion.id });
+    actual = jugarDia(actual, opcion.id);
   }
   return actual;
 }
@@ -146,10 +157,7 @@ test('las acciones de diseño no hacen nada fuera del diseño y REINICIAR vuelve
 test('ELEGIR_OPCION avanza el turno y al terminar pasa a la bitácora (RF-04, RF-09)', () => {
   const lanzada = lanzar(['reciclador', 'panel-solar']);
   const opcionId = lanzada.partida.eventoActual!.opciones[0].id;
-  expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId })).toMatchObject({
-    fase: 'juego',
-    partida: { turno: 2 },
-  });
+  expect(jugarDia(lanzada, opcionId)).toMatchObject({ fase: 'juego', partida: { turno: 2 }, plan: null });
   expect(reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId: 'no-existe' })).toBe(lanzada);
 
   const final = jugarHastaElFinal(lanzada);
@@ -193,7 +201,7 @@ test('un evento educativo abre su tarjeta al resolverse', () => {
     ...lanzada,
     partida: { ...lanzada.partida, eventoActual: surveyor },
   };
-  expect(reducer(conEvento, { tipo: 'ELEGIR_OPCION', opcionId: 'seguir-plan' })).toMatchObject({
+  expect(jugarDia(conEvento, 'seguir-plan')).toMatchObject({
     tarjetas: ['surveyor-3'],
   });
 });
@@ -251,4 +259,34 @@ test('ABORTAR_MISION cierra la partida como abortada', () => {
     partida: { resultado: 'abortada', motivoFin: expect.stringContaining('abortar') },
   });
   expect(reducer(ESTADO_INICIAL, { tipo: 'ABORTAR_MISION' })).toBe(ESTADO_INICIAL);
+});
+
+test('ELEGIR_OPCION abre el plan del día sin avanzar el turno (RF-15)', () => {
+  const lanzada = lanzar(['reciclador', 'panel-solar']);
+  const opcionId = lanzada.partida.eventoActual!.opciones[0].id;
+  const conPlan = reducer(lanzada, { tipo: 'ELEGIR_OPCION', opcionId });
+  expect(conPlan).toMatchObject({ partida: { turno: 1 }, plan: { opcionId, hechas: [] } });
+  // Con un plan en marcha no se puede cambiar de opción.
+  const otra = lanzada.partida.eventoActual!.opciones[1].id;
+  expect(reducer(conPlan, { tipo: 'ELEGIR_OPCION', opcionId: otra })).toBe(conPlan);
+
+  const [primera] = tareasDelDia(lanzada.partida, opcionId);
+  const hecha = reducer(conPlan, { tipo: 'COMPLETAR_TAREA', tareaId: primera.id });
+  expect(hecha).toMatchObject({ plan: { hechas: [primera.id] } });
+  expect(reducer(hecha, { tipo: 'COMPLETAR_TAREA', tareaId: primera.id })).toBe(hecha);
+  expect(reducer(hecha, { tipo: 'COMPLETAR_TAREA', tareaId: 'no-existe' })).toBe(hecha);
+  expect(reducer(lanzada, { tipo: 'TERMINAR_DIA' })).toBe(lanzada);
+});
+
+test('terminar el día con tareas sin hacer aplica la opción de riesgo y para los módulos (RF-15, RF-16)', () => {
+  const lanzada = lanzar(['reciclador', 'panel-solar']);
+  const solar = EVENTOS.find((e) => e.id === 'tormenta-solar')!;
+  const conEvento: EstadoJuego = { ...lanzada, partida: { ...lanzada.partida, eventoActual: solar } };
+
+  const bien = jugarDia(conEvento, 'refugiarse');
+  const mal = jugarDia(conEvento, 'refugiarse', false);
+  if (bien.fase !== 'juego' || mal.fase !== 'juego') throw new Error('esperaba seguir en juego');
+  expect(bien.partida.ultimoDelta).toMatchObject({ opcionTexto: 'Refugiarse en la base' });
+  expect(mal.partida.ultimoDelta).toMatchObject({ sinAtender: true, modulosParados: 2 });
+  expect(mal.partida.ultimoDelta!.dosisMedia).toBeGreaterThan(bien.partida.ultimoDelta!.dosisMedia);
 });

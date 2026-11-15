@@ -316,14 +316,20 @@ export function crearBaseCentral3D(destino: Destino, tex: ConjuntoTexturas, isSo
   banda.position.y = yMetal + altoMetal - 0.3;
   grupo.add(banda);
 
-  // Patas de aterrizaje
+  // Patas de aterrizaje: del casco, a media altura, hasta apoyar en la plataforma con un pie redondo.
+  const radioPie = radioMetal + 0.75; // dentro de la plataforma, que mide radioMetal + 0.9 arriba
   for (let k = 0; k < 4; k++) {
     const angulo = Math.PI / 4 + (k * Math.PI) / 2;
-    const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 2.2, 8), matOscuro);
-    pata.position.set(Math.cos(angulo) * (radioMetal + 0.55), yMetal + 0.95, Math.sin(angulo) * (radioMetal + 0.55));
-    pata.lookAt(Math.cos(angulo) * radioMetal * 0.6, yMetal + 2.2, Math.sin(angulo) * radioMetal * 0.6);
-    pata.rotateX(Math.PI / 2);
-    grupo.add(pata);
+    const c = Math.cos(angulo);
+    const sn = Math.sin(angulo);
+    const arriba = new THREE.Vector3(c * radioMetal, yMetal + 1.7, sn * radioMetal);
+    const abajo = new THREE.Vector3(c * radioPie, yMetal + 0.08, sn * radioPie);
+    const pata = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, arriba.distanceTo(abajo), 8), matOscuro);
+    pata.position.copy(arriba).lerp(abajo, 0.5);
+    pata.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), arriba.clone().sub(abajo).normalize());
+    const pie = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.32, 0.1, 12), matOscuro);
+    pie.position.set(abajo.x, yMetal + 0.05, abajo.z);
+    grupo.add(pata, pie);
   }
 
   // Esclusa en la parte metálica, mirando a +Z (por donde llega la tripulación)
@@ -550,28 +556,87 @@ export function crearModulo3D(
     }
 
     case 'blindaje': {
-      // Berma de sacos de regolito: el suelo del sitio, en sacos apilados, frena la radiación. Los sacos pesan menos
-      // por volumen que el regolito suelto y necesitan una capa más gruesa (estudio Lunar Safe Haven, NASA 2021).
+      // Refugio de radiación con sacos de regolito: el concepto 1.2 del estudio Lunar Safe Haven (NASA, 2021,
+      // figura 6). Una estructura de acero cubierta de sacos llenos del suelo del sitio en el techo y tres paredes;
+      // la cara +X (de lado, según se rodea la base) queda abierta, en corte, para ver el módulo de refugio. Los sacos
+      // pesan menos por volumen que el regolito suelto y necesitan una capa más gruesa.
       // https://ntrs.nasa.gov/api/citations/20210022066/downloads/Grande_Lunar%20Safe%20Haven_ASCEND%202021_Full_v2b.docx.pdf
-      const matSaco = new THREE.MeshStandardMaterial({
-        color: destino === 'luna' ? 0x9c9b95 : 0xa45f3f,
-        roughness: 0.95,
-        metalness: 0,
-      });
-      const geoSaco = new RoundedBoxGeometry(0.85, 0.36, 0.6, 2, 0.14);
-      const filas = 4;
-      for (let fila = 0; fila < filas; fila++) {
-        const n = 6 - Math.floor(fila / 2);
-        for (let i = 0; i < n; i++) {
-          // Arco de unos 100 grados, cóncavo hacia la base; cada fila desplazada medio saco y algo torcida.
-          const ang = -0.85 + ((i + (fila % 2) * 0.5) / 5.5) * 1.7;
-          const saco = new THREE.Mesh(geoSaco, matSaco);
-          saco.position.set(Math.sin(ang) * 2.3, 0.18 + fila * 0.34, -Math.cos(ang) * 2.3 + 1.6);
-          saco.rotation.set(0, -ang + ((i * 7 + fila * 3) % 5) * 0.04 - 0.08, ((i + fila) % 3) * 0.03);
-          g.add(saco);
+      const ancho = 3.6;
+      const alto = 3;
+      const mitad = ancho / 2;
+      const suelo = new THREE.Mesh(new THREE.BoxGeometry(ancho, 0.1, ancho), matOscuro);
+      suelo.position.y = 0.05;
+      g.add(suelo);
+
+      // Estructura: columnas, vigas del techo y travesaños de la cara abierta.
+      const viga = (sx: number, sy: number, sz: number, x: number, y: number, z: number) => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), matOscuro);
+        m.position.set(x, y, z);
+        g.add(m);
+      };
+      for (const x of [-mitad + 0.08, mitad - 0.08]) {
+        for (const z of [-mitad + 0.08, mitad - 0.08]) viga(0.16, alto, 0.16, x, alto / 2, z);
+      }
+      for (const z of [-mitad + 0.08, mitad - 0.08]) viga(ancho, 0.16, 0.16, 0, alto, z);
+      for (const x of [-mitad + 0.08, mitad - 0.08]) viga(0.16, 0.16, ancho, x, alto, 0);
+      viga(0.12, alto, 0.12, mitad - 0.08, alto / 2, -0.6);
+      viga(0.12, alto, 0.12, mitad - 0.08, alto / 2, 0.6);
+      viga(0.12, 0.12, ancho, mitad - 0.08, alto * 0.55, 0);
+
+      // Dentro: el módulo de refugio, un cilindro blanco con franja azul.
+      const refugio = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.75, 0.75, 2.2, 18),
+        new THREE.MeshStandardMaterial({ color: 0xe8ebf0, roughness: 0.5, metalness: 0.3 }),
+      );
+      refugio.position.set(-0.2, 1.2, 0);
+      const franja = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.77, 0.77, 0.22, 18),
+        new THREE.MeshStandardMaterial({ color: 0x3b5ba5, roughness: 0.5 }),
+      );
+      franja.position.set(-0.2, 1.35, 0);
+      g.add(refugio, franja);
+
+      // Sacos: una sola malla instanciada (un dibujo para todos).
+      const posiciones: [number, number, number, number][] = [];
+      const saco = { largo: 0.6, alto: 0.3, fondo: 0.42 };
+      const fila = (n: number) => (n % 2) * (saco.largo / 2);
+      for (let r = 0; r < 10; r++) {
+        const y = 0.25 + r * saco.alto;
+        for (let u = -mitad + saco.largo / 2 + fila(r); u <= mitad - saco.largo / 2 + 0.01; u += saco.largo) {
+          posiciones.push([-mitad - saco.fondo / 2, y, u, Math.PI / 2]); // pared -X
+          if (u < mitad - 0.3) {
+            posiciones.push([u, y, -mitad - saco.fondo / 2, 0]); // pared -Z
+            posiciones.push([u, y, mitad + saco.fondo / 2, 0]); // pared +Z, la que mira al hábitat
+          }
         }
       }
-      g.add(crearSombraContacto(tex.sombraContacto, 2.2));
+      // Techo en dos capas, con lomo, como el de la figura.
+      for (let z = -mitad - 0.4 + saco.largo / 2; z <= mitad + 0.4; z += saco.largo) {
+        for (let x = -mitad - 0.3 + saco.fondo / 2; x <= mitad + 0.05; x += saco.fondo) {
+          posiciones.push([x, alto + 0.22, z, Math.PI / 2]);
+          if (Math.abs(z) < 1.1) posiciones.push([x, alto + 0.5, z, Math.PI / 2]);
+        }
+      }
+      const sacos = new THREE.InstancedMesh(
+        new RoundedBoxGeometry(saco.largo - 0.04, saco.alto - 0.02, saco.fondo - 0.04, 2, 0.08),
+        new THREE.MeshStandardMaterial({
+          color: destino === 'luna' ? 0xb9a78c : 0xb27b5b,
+          roughness: 0.95,
+          metalness: 0,
+        }),
+        posiciones.length,
+      );
+      const matriz = new THREE.Matrix4();
+      const giro = new THREE.Quaternion();
+      const eje = new THREE.Vector3(0, 1, 0);
+      const escala = new THREE.Vector3(1, 1, 1);
+      posiciones.forEach(([x, y, z, rot], i) => {
+        // Un poco torcidos, como sacos apilados a mano.
+        giro.setFromAxisAngle(eje, rot + (((i * 37) % 7) - 3) * 0.012);
+        matriz.compose(new THREE.Vector3(x, y, z), giro, escala);
+        sacos.setMatrixAt(i, matriz);
+      });
+      g.add(sacos, crearSombraContacto(tex.sombraContacto, 2.8));
       break;
     }
 

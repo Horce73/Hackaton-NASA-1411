@@ -27,6 +27,150 @@ import {
   type AstronautaRig,
 } from './modelos3d';
 
+// Cielo de Marte de día: amarillo anaranjado por el polvo y azulado cerca del Sol, porque el polvo fino deja pasar
+// mejor la luz azul hacia delante. https://www.jpl.nasa.gov/news/nasas-curiosity-rover-views-serene-sundown-on-mars/
+// El cielo «brumoso y rojo» por el polvo: https://science.nasa.gov/mars/facts/
+const CIELO_MARTE = { horizonte: 0xc99068, cenit: 0x8c5a3e, halo: 0xbfd2e2, roca: 0x7d4129 };
+
+const DISTANCIA_FOBOS = 260;
+const DIRECCION_FOBOS = new THREE.Vector3(0.085, 0.225, -0.97).normalize(); // unos 13° sobre el horizonte, a la derecha del hábitat en la vista de decidir
+
+function crearCieloMarte(): THREE.Mesh {
+  const material = new THREE.ShaderMaterial({
+    uniforms: {
+      horizonte: { value: new THREE.Color(CIELO_MARTE.horizonte) },
+      cenit: { value: new THREE.Color(CIELO_MARTE.cenit) },
+      halo: { value: new THREE.Color(CIELO_MARTE.halo) },
+      solDir: { value: new THREE.Vector3(0, 1, 0) },
+      disco: { value: 1 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec3 vDir;
+      void main() {
+        vDir = position;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`,
+    fragmentShader: /* glsl */ `
+      uniform vec3 horizonte;
+      uniform vec3 cenit;
+      uniform vec3 halo;
+      uniform vec3 solDir;
+      uniform float disco;
+      varying vec3 vDir;
+      void main() {
+        vec3 d = normalize(vDir);
+        vec3 col = mix(horizonte, cenit, pow(clamp(d.y, 0.0, 1.0), 0.55));
+        float s = max(dot(d, normalize(solDir)), 0.0);
+        col = mix(col, halo, pow(s, 22.0) * 0.65);
+        col += vec3(1.0, 0.96, 0.88) * smoothstep(0.99935, 0.9997, s) * disco;
+        gl_FragColor = vec4(col, 1.0);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
+      }`,
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+  });
+  const cielo = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), material);
+  cielo.renderOrder = -1;
+  cielo.frustumCulled = false;
+  return cielo;
+}
+
+// Silueta del horizonte entre los ángulos θ0 y θ1, a `radio` metros: la base se funde con el polvo y la cima tiene
+// el color de la roca velado por la distancia. Sin niebla: el velo va en los colores.
+function crearSilueta(
+  radio: number,
+  theta0: number,
+  theta1: number,
+  altura: (theta: number) => number,
+  velo: number,
+  segmentos = 240,
+): THREE.Mesh {
+  const horizonte = new THREE.Color(CIELO_MARTE.horizonte);
+  const cima = new THREE.Color(CIELO_MARTE.roca).lerp(horizonte, velo);
+  const base = new THREE.Color(CIELO_MARTE.roca).lerp(horizonte, Math.min(1, velo + 0.3));
+  const posiciones: number[] = [];
+  const colores: number[] = [];
+  const indices: number[] = [];
+  for (let i = 0; i <= segmentos; i++) {
+    const t = theta0 + ((theta1 - theta0) * i) / segmentos;
+    const c = Math.cos(t);
+    const sn = Math.sin(t);
+    posiciones.push(c * radio, 1.8, sn * radio, c * (radio - 6), altura(t), sn * (radio - 6));
+    colores.push(base.r, base.g, base.b, cima.r, cima.g, cima.b);
+    if (i < segmentos) {
+      const k = i * 2;
+      indices.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(posiciones, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colores, 3));
+  geo.setIndex(indices);
+  return new THREE.Mesh(
+    geo,
+    new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide }),
+  );
+}
+
+// Monte Olimpo: escudo ancho y bajo con acantilado en la base y caldera en la cima. Mide más de 40 km desde la base
+// y su base ocupa un área como Arizona (https://science.nasa.gov/mars/facts/): de cerca no parece un pico sino una
+// loma enorme. Aquí está comprimido a 240 m y en un ángulo que no tapa el amanecer de la llegada.
+const OLIMPO = { centro: -Math.PI / 2 - 0.75, semiancho: 0.46, alto: 34, acantilado: 7, radio: 240 };
+
+// Tres filas: el pie (velado por el polvo), el borde del acantilado (en sombra) y la ladera iluminada hasta la
+// caldera de la cima.
+function crearOlimpo(): THREE.Mesh {
+  const horizonte = new THREE.Color(CIELO_MARTE.horizonte);
+  const pie = new THREE.Color(CIELO_MARTE.roca).lerp(horizonte, 0.7);
+  const borde = new THREE.Color(0x4a2416).lerp(horizonte, 0.32);
+  const ladera = new THREE.Color(0x8c4a2e).lerp(horizonte, 0.3);
+  const segmentos = 160;
+  const posiciones: number[] = [];
+  const colores: number[] = [];
+  const indices: number[] = [];
+  const { centro, semiancho, alto, acantilado, radio } = OLIMPO;
+  for (let i = 0; i <= segmentos; i++) {
+    const u = -1 + (2 * i) / segmentos;
+    const t = centro + u * semiancho;
+    const c = Math.cos(t);
+    const sn = Math.sin(t);
+    const a = Math.abs(u);
+    const yBorde = 1.8 + acantilado * Math.min(1, (1 - a) / 0.05);
+    const caldera = a < 0.06 ? -1.6 * (1 - a / 0.06) : 0;
+    const yCima = yBorde + alto * Math.pow(Math.max(0, 1 - a * a), 1.1) + caldera;
+    for (const [y, color, retraso] of [
+      [1.8, pie, 0],
+      [yBorde, borde, 2],
+      [yCima, ladera, 8],
+    ] as const) {
+      posiciones.push(c * (radio - retraso), y, sn * (radio - retraso));
+      colores.push(color.r, color.g, color.b);
+    }
+    if (i < segmentos) {
+      const k = i * 3;
+      indices.push(k, k + 1, k + 3, k + 1, k + 4, k + 3, k + 1, k + 2, k + 4, k + 2, k + 5, k + 4);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(posiciones, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(colores, 3));
+  geo.setIndex(indices);
+  return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, fog: false, side: THREE.DoubleSide }));
+}
+
+// Cordillera baja alrededor, como el borde de un cráter. Tiene que asomar por encima del borde del cráter cercano,
+// que sube hasta unos 4,5 m a 60–80 m de la base.
+function alturaCordillera(t: number): number {
+  const base = 15 + 6 * Math.sin(3 * t + 1) + 3.5 * Math.sin(7 * t + 2) + 1.5 * Math.sin(17 * t + 0.5);
+  // Delante del Olimpo, la cordillera baja para que el volcán se distinga.
+  let d = Math.abs(t - OLIMPO.centro);
+  d = Math.min(d, Math.PI * 2 - d);
+  const hueco = Math.max(0, 1 - d / (OLIMPO.semiancho * 1.2));
+  return 1.8 + (base - 1.8) * (1 - 0.75 * hueco);
+}
+
 export type ModoCamara3D = 'orbita' | 'tercera_persona' | 'pausa';
 
 export interface ObjetivoCercano {
@@ -163,6 +307,8 @@ export class EscenaPlaneta {
   private grupoRocas = new THREE.Group();
   private grupoNodos = new THREE.Group();
   private grupoCielo = new THREE.Group();
+  private cieloMarte: THREE.Mesh | null = null;
+  private fobos: THREE.Mesh | null = null;
 
   private terrenoMesh: THREE.Mesh | null = null;
   // Tripulación (RF-13): `astronauta` y `fisica` son siempre los del tripulante seleccionado.
@@ -321,7 +467,7 @@ export class EscenaPlaneta {
       54,
       Math.max(1, this.contenedor.clientWidth) / Math.max(1, this.contenedor.clientHeight),
       0.2,
-      260,
+      420,
     );
 
     this.pmremGenerator = new THREE.PMREMGenerator(this.renderer);
@@ -506,18 +652,30 @@ export class EscenaPlaneta {
       this.luzHemi.groundColor.setHex(0x161a24);
       this.luzHemi.intensity = 0.72;
     } else {
-      this.scene.background = new THREE.Color(0x3a1c15);
-      this.niebla.color.setHex(0x4d2318);
-      this.niebla.density = 0.0135;
-      this.luzSol.color.setHex(0xffdfc2);
+      // La niebla tiene el color del horizonte: el suelo lejano se funde con el polvo del aire.
+      this.scene.background = new THREE.Color(CIELO_MARTE.horizonte);
+      this.niebla.color.setHex(CIELO_MARTE.horizonte);
+      this.niebla.density = 0.0095;
+      this.luzSol.color.setHex(0xffe2c8);
       this.luzSol.intensity = 2.45;
-      this.luzHemi.color.setHex(0xf2a57c);
-      this.luzHemi.groundColor.setHex(0x301710);
+      this.luzHemi.color.setHex(0xe0a37a);
+      this.luzHemi.groundColor.setHex(0x3a1d12);
       this.luzHemi.intensity = 0.85;
+    }
+    this.cieloMarte = null;
+    this.fobos = null;
+    if (this.destino === 'marte') {
+      this.cieloMarte = crearCieloMarte();
+      this.grupoCielo.add(
+        this.cieloMarte,
+        crearSilueta(175, -Math.PI, Math.PI, alturaCordillera, 0.42, 360),
+        crearOlimpo(),
+      );
     }
 
     // Campo de estrellas
-    const numEstrellas = this.destino === 'luna' ? 520 : 180;
+    // De día, el cielo de Marte es demasiado claro para ver estrellas.
+    const numEstrellas = this.destino === 'luna' ? 520 : 0;
     const posEstrellas = new Float32Array(numEstrellas * 3);
     let seed = this.destino === 'luna' ? 777 : 999;
     const rnd = () => {
@@ -563,18 +721,19 @@ export class EscenaPlaneta {
       tierra.rotation.y = -0.6;
       this.grupoCielo.add(tierra);
     } else {
-      const fobos = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(2.6, 2),
-        new THREE.MeshStandardMaterial({
-          map: this.tex.fobosAlbedo,
-          normalMap: this.tex.fobosNormal,
-          normalScale: new THREE.Vector2(1.3, 1.3),
-          roughness: 0.92,
+      // Fobos, pequeño y pálido tras el velo de polvo. Desde Marte se ve a un tercio del ancho de la Luna llena vista
+      // desde la Tierra (unos 0,17°, https://science.nasa.gov/solar-system/planets/mars/nasas-hubble-sees-martian-moon-orbiting-the-red-planet/);
+      // aquí mide el doble, 0,35°, para que no quede en un punto de 2 píxeles. Sigue a la cámara, como el cielo.
+      const radio = DISTANCIA_FOBOS * Math.tan(((0.35 / 2) * Math.PI) / 180);
+      this.fobos = new THREE.Mesh(
+        new THREE.SphereGeometry(radio, 12, 8),
+        new THREE.MeshBasicMaterial({
+          color: new THREE.Color(0x6f6058).lerp(new THREE.Color(CIELO_MARTE.horizonte), 0.3),
           fog: false,
         }),
       );
-      fobos.position.set(42, 32, -64);
-      this.grupoCielo.add(fobos);
+      this.fobos.renderOrder = 0;
+      this.grupoCielo.add(this.fobos);
     }
 
     // Terreno desplazado por groundHeightAt
@@ -600,6 +759,13 @@ export class EscenaPlaneta {
     this.terrenoMesh.receiveShadow = true;
     this.grupoMundo.add(this.terrenoMesh);
     this.mallasColisionCam.push(this.terrenoMesh);
+    if (this.destino === 'marte') {
+      // Llanura lejana hasta la cordillera: la niebla de polvo la funde con el horizonte.
+      const llanura = new THREE.Mesh(new THREE.RingGeometry(74, 300, 72, 1), matTerreno);
+      llanura.rotation.x = -Math.PI / 2;
+      llanura.position.y = 2.2;
+      this.grupoMundo.add(llanura);
+    }
 
     // Rocas instanciadas en cráteres exteriores con textura basáltica PBR
     const numRocas = 46;
@@ -744,8 +910,8 @@ export class EscenaPlaneta {
           id: `mod-${id}-${idx}-${k}`,
           x: mx + ejeX * desplazamiento,
           z: mz + ejeZ * desplazamiento,
-          radio: alargado ? 1.25 : id === 'panel-solar' && this.destino === 'luna' ? 0.9 : 1.55,
-          altura: alargado ? 2.7 : 2.1,
+          radio: alargado ? 1.25 : id === 'blindaje' ? 2.1 : id === 'panel-solar' && this.destino === 'luna' ? 0.9 : 1.55,
+          altura: alargado ? 2.7 : id === 'blindaje' ? 3.6 : 2.1,
         });
       });
 
@@ -1078,6 +1244,19 @@ export class EscenaPlaneta {
     this.camYaw = 0;
     this.camPitch = 0.21;
     this.salida = performance.now() / 1000;
+  }
+
+  // El cielo de Marte sigue a la cámara (no tiene paralaje) y su halo apunta al Sol: el de la escena o, durante la
+  // llegada, el que sale por detrás del hábitat.
+  private actualizarCielo() {
+    if (!this.cieloMarte) return;
+    this.cieloMarte.position.copy(this.camera.position);
+    this.fobos?.position.copy(DIRECCION_FOBOS).multiplyScalar(DISTANCIA_FOBOS).add(this.camera.position);
+    const u = (this.cieloMarte.material as THREE.ShaderMaterial).uniforms;
+    const llegada = this.sol?.visible === true;
+    if (llegada && this.sol) u.solDir.value.copy(this.sol.position).sub(this.camera.position);
+    else u.solDir.value.copy(this.luzSol.position);
+    u.disco.value = llegada ? 0 : 1;
   }
 
   public setAmanecer(activo: boolean) {
@@ -1508,7 +1687,7 @@ export class EscenaPlaneta {
     const esTormentaPolvo = this.eventoActualId === 'tormenta-polvo';
     const esTormentaSolar = this.eventoActualId === 'tormenta-solar';
     if (this.destino === 'marte') {
-      const densidadObj = esTormentaPolvo ? 0.032 : 0.0135;
+      const densidadObj = esTormentaPolvo ? 0.032 : 0.0095;
       this.niebla.density += (densidadObj - this.niebla.density) * Math.min(1, dt * 2);
       if (this.polvoTimer > (esTormentaPolvo ? 0.05 : 0.16)) {
         this.polvoTimer = 0;
@@ -1797,6 +1976,7 @@ export class EscenaPlaneta {
       if (this.modo !== 'pausa') {
         this.animarEscena(dt, now / 1000, dtReal);
         this.actualizarCamara(dt);
+        this.actualizarCielo();
         this.renderer.render(this.scene, this.camera);
         if (this.modo === 'tercera_persona') {
           this.emitirTelemetria(false);

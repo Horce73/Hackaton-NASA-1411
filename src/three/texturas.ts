@@ -29,8 +29,6 @@ export interface ConjuntoTexturas {
   cultivoNormal: THREE.CanvasTexture;
   tierraAlbedo: THREE.CanvasTexture;
   tierraRoughness: THREE.CanvasTexture;
-  fobosAlbedo: THREE.CanvasTexture;
-  fobosNormal: THREE.CanvasTexture;
   sombraContacto: THREE.CanvasTexture;
   dispose: () => void;
 }
@@ -149,7 +147,8 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
   const [cTerrH, ctxTH] = crearCanvas(T_SIZE, T_SIZE);
   const [cTerrR, ctxTR] = crearCanvas(T_SIZE, T_SIZE);
 
-  ctxTA.fillStyle = destino === 'luna' ? '#6c727f' : '#9d4f32';
+  // Marte: regolito ocre rojizo por el óxido de hierro del polvo (https://science.nasa.gov/mars/facts/).
+  ctxTA.fillStyle = destino === 'luna' ? '#6c727f' : '#a55e3a';
   ctxTA.fillRect(0, 0, T_SIZE, T_SIZE);
   ctxTH.fillStyle = '#808080';
   ctxTH.fillRect(0, 0, T_SIZE, T_SIZE);
@@ -168,8 +167,8 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
           ? 'rgba(170,178,194,0.12)'
           : 'rgba(46,50,60,0.14)'
         : claro
-          ? 'rgba(205,112,72,0.14)'
-          : 'rgba(98,40,22,0.16)';
+          ? 'rgba(216,152,106,0.16)'
+          : 'rgba(96,46,28,0.18)';
     const colH = claro ? 'rgba(180,180,180,0.12)' : 'rgba(75,75,75,0.12)';
 
     for (const ox of [-T_SIZE, 0, T_SIZE]) {
@@ -225,8 +224,55 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
     }
   }
 
-  // Microcráteres con borde elevado y sombra interna
-  for (let i = 0; i < 42; i++) {
+  if (destino === 'marte') {
+    // Ondas de arena: crestas claras y senos oscuros, periódicas en X y repetidas en Y para que la textura no tenga
+    // costuras.
+    for (let fila = 0; fila < 14; fila++) {
+      const y0 = (fila / 14) * T_SIZE + rand() * 8;
+      const fase = rand() * Math.PI * 2;
+      for (const oy of [-T_SIZE, 0, T_SIZE]) {
+        for (const [desplazamiento, colorA, colorH, ancho] of [
+          [0, 'rgba(100,46,26,0.2)', 'rgba(60,60,60,0.25)', 3],
+          [-3, 'rgba(226,166,118,0.16)', 'rgba(205,205,205,0.25)', 2],
+        ] as const) {
+          ctxTA.strokeStyle = colorA;
+          ctxTH.strokeStyle = colorH;
+          ctxTA.lineWidth = ctxTH.lineWidth = ancho;
+          ctxTA.beginPath();
+          ctxTH.beginPath();
+          for (let x = 0; x <= T_SIZE; x += 4) {
+            const y = y0 + oy + desplazamiento + 5 * Math.sin((x / T_SIZE) * Math.PI * 2 * 3 + fase);
+            if (x === 0) {
+              ctxTA.moveTo(x, y);
+              ctxTH.moveTo(x, y);
+            } else {
+              ctxTA.lineTo(x, y);
+              ctxTH.lineTo(x, y);
+            }
+          }
+          ctxTA.stroke();
+          ctxTH.stroke();
+        }
+      }
+    }
+    // Guijarros de basalto oscuro, a medio cubrir de polvo.
+    for (let i = 0; i < 900; i++) {
+      const x = rand() * T_SIZE;
+      const y = rand() * T_SIZE;
+      const r = 1.2 + rand() * 2.6;
+      ctxTA.fillStyle = rand() > 0.35 ? 'rgba(62,48,42,0.55)' : 'rgba(118,82,64,0.5)';
+      ctxTA.beginPath();
+      ctxTA.ellipse(x, y, r * 1.3, r, rand() * Math.PI, 0, Math.PI * 2);
+      ctxTA.fill();
+      ctxTH.fillStyle = 'rgba(230,230,230,0.45)';
+      ctxTH.beginPath();
+      ctxTH.arc(x, y, r, 0, Math.PI * 2);
+      ctxTH.fill();
+    }
+  }
+
+  // Microcráteres con borde elevado y sombra interna. En Marte, el viento y el polvo borran casi todos los pequeños.
+  for (let i = 0; i < (destino === 'luna' ? 42 : 10); i++) {
     const x = rand() * T_SIZE;
     const y = rand() * T_SIZE;
     const r = 6 + rand() * 22;
@@ -735,7 +781,7 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
   const cultivoNormal = registrar(generarNormalDesdeAltura(cCulH, 2.4, maxAnisotropy, 2, 1));
 
   // =========================================================================
-  // 11. PLANETA TIERRA EN EL CIELO LUNAR + FOBOS EN MARTE (512x256 / 256x128)
+  // 11. PLANETA TIERRA EN EL CIELO LUNAR (512x256)
   // =========================================================================
   const [cEarA, ctxEarA] = crearCanvas(512, 256);
   const [cEarR, ctxEarR] = crearCanvas(512, 256);
@@ -782,29 +828,6 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
   const tierraAlbedo = registrar(configurarTextura(cEarA, true, maxAnisotropy, 1, 1));
   const tierraRoughness = registrar(configurarTextura(cEarR, false, maxAnisotropy, 1, 1));
 
-  // Fobos (luna craterizada de Marte)
-  const [cFobA, ctxFobA] = crearCanvas(256, 128);
-  const [cFobH, ctxFobH] = crearCanvas(256, 128);
-  ctxFobA.fillStyle = '#7e635a';
-  ctxFobA.fillRect(0, 0, 256, 128);
-  ctxFobH.fillStyle = '#808080';
-  ctxFobH.fillRect(0, 0, 256, 128);
-  for (let i = 0; i < 38; i++) {
-    const x = randPlanet() * 256;
-    const y = randPlanet() * 128;
-    const r = 4 + randPlanet() * 14;
-    ctxFobA.fillStyle = 'rgba(48,34,30,0.45)';
-    ctxFobA.beginPath();
-    ctxFobA.arc(x, y, r, 0, Math.PI * 2);
-    ctxFobA.fill();
-    ctxFobH.fillStyle = 'rgba(30,30,30,0.6)';
-    ctxFobH.beginPath();
-    ctxFobH.arc(x, y, r, 0, Math.PI * 2);
-    ctxFobH.fill();
-  }
-  const fobosAlbedo = registrar(configurarTextura(cFobA, true, maxAnisotropy, 1, 1));
-  const fobosNormal = registrar(generarNormalDesdeAltura(cFobH, 2.5, maxAnisotropy, 1, 1));
-
   // =========================================================================
   // 12. SOMBRA DE CONTACTO RADIAL
   // =========================================================================
@@ -847,8 +870,6 @@ export function crearConjuntoTexturas(destino: Destino, maxAnisotropy: number): 
     cultivoNormal,
     tierraAlbedo,
     tierraRoughness,
-    fobosAlbedo,
-    fobosNormal,
     sombraContacto,
     dispose: () => {
       todas.forEach((t) => t.dispose());

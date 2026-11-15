@@ -46,7 +46,9 @@ export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
 
   return (
     <main className="relative z-10 min-h-screen pointer-events-none flex flex-col justify-between p-4 sm:p-6 lg:p-8">
-      <div className="pointer-events-auto w-full max-w-md rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 p-5 sm:p-6 space-y-5 shadow-2xl">
+      {/* Como mucho, el alto de la pantalla: lo de dentro se desplaza y el botón principal queda siempre a la vista. */}
+      <div className="pointer-events-auto w-full max-w-md flex flex-col max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)] lg:max-h-[calc(100dvh-7rem)] rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/90 shadow-2xl overflow-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-width:thin] [scrollbar-color:var(--color-border-strong)_transparent] p-5 sm:p-6 space-y-5">
         <header className="space-y-3">
           <div className="flex items-center gap-4">
             <ParcheMision destino={config.destino} className="w-16 h-16 sm:w-20 sm:h-20" />
@@ -113,7 +115,16 @@ export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
           </div>
         </section>
 
-        <details open={!misionActiva} className="group rounded-xl border border-[var(--color-border)] bg-[#111830]">
+        <details
+          open={!misionActiva}
+          onToggle={(e) => {
+            // Al abrir, que se vea lo de dentro aunque la tarjeta esté desplazada.
+            if (!e.currentTarget.open) return;
+            const reducido = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+            e.currentTarget.scrollIntoView({ block: 'nearest', behavior: reducido ? 'auto' : 'smooth' });
+          }}
+          className="group rounded-xl border border-[var(--color-border)] bg-[#111830]"
+        >
           <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between gap-2 px-3.5 text-sm font-semibold text-[var(--color-text)] [&::-webkit-details-marker]:hidden">
             <span>
               Personalizar
@@ -199,8 +210,9 @@ export function PantallaInicio({ config, dispatch }: PantallaInicioProps) {
             </div>
           </div>
         </details>
+        </div>
 
-        <div className="space-y-2">
+        <div className="shrink-0 space-y-2 border-t border-[var(--color-border)] px-5 py-4 sm:px-6">
           <button
             type="button"
             data-start="true"

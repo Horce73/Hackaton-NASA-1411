@@ -58,6 +58,22 @@ test('todo aviso tiene sus textos, un dato y una fuente de nasa.gov', () => {
   }
 });
 
+test('cada misión histórica tiene su medición con fuente y las notas de los eventos existen (RF-17)', () => {
+  for (const historia of HISTORIAS) {
+    expect(historia.medicion.dato.length, historia.id).toBeGreaterThan(20);
+    expect(historia.medicion.fuente, historia.id).toMatch(/^https:\/\//);
+  }
+  const ids = HISTORIAS.map((h) => h.id);
+  for (const evento of EVENTOS) for (const id of evento.notaDe ?? []) expect(ids, evento.id).toContain(id);
+});
+
+test('cada evento tiene un dato del archivo NASA con su fuente', () => {
+  for (const evento of EVENTOS) {
+    expect(evento.archivo.dato.length, evento.id).toBeGreaterThan(20);
+    expect(evento.archivo.fuente, evento.id).toMatch(/^https:\/\/([a-z]+\.)*nasa\.gov\//);
+  }
+});
+
 test('cada evento tiene 2 o 3 opciones y peso positivo (RF-04)', () => {
   for (const evento of EVENTOS) {
     expect(evento.opciones.length, evento.id).toBeGreaterThanOrEqual(2);
@@ -80,8 +96,8 @@ test('contenido mínimo del PRD', () => {
 test('ningún texto visible usa raya larga', () => {
   const textos = [
     ...CATALOGO.map((i) => i.nombre),
-    ...EVENTOS.flatMap((e) => [e.titulo, e.texto, ...e.opciones.map((o) => o.texto)]),
-    ...HISTORIAS.flatMap((h) => [h.nombre, h.texto, h.datoCurioso, h.imagen.alt]),
+    ...EVENTOS.flatMap((e) => [e.titulo, e.texto, e.archivo.dato, ...e.opciones.map((o) => o.texto)]),
+    ...HISTORIAS.flatMap((h) => [h.nombre, h.texto, h.datoCurioso, h.imagen.alt, h.medicion.dato]),
     ...Object.values(AVISOS).flatMap((a) => [a.nombre, a.ok, a.riesgo, a.dato]),
   ];
   expect(textos.filter((t) => t.includes('—'))).toEqual([]);

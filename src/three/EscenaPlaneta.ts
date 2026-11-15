@@ -43,7 +43,6 @@ export interface EventoAccion3D {
 
 export interface EstadoTelemetria3D {
   objetivoCercano: ObjetivoCercano | null;
-  combustibleJetpack: number;
   enSuelo: boolean;
   enDomo: boolean;
   altura: number;
@@ -183,6 +182,9 @@ export class EscenaPlaneta {
   private trabajoActivo = false;
   private progreso = new Map<string, number>();
   private posEstaciones = new Map<string, THREE.Vector3>();
+  // Primer plano del cuaderno de misión (RF-17): dónde está cada equipo histórico y a cuál mira la cámara.
+  private posHistorias = new Map<string, { centro: THREE.Vector3; tamano: number }>();
+  private enfoque: { pos: THREE.Vector3; mira: THREE.Vector3 } | null = null;
   private capaPops: HTMLDivElement;
   private pops = new Map<string, { raiz: HTMLDivElement; barra: HTMLElement; aviso: HTMLElement }>();
   private anilloSeleccion!: THREE.Mesh;
@@ -652,6 +654,7 @@ export class EscenaPlaneta {
     this.obstaculos = [...this.rocasObstaculos];
     this.nodos = [];
     this.posEstaciones.clear();
+    this.posHistorias.clear();
     this.mallasColisionCam.length = 0;
     if (this.terrenoMesh) {
       this.mallasColisionCam.push(this.terrenoMesh);
@@ -743,6 +746,9 @@ export class EscenaPlaneta {
       });
 
       const info = CATALOGO_POR_ID[id];
+      if (info?.historiaId) {
+        this.posHistorias.set(info.historiaId, { centro: new THREE.Vector3(hx, hy, hz), tamano: id === 'sojourner' ? 0.5 : 1.6 });
+      }
       const yaInspeccionado = info?.historiaId
         ? this.historiasInspeccionadas.has(info.historiaId)
         : false;
@@ -756,8 +762,8 @@ export class EscenaPlaneta {
         tipo: 'historia',
         etiqueta: info ? `Inspeccionar ${info.nombre}` : 'Inspeccionar equipo NASA',
         subetiqueta: yaInspeccionado
-          ? 'Archivo histórico ya consultado'
-          : 'Pulsa [E] para leer su historia NASA (+3 ciencia)',
+          ? 'Ya está en tu cuaderno: pulsa [E] para releerlo'
+          : 'Pulsa [E] para anotar lo que midió su misión (+3 ciencia)',
         historiaId: info?.historiaId,
         x: hx,
         y: hy,
@@ -827,6 +833,7 @@ export class EscenaPlaneta {
       const sy = groundHeightAt(sx, sz, this.destino);
       const sonda = crearModulo3D('surveyor-3', this.tex, this.isSoftwareGl);
       sonda.position.set(sx, sy, sz);
+      this.posHistorias.set(EVENTO_SURVEYOR, { centro: new THREE.Vector3(sx, sy, sz), tamano: 2 });
       this.grupoBase.add(sonda);
 
       const baliza = crearNodoInteractivo3D('historia', this.tex);
@@ -1001,6 +1008,28 @@ export class EscenaPlaneta {
     this.emitirTelemetria(true);
   }
 
+  // Acerca la cámara a un equipo histórico (o la devuelve al astronauta con null). Mira desde el lado de la base,
+  // que es hacia donde está girado cada modelo.
+  public enfocarHistoria(historiaId: string | null) {
+    const destino = historiaId ? this.posHistorias.get(historiaId) : undefined;
+    // En el primer plano solo se ve el equipo: la tripulación y los avisos flotantes se apartan.
+    this.tripulantes.forEach((t) => (t.rig.root.visible = !destino));
+    this.capaPops.style.visibility = destino ? 'hidden' : '';
+    if (!destino) {
+      this.enfoque = null;
+      return;
+    }
+    const { centro, tamano } = destino;
+    const haciaBase = new THREE.Vector3(-centro.x, 0, -centro.z).normalize();
+    const lateral = new THREE.Vector3(haciaBase.z, 0, -haciaBase.x);
+    const pos = centro
+      .clone()
+      .addScaledVector(haciaBase, tamano * 1.9)
+      .addScaledVector(lateral, tamano * 0.8)
+      .setY(centro.y + tamano * 0.9);
+    this.enfoque = { pos, mira: centro.clone().setY(centro.y + tamano * 0.35) };
+  }
+
   public seleccionar(indice: number) {
     if (indice < 0 || indice >= this.tripulantes.length || indice === this.seleccionado) return;
     this.seleccionado = indice;
@@ -1049,24 +1078,11 @@ export class EscenaPlaneta {
 
     if (esSeleccionado) {
       // Sonidos de salto, aterrizaje y pasos, solo del astronauta que manejas
-      if (prevEnSuelo && !f.enSuelo && f.vy > 1.2) {
+      if (prevEnSuelo && !f.enSuelo && f.vy > 0.8) {
         sonido.salto();
-      } else if (!prevEnSuelo && f.enSuelo && prevVy < -1.5) {
+      } else if (!prevEnSuelo && f.enSuelo && prevVy < -0.8) {
         sonido.aterrizaje();
         this.lanzarRafaga(f.x, f.y + 0.15, f.z, this.destino === 'luna' ? 0x9aa4b8 : 0xc46b45, 8);
-      }
-      if (f.usandoJetpack) {
-        this.emitirParticula(
-          f.x - Math.sin(f.yaw) * 0.28,
-          f.y + 0.55,
-          f.z - Math.cos(f.yaw) * 0.28,
-          (Math.random() - 0.5) * 0.8,
-          -2.4,
-          (Math.random() - 0.5) * 0.8,
-          0.35,
-          0.95,
-          0x6ce5ff,
-        );
       }
     }
 
@@ -1083,10 +1099,12 @@ export class EscenaPlaneta {
     rig.root.position.set(f.x, f.y, f.z);
     rig.cuerpo.rotation.y = f.yaw;
 
-    const amplitudPaso = f.enSuelo ? Math.min(0.65, velH / 10) : 0.18;
+    const amplitudPaso = f.enSuelo ? Math.min(0.65, velH / 10) : 0;
     const swing = Math.sin(t.fasePaso) * amplitudPaso;
-    rig.piernaIzq.rotation.x = swing;
-    rig.piernaDer.rotation.x = -swing;
+    // En el aire, el salto de canguro de los astronautas del Apolo: piernas juntas y flexionadas hacia delante.
+    const flexion = f.enSuelo ? 0 : -0.45;
+    rig.piernaIzq.rotation.x = swing + flexion;
+    rig.piernaDer.rotation.x = -swing + flexion;
     rig.brazoIzq.rotation.x = -swing * 0.85;
     // Trabajando: el brazo derecho se mueve como si usara una herramienta.
     const trabajando = t.tareaId !== null && this.trabajoActivo;
@@ -1095,13 +1113,6 @@ export class EscenaPlaneta {
     rig.brazoIzq.rotation.z = f.enSuelo ? 0.08 : 0.35;
     rig.brazoDer.rotation.z = f.enSuelo ? -0.08 : -0.35;
 
-    rig.llamaIzq.visible = f.usandoJetpack;
-    rig.llamaDer.visible = f.usandoJetpack;
-    if (f.usandoJetpack) {
-      const parpadeo = 0.8 + Math.random() * 0.45;
-      rig.llamaIzq.scale.set(1, parpadeo, 1);
-      rig.llamaDer.scale.set(1, parpadeo, 1);
-    }
 
     // Sombra de contacto proyectada en el suelo bajo el astronauta
     const alturaSobreSuelo = Math.max(0, f.y - groundHeightAt(f.x, f.z, this.destino));
@@ -1180,13 +1191,14 @@ export class EscenaPlaneta {
     const ancho = this.contenedor.clientWidth;
     const alto = this.contenedor.clientHeight;
     const enJuego = this.modo === 'tercera_persona';
-    const proyectar = (v: THREE.Vector3, el: HTMLElement) => {
+    // `dy`: píxeles hacia arriba, para apilar avisos de la misma estación sin que se tapen a ninguna distancia.
+    const proyectar = (v: THREE.Vector3, el: HTMLElement, dy = 0) => {
       this.tmpVecA.copy(v).project(this.camera);
       const visible = enJuego && this.tmpVecA.z < 1 && Math.abs(this.tmpVecA.x) < 1.2 && Math.abs(this.tmpVecA.y) < 1.2;
       el.style.display = visible ? 'block' : 'none';
       if (visible) {
         const x = (this.tmpVecA.x * 0.5 + 0.5) * ancho;
-        const y = (-this.tmpVecA.y * 0.5 + 0.5) * alto;
+        const y = (-this.tmpVecA.y * 0.5 + 0.5) * alto - dy;
         el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%)`;
         el.style.zIndex = String(Math.round((1 - this.tmpVecA.z) * 100000)); // el más cercano, encima
       }
@@ -1256,8 +1268,8 @@ export class EscenaPlaneta {
       // Varias tareas en la misma estación (el hábitat) se apilan.
       const pila = pendientes.filter((x) => x.estacion === tarea.estacion).indexOf(tarea);
       const flotar = this.movimientoReducido ? 0 : Math.sin(ahoraSec * 2 + pila) * 0.08;
-      this.tmpVecB.set(pos.x, pos.y + 3.4 + pila * 1.3 + flotar, pos.z);
-      proyectar(this.tmpVecB, pop.raiz);
+      this.tmpVecB.set(pos.x, pos.y + 3.4 + flotar, pos.z);
+      proyectar(this.tmpVecB, pop.raiz, pila * (ancho < 640 ? 38 : 66));
     }
   }
 
@@ -1454,7 +1466,8 @@ export class EscenaPlaneta {
 
     // Física y animación de la tripulación: solo el seleccionado recibe la entrada (RF-13).
     if (this.modo === 'tercera_persona') {
-      const entrada = this.construirEntradaMovimiento();
+      // Durante el primer plano nadie se mueve: el jugador lee.
+      const entrada = this.enfoque ? { ...ENTRADA_QUIETA, camaraYaw: this.camYaw } : this.construirEntradaMovimiento();
       this.tripulantes.forEach((t, i) => {
         this.moverTripulante(t, i === this.seleccionado ? entrada : { ...ENTRADA_QUIETA, camaraYaw: this.camYaw }, dt, i === this.seleccionado);
       });
@@ -1469,14 +1482,12 @@ export class EscenaPlaneta {
         t.rig.piernaDer.rotation.x = 0;
         t.rig.brazoIzq.rotation.set(0, 0, 0.1);
         t.rig.brazoDer.rotation.set(0, 0, -0.1);
-        t.rig.llamaIzq.visible = false;
-        t.rig.llamaDer.visible = false;
         t.rig.sombra.position.y = 0.03;
         t.rig.sombra.scale.set(1, 1, 1);
       });
     }
     const sel = this.astronauta.root.position;
-    this.anilloSeleccion.visible = this.modo === 'tercera_persona' && this.tripulantes.length > 1;
+    this.anilloSeleccion.visible = this.modo === 'tercera_persona' && this.tripulantes.length > 1 && !this.enfoque;
     this.anilloSeleccion.position.set(sel.x, groundHeightAt(sel.x, sel.z, this.destino) + 0.05, sel.z);
     this.actualizarPops(ahoraSec);
 
@@ -1527,6 +1538,15 @@ export class EscenaPlaneta {
       this.tmpVecB.set(-2.4, 2.5, 0); // Desplaza el foco para equilibrar el panel izquierdo y ver horizonte/cielo
       this.camPosSuave.lerp(this.tmpVecA, k * 0.6);
       this.camTargetSuave.lerp(this.tmpVecB, k * 0.6);
+      this.camera.position.copy(this.camPosSuave);
+      this.camera.lookAt(this.camTargetSuave);
+      return;
+    }
+
+    if (this.enfoque) {
+      const suave = this.movimientoReducido ? 1 : k * 0.45;
+      this.camPosSuave.lerp(this.enfoque.pos, suave);
+      this.camTargetSuave.lerp(this.enfoque.mira, suave);
       this.camera.position.copy(this.camPosSuave);
       this.camera.lookAt(this.camTargetSuave);
       return;
@@ -1597,7 +1617,6 @@ export class EscenaPlaneta {
             historiaId: cercano.historiaId,
           }
         : null,
-      combustibleJetpack: Math.round(this.fisica.combustibleJetpack),
       enSuelo: this.fisica.enSuelo,
       enDomo: distDomo <= 6.5,
       altura: Math.max(0, Number((this.fisica.y - groundHeightAt(this.fisica.x, this.fisica.z, this.destino)).toFixed(1))),

@@ -1,9 +1,10 @@
 import { expect, test } from 'vitest';
 import { EVENTOS } from '../data/eventos';
 import { tareasDelDia } from '../engine/tareas';
+import { recursoQueFalta } from '../engine/turno';
 import { PREAJUSTES, TURNOS_MAX, TURNOS_MIN } from '../data/parametros';
 import type { Configuracion } from '../engine/tipos';
-import { crearEstadoInicial, ESTADO_INICIAL, reducer, type Accion, type EstadoApp } from './reducer';
+import { conocimientoDelDia, crearEstadoInicial, ESTADO_INICIAL, reducer, type Accion, type EstadoApp } from './reducer';
 
 const marte: Configuracion = { destino: 'marte', tripulantes: 3, turnos: 14, semilla: 5 };
 
@@ -225,7 +226,7 @@ test('completar una tarea de exploración 3D da la recompensa, avisa y no se rep
   ).toBe(conHielo);
 });
 
-test('inspeccionar un equipo NASA abre su historia y suma ciencia', () => {
+test('inspeccionar un equipo NASA abre su primer plano y suma ciencia', () => {
   const lanzada = lanzar(['panel-solar']);
   const antes = lanzada.partida;
   const conHistoria = reducer(lanzada, {
@@ -236,7 +237,7 @@ test('inspeccionar un equipo NASA abre su historia y suma ciencia', () => {
   });
   if (conHistoria.fase !== 'juego') throw new Error('esperaba la fase de juego');
 
-  expect(conHistoria.tarjetas).toContain('curiosity');
+  expect(conHistoria.closeUp).toBe('curiosity');
   expect(conHistoria.partida.historiasDesbloqueadas).toContain('curiosity');
   expect(conHistoria.partida.ciencia).toBe(antes.ciencia + 3);
 });
@@ -287,6 +288,51 @@ test('terminar el día con tareas sin hacer aplica la opción de riesgo y para l
   const mal = jugarDia(conEvento, 'refugiarse', false);
   if (bien.fase !== 'juego' || mal.fase !== 'juego') throw new Error('esperaba seguir en juego');
   expect(bien.partida.ultimoDelta).toMatchObject({ opcionTexto: 'Refugiarse en la base' });
-  expect(mal.partida.ultimoDelta).toMatchObject({ sinAtender: true, modulosParados: 2 });
+  // El día 1 solo le toca revisión al reciclador: el panel, en segunda posición, la tiene mañana.
+  expect(mal.partida.ultimoDelta).toMatchObject({ sinAtender: true, modulosParados: 1 });
   expect(mal.partida.ultimoDelta!.dosisMedia).toBeGreaterThan(bien.partida.ultimoDelta!.dosisMedia);
+});
+
+test('cuaderno: sin la nota de la misión que lo midió, el evento no muestra cifras (RF-17)', () => {
+  const lanzada = lanzar(['reciclador', 'curiosity']);
+  const solar = EVENTOS.find((e) => e.id === 'tormenta-solar')!;
+  const conSolar: EstadoJuego = { ...lanzada, partida: { ...lanzada.partida, eventoActual: solar } };
+  // En Marte la explica Curiosity; el ALSEP es de la Luna.
+  expect(conocimientoDelDia(conSolar)).toEqual({ conocido: false, misiones: ['curiosity'] });
+
+  const inspeccion = reducer(conSolar, {
+    tipo: 'COMPLETAR_TAREA_3D',
+    tarea: 'historia',
+    nodoId: 'nodo-equipo-curiosity',
+    historiaId: 'curiosity',
+  });
+  if (inspeccion.fase !== 'juego') throw new Error('esperaba seguir en juego');
+  expect(inspeccion.closeUp).toBe('curiosity');
+  expect(inspeccion.notas).toEqual(['curiosity']);
+  expect(conocimientoDelDia(inspeccion).conocido).toBe(true);
+  expect(reducer(inspeccion, { tipo: 'CERRAR_CLOSEUP' })).toMatchObject({ closeUp: null, notas: ['curiosity'] });
+
+  // Releerlo vuelve a abrir el primer plano sin repetir la recompensa.
+  const cerrada = reducer(inspeccion, { tipo: 'CERRAR_CLOSEUP' });
+  const relectura = reducer(cerrada, { tipo: 'COMPLETAR_TAREA_3D', tarea: 'historia', nodoId: 'nodo-equipo-curiosity', historiaId: 'curiosity' });
+  expect(relectura).toMatchObject({ closeUp: 'curiosity' });
+  if (relectura.fase !== 'juego') throw new Error('esperaba seguir en juego');
+  expect(relectura.partida.ciencia).toBe(inspeccion.partida.ciencia);
+});
+
+test('cuaderno: los eventos de conocimiento general se ven desde el primer día y lo vivido se recuerda', () => {
+  const lanzada = lanzar(['reciclador']);
+  const fuga = EVENTOS.find((e) => e.id === 'fuga-agua')!;
+  expect(conocimientoDelDia({ ...lanzada, partida: { ...lanzada.partida, eventoActual: fuga } }).conocido).toBe(true);
+  // El fallo de aire lo explica Perseverance, que solo existe en Marte: en la Luna es conocimiento general.
+  const fallo = EVENTOS.find((e) => e.id === 'fallo-equipo')!;
+  const enLuna = lanzar(['reciclador'], { ...marte, destino: 'luna' });
+  expect(conocimientoDelDia({ ...enLuna, partida: { ...enLuna.partida, eventoActual: fallo } }).conocido).toBe(true);
+  expect(conocimientoDelDia({ ...lanzada, partida: { ...lanzada.partida, eventoActual: fallo } }).conocido).toBe(false);
+
+  const evento = lanzada.partida.eventoActual!;
+  const opcion = evento.opciones.find((o) => !recursoQueFalta(lanzada.partida, o.id))!;
+  const manana = jugarDia(lanzada, opcion.id);
+  if (manana.fase !== 'juego') throw new Error('esperaba seguir en juego');
+  expect(manana.eventosConocidos).toContain(evento.id);
 });

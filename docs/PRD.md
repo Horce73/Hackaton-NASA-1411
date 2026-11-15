@@ -60,6 +60,7 @@ RF-06 (gráfica de tendencia), RF-10 (imágenes de la API de la NASA), RF-11 (so
 
 ### Fase de jugabilidad (después de la entrega del MVP)
 RF-13 a RF-16: tripulación controlable, especialidades, tareas en las estaciones y mantenimiento.
+RF-17: cuaderno de misión, lo que midieron las misiones da ventaja al decidir.
 
 ### Contenido mínimo del MVP
 
@@ -88,6 +89,7 @@ RF-13 a RF-16: tripulación controlable, especialidades, tareas en las estacione
 | RF-14 | **Dado** una tarea de su especialidad, **cuando** un especialista trabaja en ella, **entonces** avanza al doble de velocidad, y la interfaz lo indica. |
 | RF-15 | **Dado** una tarea del exterior, **cuando** solo una persona trabaja en ella, **entonces** no avanza y se indica que falta otra. **Dado** una opción elegida, **cuando** termina el día (reloj a 0 o "Terminar día") con alguna de sus tareas sin hacer, **entonces** se aplica la opción de riesgo del evento y la bitácora del día lo explica. Con "sin reloj", el día solo termina con el botón. |
 | RF-16 | **Dado** un módulo del diseño, **cuando** termina el día sin su mantenimiento, **entonces** ese módulo no produce ese día; el diseño avisa de cuántas tareas diarias genera. |
+| RF-17 | **Dado** un evento que explica una misión histórica del destino, **cuando** el jugador no tiene su nota ni ha vivido el evento, **entonces** ve qué cambia cada opción sin cifras y con qué misión se midió; **cuando** inspecciona ese equipo en 3D, **entonces** la cámara se acerca, un diálogo cuenta lo que midió con su fuente, se anota en el cuaderno y las opciones muestran cifras. Los eventos de conocimiento general muestran cifras desde el primer día. |
 
 ## 7. Métricas de éxito
 

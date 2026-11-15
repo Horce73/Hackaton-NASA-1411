@@ -1,5 +1,4 @@
-# Misión Legado (nombre provisional)
-
+# Misión Legado 
 Juego web educativo para jóvenes exploradores: diseñas una misión a la Luna o a Marte,
 gestionas la base y cuidas la salud de la tripulación. Por el camino descubres la historia
 real de los equipos que la NASA dejó en esos mundos.
@@ -51,8 +50,9 @@ Prioridad: **M** = imprescindible (MVP), **S** = si hay tiempo, **C** = opcional
 | RF-12 | Guardar la última partida en `localStorage`. | — | C |
 | RF-13 | Tripulación en 3D: un astronauta por tripulante; las teclas 1–4 eligen a quién mover y los demás siguen con su tarea. | 13 | S |
 | RF-14 | Especialidades fijas (ingeniería, biología, geología, medicina): el especialista hace su tipo de tarea el doble de rápido. | 13 | S |
-| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. Cada opción pide 2 o 3 tareas que cuentan lo que significa; solo hace efecto si se terminan todas, y si no, se aplica la opción de riesgo del evento. Las del exterior piden 2 personas a la vez, como una caminata espacial. Día de 90 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
-| RF-16 | Mantenimiento diario de cada módulo: si no se hace, el módulo no rinde ese día. Comprar demasiados módulos sobrecarga a la tripulación. | 13 | S |
+| RF-15 | Tareas del día en las estaciones, con aviso flotante y progreso. Cada opción pide 2 o 3 tareas que cuentan lo que significa; solo hace efecto si se terminan todas, y si no, se aplica la opción de riesgo del evento. Las del exterior piden 2 personas a la vez, como una caminata espacial. Cada día hay un muestreo geológico opcional que da ciencia. Día de 60 s, ajustable a ×2 o sin reloj. | 3, 13 | S |
+| RF-16 | Mantenimiento de cada módulo cada pocos días (los cultivos, a diario): si no se hace el día que toca, el módulo no rinde ese día. Comprar demasiados módulos sobrecarga a la tripulación. | 13 | S |
+| RF-17 | Cuaderno de misión: cada equipo histórico guarda lo que midió su misión (dato y fuente). Al inspeccionarlo en 3D, la cámara se acerca y un diálogo negro lo cuenta; queda anotado. Un evento que explica una misión sin anotar muestra qué cambia cada opción, sin cifras, y con qué misión se midió; con la nota (o si es conocimiento general, o ya se vivió) se ven las cifras. | 1, 13 | S |
 
 ## Requisitos no funcionales
 
@@ -183,7 +183,7 @@ se entrega eso con las fases 4 y 5 reducidas.
 | **Asumido:** interfaz y textos en español. Los identificadores del código van en español (decidido, TRD sección 13). | ¿Hay un idioma obligatorio para la entrega? | Traducir la interfaz. | Entrega. |
 | **Asumido:** no hay requisito de usar datos reales en vivo. | ¿El jurado exige datos de NASA reales y no solo contenido? | Añadir una capa de datos (por ejemplo, radiación medida) a RF-03. | Evaluación. |
 | **Asumido:** las imágenes de NASA se pueden usar en la demo. | ¿Hay reglas de uso de imágenes en la hackatón? | Usar ilustraciones propias. | RF-08, RF-10. |
-| **Asumido:** los 3 preajustes de partida solo rellenan destino, tripulación y duración (RF-01): Luna fácil 2 y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14. El motor no tiene un campo de dificultad. | ¿Qué diferencia "Luna difícil" de "Luna fácil"? | Añadir `dificultad` a `Configuracion` y a `parametros.ts`. | Fase 2. |
+| **Asumido:** los 3 preajustes de partida solo rellenan destino, tripulación y duración (RF-01): Luna fácil 2 y 10 turnos, Luna difícil 4 y 14, Marte 3 y 10. El motor no tiene un campo de dificultad. | ¿Qué diferencia "Luna difícil" de "Luna fácil"? | Añadir `dificultad` a `Configuracion` y a `parametros.ts`. | Fase 2. |
 | **Asumido:** Curiosity adelanta la alerta de radiación (avisa en ámbar) pero no cambia la dosis. | ¿Debe cambiar también la simulación (por ejemplo, menos dosis en tormenta solar)? | Aplicarlo en `engine/turno.ts`. | Balance (fase 6). |
 | **Asumido:** no se puede usar la insignia de la NASA sin permiso (https://www.nasa.gov/nasa-brand-center/nasa-logo-use/); queda lista y apagada en el hábitat (`MOSTRAR_LOGO_NASA` en `src/three/modelos3d.ts`). | ¿La organización de Space Apps autoriza por escrito poner la insignia en el juego? | Copiar `RAW/logo nasa pe.png` a `public/img/logo-nasa.png` y poner el flag en `true`. | Nada: el juego funciona sin el logo. |
 | **Asumido:** cada evento afecta solo al turno en que ocurre. | ¿Hacen falta eventos que duren varios días? | Añadir efectos activos con duración al `Estado`. | Fase 3. |
@@ -199,12 +199,17 @@ ajustarlo tras ensayar con cronómetro.
 2. **[0:30] Diseño:** enseñar el presupuesto, la pestaña **Equipo NASA** con Curiosity y la previsión técnica.
    Pulsar **Lanzar misión** (RF-02, RF-07).
 3. **[0:20] Tarjetas:** se abren las de Curiosity y Sojourner con foto, año y fuente (RF-08). Cerrar con **Entendido**.
-4. **[0:30] Día 1, tormenta de polvo:** elegir **Ahorrar energía**. Sale el plan del día: reloj de 90 s, dos tareas
-   del plan (apagar sistemas en el hábitat y proteger los cultivos) y el mantenimiento de cada módulo, con un aviso
+4. **[0:30] Día 1, tormenta de polvo:** las opciones dicen qué cambian, sin cifras: esto se midió con Spirit y
+   Opportunity, que no trajimos (RF-17). Elegir **Ahorrar energía**. Sale el plan del día: reloj de
+   60 s, dos tareas del plan (apagar sistemas en el hábitat y proteger los cultivos), el muestreo geológico opcional y
+   los módulos a los que les toca revisión, con un aviso
    flotante sobre cada estación. Caminar con W hacia el hábitat y pulsar **E**: Lucía es ingeniera y trabaja el doble de
    rápido. Pulsar **2** y llevar a Marco, biólogo, al invernadero. **Terminar día**: los módulos sin revisar no rinden
-   (RF-03, RF-04, RF-13 a RF-16).
-5. **[0:15] Día 2, tormenta solar:** elegir **Seguir trabajando fuera** y **Terminar día** para mostrar el riesgo.
+   (RF-03, RF-04, RF-13 a RF-17).
+5. **[0:30] Día 2, tormenta solar:** el panel dice que esto se midió con Curiosity. Caminar hasta Curiosity (a la
+   izquierda, detrás de la base) y pulsar **E**: la cámara se acerca y el diálogo cuenta lo que midió su instrumento RAD.
+   **Anotar en el cuaderno**: ahora las opciones tienen cifras. Elegir **Seguir trabajando fuera** y **Terminar día**
+   para mostrar el riesgo (RF-17).
 6. **[0:35] Día 3:** abrir **Salud**: Curiosity avisa de la radiación antes de que sea peligrosa (RF-05).
    Opcional: pulsar **Explorar 3D [H]** y caminar con WASD hasta un equipo de la NASA.
 7. **[0:35] Cierre:** **Abortar** y **Confirmar regreso** para abrir la bitácora con puntuación, tendencia e
@@ -233,6 +238,7 @@ ajustarlo tras ensayar con cronómetro.
 | RNF-05 | Hecho (fase 6): 69 kB comprimidos al arrancar; el 3D (149 kB) se descarga aparte. Lighthouse rendimiento 57 móvil / 65 escritorio, medido con gráficos por software |
 | RF-12 | Hecho: la partida en curso se guarda en `localStorage` y el inicio ofrece "Continuar partida" |
 | RF-10 | No se hace (decidido, TRD sección 13) |
-| RF-13 a RF-16 | Hecho (fases 7 a 10): tripulación en 3D con selección 1–4, especialidades, tareas del día con avisos flotantes y reloj de 90 s (×2 o sin reloj), mantenimiento por módulo; el trabajo crece con la tripulación y con los días. Comprobado en Chrome; falta jugarlo con personas para ajustar tiempos |
+| RF-13 a RF-16 | Hecho (fases 7 a 10): tripulación en 3D con selección 1–4, especialidades, tareas del día con avisos flotantes y reloj de 60 s (×2 o sin reloj), mantenimiento por módulo cada pocos días y muestreo diario del geólogo; el trabajo crece con la tripulación y con los días. Comprobado en Chrome; falta jugarlo con personas para ajustar tiempos |
+| RF-17 | Hecho: cuaderno de misión con primer plano y diálogo al inspeccionar, una medición con fuente por misión (5 nuevas con `verificada: false`), riesgo sin cifras hasta tener la nota. 4 eventos nuevos (hielo en un cráter, polvo en los trajes, conjunción solar, remolino) con `verificada: false` hasta contrastarlos |
 | Textos con fuente | Historias y avisos verificados por el equipo el 2026-11-14; `npm run test:entrega` pasa |
 | Despliegue de prueba (fase 0) | Hecho el 2026-11-14: https://horce73.github.io/Hackaton-NASA-1411/ (GitHub Pages, lanzamiento manual) |

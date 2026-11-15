@@ -232,8 +232,9 @@ function ritmoTrabajo(astronauta: Astronauta, tarea: Tarea): number
 ```
 
 **Tareas del día (RF-13 a RF-16).** `tareasDelDia` lista lo que hay que hacer tras elegir una opción: las
-`tareas` de la opción (en `data/eventos.ts`) y una tarea de mantenimiento por cada módulo del diseño (de
-`Item.mantenimiento`, en `data/catalogo.ts`). Cada `Tarea` tiene `id`, `estacion` (`habitat`, `exterior` o
+`tareas` de la opción (en `data/eventos.ts`), un muestreo geológico opcional (`tipo: 'ciencia'`, exterior, 2 personas;
+si se termina suma `CIENCIA_MUESTREO`) y la revisión de los módulos a los que les toca hoy: cada módulo se revisa cada
+`Item.mantenimiento.cadaDias` días (en `data/catalogo.ts`), desfasado por su posición en el diseño. Cada `Tarea` tiene `id`, `estacion` (`habitat`, `exterior` o
 `item:<índice en itemIds>`), `tipo` (`evento` o `mantenimiento`), `especialidad`, `trabajo` (segundos de un
 no especialista) y `etiqueta`. `trabajo` se multiplica por `cargaDelDia`: `tripulantes / 2` por una carga que sube
 lineal de `CARGA_PRIMER_DIA` a `CARGA_ULTIMO_DIA`. Con los preajustes, el trabajo ideal ocupa el 42–69 % del día 1 y el
@@ -352,7 +353,7 @@ misión termina con una tarjeta pendiente, la bitácora muestra la historia comp
 Fase de jugabilidad: el estado `juego` añade `plan: { opcionId, hechas: string[] } | null`. `ELEGIR_OPCION`
 crea el plan del día en lugar de resolver el turno; `COMPLETAR_TAREA` anota una tarea hecha y `TERMINAR_DIA`
 resuelve el turno con las pendientes. La selección de astronauta, su posición y el progreso parcial de cada
-tarea viven en la escena 3D; el reloj (90 s, ×2 o sin reloj), en la interfaz.
+tarea viven en la escena 3D; el reloj (60 s, ×2 o sin reloj), en la interfaz.
 
 La semilla se toma de `?seed=` en la URL y, si no existe, de la hora; la demo usa una semilla fija.
 
@@ -421,6 +422,7 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 | RF-09 | `engine/puntuacion.ts`, `ui/bitacora` |
 | RF-12 | `state/guardado.ts`, `ui/comun/EstadoContext.tsx`, `ui/inicio` |
 | RF-13 a RF-16 | `engine/tareas.ts`, `data/catalogo.ts`, `data/eventos.ts`, `state/reducer.ts`, `three/`, `ui/juego` |
+| RF-17 | `Historia.medicion` en `data/historias.ts`, `Evento.archivo` y `Evento.notaDe` en `data/eventos.ts`; `notas`, `closeUp`, `eventosConocidos` y `conocimientoDelDia` en `state/reducer.ts` (guardado versión 4); `enfocarHistoria` en `three/EscenaPlaneta.ts`; `ArchivoNasa` y `DialogoCloseUp` en `ui/juego` |
 | RNF-01, RNF-02 | Sin backend; recursos en `public/` |
 | RNF-04 | Carpeta `engine/` sin importar React |
 
@@ -430,13 +432,15 @@ No se hacen pruebas de interfaz automatizadas en el MVP.
 |---|---|---|
 | Idioma del código | Español en identificadores | Decidido en la fase 0 |
 | Netlify o GitHub Pages | GitHub Pages | Decidido; despliegue de prueba hecho en la fase 0 |
-| Preajustes de partida y dificultad | Solo rellenan RF-01: Luna fácil 2 tripulantes y 10 turnos, Luna difícil 4 y 20, Marte 3 y 14 (provisionales, en `parametros.ts`) | Decidido en la fase 2 |
+| Preajustes de partida y dificultad | Solo rellenan RF-01: Luna fácil 2 tripulantes y 10 turnos, Luna difícil 4 y 14, Marte 3 y 10 (acortados el 2026-11-15) (provisionales, en `parametros.ts`) | Decidido en la fase 2 |
 | Eventos de varios turnos | No: cada evento afecta a su turno | Fase 3 |
 | Opción con coste y almacén vacío | La opción queda bloqueada con el motivo visible | Decidido en la fase 3 |
 | Efecto de Curiosity en la alerta de dosis | Alerta temprana de radiación (`alertaRadiacion`); no cambia la simulación | Decidido en la fase 4 |
 | Valores de balance | Los de `parametros.ts`; cinco calibrados con cifras de la NASA en la fase 3. Objetivo de la fase 6, en victorias con decisiones al azar sobre el diseño sugerido: Luna fácil 70–85 %, Luna difícil 20–35 %, Marte 35–55 %; decidiendo bien, los tres se ganan casi siempre. Las cifras de la NASA no se tocan | Decidido en la fase 6 |
 | RF-10 (API de imágenes) | No se hace: las 8 historias ya tienen su foto de images.nasa.gov en el repo, y los resultados en vivo no pasarían la revisión de textos e imágenes para niños | Decidido tras la fase 6 |
-| Jugabilidad (RF-13 a RF-16) | Control con WASD del astronauta elegido (1–4); día de 90 s con ×2 y sin reloj (WCAG 2.2.1); tarea de evento sin hacer → `opcionSinAtender`; mantenimiento sin hacer → el módulo no rinde ese día; especialidades fijas por nombre (Lucía ingeniería, Marco biología, Aiko geología, Dani medicina) | Decidido el 2026-11-14 |
-| Dificultad del día | El trabajo crece con la tripulación y del primer al último día (`cargaDelDia`), en vez de acortar el día | Decidido el 2026-11-14 |
+| Jugabilidad (RF-13 a RF-16) | Control con WASD del astronauta elegido (1–4); día de 60 s con ×2 y sin reloj (WCAG 2.2.1); tarea de evento sin hacer → `opcionSinAtender`; mantenimiento sin hacer → el módulo no rinde ese día; especialidades fijas por nombre (Lucía ingeniería, Marco biología, Aiko geología, Dani medicina) | Decidido el 2026-11-14 |
+| Dificultad del día | El trabajo crece con la tripulación y del primer al último día (`cargaDelDia`); día de 60 s y misiones más cortas | Decidido el 2026-11-14 y el 2026-11-15 |
+| Cuaderno de misión (RF-17) | Sin la nota de la misión que lo midió, el evento muestra el riesgo sin cifras; la nota se anota al inspeccionar el equipo en 3D, con primer plano y diálogo | Decidido el 2026-11-15 |
+| Movimiento | Sin jetpack; salto con traje de unos 0,44 m en la Luna (saludo con salto del Apolo 16), postura de piernas juntas en el aire | Decidido el 2026-11-15 |
 | Insignia de la NASA en el hábitat | Lista en `modelos3d.ts` tras `MOSTRAR_LOGO_NASA = false`; la imagen no se publica hasta tener permiso por escrito | Pendiente de permiso |
 | RF-12 (guardado) | Se guarda solo la partida en curso; el inicio ofrece "Continuar partida" y nunca se reanuda sola. Al terminar la misión se borra | Decidido tras la fase 6 |

@@ -12,7 +12,6 @@ import {
   HelpCircle,
   Menu,
   Radio,
-  Rocket,
   Sparkles,
   Timer,
   Volume2,
@@ -24,13 +23,13 @@ import {
 import { sonido } from '../../audio/sonido';
 import { CATALOGO_POR_ID } from '../../data/catalogo';
 import { HISTORIAS_POR_ID } from '../../data/historias';
-import { DURACION_DIA, ESPECIALIDADES } from '../../data/parametros';
+import { CIENCIA_MUESTREO, DURACION_DIA, ESPECIALIDADES } from '../../data/parametros';
 import { semaforo } from '../../engine/salud';
 import { recursoQueFalta } from '../../engine/turno';
-import type { Especialidad, Recursos, Tarea } from '../../engine/tipos';
-import type { Accion, EstadoApp } from '../../state/reducer';
+import type { Archivo, Especialidad, Historia, Recursos, Tarea } from '../../engine/tipos';
+import { conocimientoDelDia, type Accion, type EstadoApp } from '../../state/reducer';
 import type { EntradaTactil3D, EstadoTelemetria3D } from '../../three/EscenaPlaneta';
-import { describirConsecuencia } from '../comun/efectos';
+import { describirConsecuencia, describirRiesgo } from '../comun/efectos';
 import { porcentajeDosis } from '../comun/formato';
 import { PanelSalud } from '../salud/PanelSalud';
 
@@ -104,7 +103,7 @@ export function PantallaJuego({
   const [restante, setRestante] = useState(SEGUNDOS_RELOJ.normal);
 
   // El reloj arranca con cada plan nuevo y se para con una tarjeta o un panel abierto.
-  const relojPausado = estado.tarjetas.length > 0 || mostrarTripulacion || mostrarHistorias;
+  const relojPausado = estado.tarjetas.length > 0 || estado.closeUp !== null || mostrarTripulacion || mostrarHistorias;
   const claveDia = plan ? `${partida.turno}-${plan.opcionId}` : null;
   const claveAnterior = useRef<string | null>(null);
   // En táctil, el panel se pliega al empezar el plan (para ver y moverse) y se abre para decidir el día siguiente.
@@ -174,6 +173,7 @@ export function PantallaJuego({
   };
 
   const evento = partida.eventoActual;
+  const conocimiento = conocimientoDelDia(estado);
   const dosisMediaPct = porcentajeDosis(partida.tripulacion);
 
   const alertaCriticaSalud = partida.tripulacion.some((a) =>
@@ -250,11 +250,6 @@ export function PantallaJuego({
             <span className="inline-flex items-center gap-1 text-[var(--color-moon)]">
               <FlaskConical className="w-3.5 h-3.5" aria-hidden="true" />
               {Math.round(partida.ciencia)} ciencia
-            </span>
-            <span>·</span>
-            <span className="inline-flex items-center gap-1 text-[var(--color-ok)]">
-              <Rocket className="w-3.5 h-3.5" aria-hidden="true" />
-              Jetpack {telemetria.combustibleJetpack}%
             </span>
           </div>
         </div>
@@ -399,7 +394,8 @@ export function PantallaJuego({
         )}
       </header>
 
-      <div className="relative flex-1 pointer-events-none">
+      {/* Durante el primer plano solo quedan la cabecera y el diálogo (RF-17). */}
+      <div className={`relative flex-1 pointer-events-none ${estado.closeUp ? 'invisible' : ''}`}>
         {estado.avisoCampo && (
           <div
             role="status"
@@ -431,7 +427,7 @@ export function PantallaJuego({
         {mostrarHistorias && partida.historiasDesbloqueadas.length > 0 && (
           <div className="pointer-events-auto absolute top-2 right-0 w-full max-w-sm rounded-2xl border border-[var(--color-border-strong)] bg-[#0b1020]/96 p-4 shadow-2xl space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-[var(--color-warn)]">Archivo NASA desbloqueado</h2>
+              <h2 className="text-sm font-bold text-[var(--color-warn)]">Cuaderno de misión</h2>
               <button
                 type="button"
                 onClick={() => setMostrarHistorias(false)}
@@ -456,6 +452,11 @@ export function PantallaJuego({
                     className="text-left min-h-[42px] px-3 py-2 rounded-lg border border-[var(--color-border)] bg-[#141b34] hover:border-[var(--color-warn)] text-sm text-[var(--color-text)] transition-colors cursor-pointer"
                   >
                     ★ {hist.nombre}
+                    <span className="block text-xs text-[var(--color-text-muted)]">
+                      {estado.notas.includes(hId)
+                        ? hist.medicion.dato
+                        : 'Sin anotar: inspecciónalo en la base (E) para saber qué midió.'}
+                    </span>
                   </button>
                 );
               })}
@@ -484,7 +485,7 @@ export function PantallaJuego({
                 <strong className="text-[var(--color-text)]">Shift:</strong> Correr
               </li>
               <li>
-                <strong className="text-[var(--color-text)]">Espacio (mantener):</strong> Salto + Jetpack
+                <strong className="text-[var(--color-text)]">Espacio:</strong> Saltar
               </li>
               <li>
                 <strong className="text-[var(--color-text)]">1–4:</strong> Elegir astronauta
@@ -543,7 +544,7 @@ export function PantallaJuego({
       </div>
 
       <div
-        className={`pointer-events-none flex flex-col justify-between gap-2 ${esTactil ? '' : 'md:flex-row md:items-end'}`}
+        className={`pointer-events-none flex flex-col justify-between gap-2 ${esTactil ? '' : 'md:flex-row md:items-end'} ${estado.closeUp ? 'invisible' : ''}`}
       >
         {evento && (
           <section
@@ -620,6 +621,13 @@ export function PantallaJuego({
                     onTerminar={() => dispatch({ tipo: 'TERMINAR_DIA' })}
                   />
                 ) : (
+                <>
+                <ArchivoNasa
+                  archivo={evento.archivo}
+                  conocido={conocimiento.conocido}
+                  misiones={conocimiento.misiones}
+                  itemIds={partida.diseno.itemIds}
+                />
                 <ul className="space-y-1.5">
                   {evento.opciones.map((op) => {
                     const falta = recursoQueFalta(partida, op.id);
@@ -633,7 +641,7 @@ export function PantallaJuego({
                         >
                           <div className="text-sm font-semibold text-[var(--color-text)]">{op.texto}</div>
                           <div className="text-xs text-[var(--color-text-muted)]">
-                            {describirConsecuencia(op.efectos)}
+                            {conocimiento.conocido ? describirConsecuencia(op.efectos) : describirRiesgo(op.efectos)}
                           </div>
                         </button>
                         {falta && (
@@ -645,6 +653,7 @@ export function PantallaJuego({
                     );
                   })}
                 </ul>
+                </>
                 )}
               </div>
             )}
@@ -678,7 +687,7 @@ export function PantallaJuego({
               <div className="flex items-end gap-2">
                 <button
                   type="button"
-                  aria-label="Saltar y jetpack (mantener)"
+                  aria-label="Saltar"
                   onPointerDown={() => onCambiarEntradaTactil({ saltar: true })}
                   onPointerUp={() => onCambiarEntradaTactil({ saltar: false })}
                   onPointerCancel={() => onCambiarEntradaTactil({ saltar: false })}
@@ -704,6 +713,13 @@ export function PantallaJuego({
           </div>
         )}
       </div>
+      {estado.closeUp && HISTORIAS_POR_ID[estado.closeUp] && (
+        <DialogoCloseUp
+          key={estado.closeUp}
+          historia={HISTORIAS_POR_ID[estado.closeUp]}
+          onCerrar={() => dispatch({ tipo: 'CERRAR_CLOSEUP' })}
+        />
+      )}
     </main>
   );
 }
@@ -711,6 +727,100 @@ export function PantallaJuego({
 interface MiembroTripulacion {
   nombre: string;
   especialidad: Especialidad;
+}
+
+// Cuaderno de misión (RF-17): con la nota de la misión que lo midió (o si es conocimiento general, o ya se vivió),
+// el jugador ve el dato y las cifras; sin ella, solo qué cambia cada opción y dónde aprenderlo.
+function ArchivoNasa({
+  archivo,
+  conocido,
+  misiones,
+  itemIds,
+}: {
+  archivo: Archivo;
+  conocido: boolean;
+  misiones: string[];
+  itemIds: string[];
+}) {
+  if (conocido) {
+    return (
+      <p className="rounded-lg border border-[var(--color-ok)]/50 bg-[#0f241f] px-2.5 py-1.5 text-xs leading-snug text-[var(--color-text)]">
+        <strong>Archivo NASA:</strong> {archivo.dato}{' '}
+        <a href={archivo.fuente} target="_blank" rel="noreferrer" className="underline text-[var(--color-text-muted)]">
+          Fuente
+        </a>
+      </p>
+    );
+  }
+  const traidas = misiones.filter((id) => itemIds.some((item) => CATALOGO_POR_ID[item]?.historiaId === id));
+  const nombres = (ids: string[]) => ids.map((id) => HISTORIAS_POR_ID[id]?.nombre ?? id).join(' o ');
+  return (
+    <p className="rounded-lg border border-[var(--color-border)] bg-[#141b34] px-2.5 py-1.5 text-xs leading-snug text-[var(--color-text-muted)]">
+      <strong className="text-[var(--color-text)]">Sin cifras todavía.</strong>{' '}
+      {traidas.length > 0
+        ? `Esto se midió con ${nombres(traidas)}: acércate en la base y pulsa E para anotarlo en tu cuaderno.`
+        : `Esto se midió con ${nombres(misiones)}, que no trajiste. Lo sabrás cuando lo vivas.`}
+    </p>
+  );
+}
+
+// Primer plano (RF-17): la cámara se acerca al equipo y un diálogo negro abajo cuenta lo que midió su misión.
+// El texto se escribe poco a poco salvo con movimiento reducido; el lector de pantalla recibe el texto entero.
+function DialogoCloseUp({ historia, onCerrar }: { historia: Historia; onCerrar: () => void }) {
+  const texto = historia.medicion.dato;
+  const reducido = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
+  const [letras, setLetras] = useState(reducido ? texto.length : 0);
+  const completo = letras >= texto.length;
+
+  useEffect(() => {
+    if (completo) return;
+    const t = window.setTimeout(() => setLetras((n) => n + 2), 24);
+    return () => window.clearTimeout(t);
+  }, [letras, completo]);
+
+  useEffect(() => {
+    const alPulsar = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCerrar();
+    };
+    window.addEventListener('keydown', alPulsar);
+    return () => window.removeEventListener('keydown', alPulsar);
+  }, [onCerrar]);
+
+  return (
+    <div
+      role="dialog"
+      aria-labelledby="titulo-closeup"
+      className="pointer-events-auto fixed inset-x-0 bottom-0 z-40 bg-black/92 border-t border-white/15 px-4 py-4 sm:px-8 sm:py-5"
+    >
+      <div className="mx-auto max-w-3xl space-y-2">
+        <h2 id="titulo-closeup" className="text-xs font-semibold tracking-wide text-[var(--color-warn)]">
+          {historia.anio} · {historia.nombre} · Lo que se midió
+        </h2>
+        <p className="sr-only">{texto}</p>
+        <p aria-hidden="true" className="min-h-[3.5em] text-sm sm:text-base leading-relaxed text-white">
+          {texto.slice(0, letras)}
+        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <a
+            href={historia.medicion.fuente}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs underline text-white/70"
+          >
+            Fuente NASA
+          </a>
+          <button
+            type="button"
+            autoFocus
+            onClick={() => (completo ? onCerrar() : setLetras(texto.length))}
+            className="min-h-[44px] rounded-lg bg-[var(--color-mars)] px-4 font-semibold text-[var(--color-on-accent)] cursor-pointer"
+          >
+            {completo ? 'Anotar en el cuaderno' : 'Ver todo'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // Plan del día (RF-15): primero las tareas de la opción elegida, después el mantenimiento en líneas cortas.
@@ -738,9 +848,9 @@ function PlanDelDia({
   onAjusteReloj: (ajuste: AjusteReloj) => void;
   onTerminar: () => void;
 }) {
-  const delPlan = tareas.filter((t) => t.tipo === 'evento');
+  const delPlan = tareas.filter((t) => t.tipo !== 'mantenimiento');
   const mantenimiento = tareas.filter((t) => t.tipo === 'mantenimiento');
-  const faltanDelPlan = delPlan.some((t) => !hechas.has(t.id));
+  const faltanDelPlan = delPlan.some((t) => t.tipo === 'evento' && !hechas.has(t.id));
   const pct = (t: Tarea) => (hechas.has(t.id) ? 100 : Math.round((progreso[t.id] ?? 0) * 100));
   return (
     <div className="space-y-2">
@@ -770,6 +880,7 @@ function PlanDelDia({
                 <div className="text-[var(--color-text-muted)]">
                   {nombreEstacion(t.estacion, itemIds)} · {ESPECIALIDADES[t.especialidad].nombre}
                   {(t.personas ?? 1) > 1 && ` · ${t.personas} personas a la vez`}
+                  {t.tipo === 'ciencia' && ` · opcional, +${CIENCIA_MUESTREO} ciencia`}
                   {especialista ? ` (${especialista.nombre} va el doble de rápido)` : ''}
                   {quienes.length > 0 && ` · Trabajando: ${quienes.join(', ')}`}
                 </div>

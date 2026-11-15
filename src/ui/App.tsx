@@ -37,7 +37,6 @@ export function App() {
 
   const [telemetria, setTelemetria] = useState<EstadoTelemetria3D>({
     objetivoCercano: null,
-    combustibleJetpack: 100,
     enSuelo: true,
     enDomo: false,
     altura: 0,
@@ -128,6 +127,7 @@ export function App() {
           tareas={tareas}
           tareasHechas={tareasHechas}
           trabajoActivo={trabajoActivo}
+          enfoque={estado.fase === 'juego' ? estado.closeUp : null}
           onTelemetria={setTelemetria}
           onAccionCompletada={manejarAccion3D}
           onTareaCompletada={completarTarea}

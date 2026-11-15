@@ -282,6 +282,19 @@ function detectarSoftwareWebGL(gl: WebGLRenderingContext | WebGL2RenderingContex
   }
 }
 
+const EJE_Y = new THREE.Vector3(0, 1, 0);
+
+// ¿El cilindro se cruza entre la cámara y el punto que mira? El propio equipo enfocado (el punto cae dentro) y lo
+// que queda por debajo de la línea de visión, como las rocas bajas, no cuentan.
+function tapaLaVista(o: ObstaculoCilindro, camara: THREE.Vector3, mira: THREE.Vector3, destino: Destino): boolean {
+  if (Math.hypot(o.x - mira.x, o.z - mira.z) < o.radio) return false;
+  if (groundHeightAt(o.x, o.z, destino) + o.altura < Math.min(camara.y, mira.y)) return false;
+  const dx = mira.x - camara.x;
+  const dz = mira.z - camara.z;
+  const t = Math.max(0, Math.min(1, ((o.x - camara.x) * dx + (o.z - camara.z) * dz) / (dx * dx + dz * dz)));
+  return Math.hypot(camara.x + dx * t - o.x, camara.z + dz * t - o.z) < o.radio + 1;
+}
+
 export class EscenaPlaneta {
   private contenedor: HTMLElement;
   private renderer: THREE.WebGLRenderer;
@@ -1194,7 +1207,8 @@ export class EscenaPlaneta {
   }
 
   // Acerca la cámara a un equipo histórico (o la devuelve al astronauta con null). Mira desde el lado de la base,
-  // que es hacia donde está girado cada modelo.
+  // que es hacia donde está girado cada modelo; si un módulo o túnel tapa ese ángulo (en Marte, el invernadero
+  // delante de Curiosity), rodea el equipo hasta encontrar una vista despejada.
   public enfocarHistoria(historiaId: string | null) {
     const destino = historiaId ? this.posHistorias.get(historiaId) : undefined;
     if (!destino) {
@@ -1202,14 +1216,22 @@ export class EscenaPlaneta {
       return;
     }
     const { centro, tamano } = destino;
+    const mira = centro.clone().setY(centro.y + tamano * 0.35);
     const haciaBase = new THREE.Vector3(-centro.x, 0, -centro.z).normalize();
-    const lateral = new THREE.Vector3(haciaBase.z, 0, -haciaBase.x);
-    const pos = centro
-      .clone()
-      .addScaledVector(haciaBase, tamano * 1.9)
-      .addScaledVector(lateral, tamano * 0.8)
-      .setY(centro.y + tamano * 0.9);
-    this.enfoque = { pos, mira: centro.clone().setY(centro.y + tamano * 0.35) };
+    const posDesde = (giro: number) => {
+      const dir = haciaBase.clone().applyAxisAngle(EJE_Y, giro);
+      const lateral = new THREE.Vector3(dir.z, 0, -dir.x);
+      return centro
+        .clone()
+        .addScaledVector(dir, tamano * 1.9)
+        .addScaledVector(lateral, tamano * 0.8)
+        .setY(centro.y + tamano * 0.9);
+    };
+    const pos =
+      [0, 0.5, -0.5, 1, -1, 1.5, -1.5]
+        .map(posDesde)
+        .find((p) => !this.obstaculos.some((o) => tapaLaVista(o, p, mira, this.destino))) ?? posDesde(0);
+    this.enfoque = { pos, mira };
   }
 
   // Dentro: la cámara mira la base mientras se decide. Fuera: salen uno a uno por la compuerta y caminan unos metros.
